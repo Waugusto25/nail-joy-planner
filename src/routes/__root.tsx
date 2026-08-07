@@ -79,20 +79,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Jannah Nails — Agendamento de manicure e pedicure" },
+      { title: "Jannah Nails — Entrar e agendar suas unhas" },
       {
         name: "description",
         content:
-          "Agende manicure e pedicure com Janaina Silva em Paraisópolis, MG. Cartão de fidelidade, loja pronta-entrega e catálogos.",
+          "Acesse sua conta Jannah Nails para agendar manicure e pedicure, acompanhar seu cartão de fidelidade e ver a loja da Janaina.",
       },
       { name: "author", content: "Jannah Nails" },
-      { property: "og:title", content: "Jannah Nails" },
+      { property: "og:title", content: "Jannah Nails — Entrar e agendar suas unhas" },
       {
         property: "og:description",
-        content: "Agende seus cuidados de unhas com Janaina Silva em Paraisópolis, MG.",
+        content: "Acesse sua conta Jannah Nails para agendar manicure e pedicure, acompanhar seu cartão de fidelidade e ver a loja da Janaina.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Jannah Nails — Entrar e agendar suas unhas" },
+      { name: "twitter:description", content: "Acesse sua conta Jannah Nails para agendar manicure e pedicure, acompanhar seu cartão de fidelidade e ver a loja da Janaina." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ba08da18e48b1b14f5a8da62b09b9c70/id-preview-4387bade--f96d0623-3d94-4c29-b904-ecb9c33dfe92.lovable.app-1786135683876.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ba08da18e48b1b14f5a8da62b09b9c70/id-preview-4387bade--f96d0623-3d94-4c29-b904-ecb9c33dfe92.lovable.app-1786135683876.png" },
     ],
     links: [
       {

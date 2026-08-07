@@ -34,10 +34,10 @@ export const Route = createFileRoute("/")({
         content:
           "Acesse sua conta Jannah Nails para agendar manicure e pedicure, acompanhar seu cartão de fidelidade e ver a loja da Janaina.",
       },
-      { property: "og:title", content: "Jannah Nails — Entrar e agendar" },
+      { property: "og:title", content: "Jannah Nails — Entrar e agendar suas unhas" },
       {
         property: "og:description",
-        content: "Entre com seu nome e telefone para agendar seus cuidados de unhas.",
+        content: "Acesse sua conta Jannah Nails para agendar manicure e pedicure, acompanhar seu cartão de fidelidade e ver a loja da Janaina.",
       },
     ],
   }),
