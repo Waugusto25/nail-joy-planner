@@ -103,9 +103,18 @@ function AgendaTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("*, services(name), profiles(full_name, phone, login_id)")
+        .select("*, services(name)")
         .order("day", { ascending: true })
         .order("start_time", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const clients = useQuery({
+    queryKey: ["admin-clients"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
       if (error) throw error;
       return data;
     },
@@ -127,7 +136,7 @@ function AgendaTab() {
   return (
     <div className="space-y-3">
       {rows.map((a) => {
-        const client = a.profiles as { full_name: string; phone: string; login_id: string } | null;
+        const client = (clients.data ?? []).find((c) => c.id === a.client_id) ?? null;
         return (
           <article key={a.id} className="surface-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
