@@ -1,27 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  adminUpdateClientInput,
-  finishRecoveryInput,
-  finishSignupInput,
-  resolveLoginInput,
-  startRecoveryInput,
-  startSignupInput,
-} from "./auth-schemas";
+import { adminUpdateClientInput, phoneAccessInput, resolveLoginInput } from "./auth-schemas";
 
-export const startSignupFn = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => startSignupInput.parse(data))
+export const phoneAccessFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => phoneAccessInput.parse(data))
   .handler(async ({ data }) => {
-    const { startSignup } = await import("./auth-helpers.server");
-    return startSignup(data.fullName, data.phone);
-  });
-
-export const finishSignupFn = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => finishSignupInput.parse(data))
-  .handler(async ({ data }) => {
-    const { finishSignup } = await import("./auth-helpers.server");
-    return finishSignup(data.fullName, data.phone, data.code);
+    const { phoneAccess } = await import("./auth-helpers.server");
+    return phoneAccess(data.fullName, data.phone);
   });
 
 export const resolveLoginFn = createServerFn({ method: "POST" })
@@ -29,20 +15,6 @@ export const resolveLoginFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { resolveLogin } = await import("./auth-helpers.server");
     return resolveLogin(data.identifier);
-  });
-
-export const startRecoveryFn = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => startRecoveryInput.parse(data))
-  .handler(async ({ data }) => {
-    const { startRecovery } = await import("./auth-helpers.server");
-    return startRecovery(data.identifier);
-  });
-
-export const finishRecoveryFn = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => finishRecoveryInput.parse(data))
-  .handler(async ({ data }) => {
-    const { finishRecovery } = await import("./auth-helpers.server");
-    return finishRecovery(data.identifier, data.code, data.phone);
   });
 
 export const adminUpdateClientFn = createServerFn({ method: "POST" })
