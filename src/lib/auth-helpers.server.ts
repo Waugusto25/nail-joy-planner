@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { AUTH_EMAIL_DOMAIN, loginEmail, slugifyLogin, maskPhone } from "./salon";
+import { AUTH_EMAIL_DOMAIN, loginEmail, slugifyLogin } from "./salon";
 
 type Admin = SupabaseClient;
 
@@ -8,40 +8,6 @@ function admin(): Admin {
   return createClient(process.env["SUPABASE_URL"]!, process.env["SUPABASE_SERVICE_ROLE_KEY"]!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-}
-
-function randomCode() {
-  return String(Math.floor(1000 + Math.random() * 9000));
-}
-
-async function issueCode(db: Admin, phone: string, purpose: string) {
-  const code = randomCode();
-  await db
-    .from("verification_codes")
-    .update({ consumed: true })
-    .eq("phone", phone)
-    .eq("purpose", purpose)
-    .eq("consumed", false);
-  const { error } = await db.from("verification_codes").insert({ phone, code, purpose });
-  if (error) throw new Error("Não foi possível gerar o código de verificação.");
-  return code;
-}
-
-async function consumeCode(db: Admin, phone: string, purpose: string, code: string) {
-  const { data } = await db
-    .from("verification_codes")
-    .select("id, code, expires_at")
-    .eq("phone", phone)
-    .eq("purpose", purpose)
-    .eq("consumed", false)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!data || data.code !== code) throw new Error("Código inválido. Confira os 4 dígitos.");
-  if (new Date(data.expires_at as string).getTime() < Date.now()) {
-    throw new Error("Código expirado. Solicite um novo.");
-  }
-  await db.from("verification_codes").update({ consumed: true }).eq("id", data.id);
 }
 
 async function uniqueLoginId(db: Admin, fullName: string) {
@@ -56,29 +22,29 @@ async function uniqueLoginId(db: Admin, fullName: string) {
   return `${base}${Date.now().toString().slice(-5)}`;
 }
 
-export async function startSignup(_fullName: string, phone: string) {
+export async function phoneAccess(fullName: string, phone: string) {
   const db = admin();
   const { data: existing } = await db
     .from("profiles")
-    .select("login_id")
+    .select("id, full_name, login_id")
     .eq("phone", phone)
     .maybeSingle();
-  if (existing) {
-    return { alreadyRegistered: true, loginId: String(existing.login_id), code: null };
-  }
-  const code = await issueCode(db, phone, "signup");
-  return { alreadyRegistered: false, loginId: null, code };
-}
 
-export async function finishSignup(fullName: string, phone: string, code: string) {
-  const db = admin();
-  const { data: existing } = await db
-    .from("profiles")
-    .select("login_id")
-    .eq("phone", phone)
-    .maybeSingle();
-  if (existing) throw new Error("Este telefone já possui uma conta. Use a opção Entrar.");
-  await consumeCode(db, phone, "signup", code);
+  if (existing) {
+    if (String(existing.full_name).trim() !== fullName.trim()) {
+      await db.from("profiles").update({ full_name: fullName }).eq("id", existing.id);
+      await db.auth.admin.updateUserById(String(existing.id), {
+        user_metadata: { full_name: fullName, login_id: existing.login_id },
+      });
+    }
+    // Garante que o telefone atual continua sendo a senha válida.
+    await db.auth.admin.updateUserById(String(existing.id), { password: phone });
+    return {
+      created: false,
+      loginId: String(existing.login_id),
+      email: loginEmail(String(existing.login_id)),
+    };
+  }
 
   const loginId = await uniqueLoginId(db, fullName);
   const email = loginEmail(loginId);
@@ -98,7 +64,7 @@ export async function finishSignup(fullName: string, phone: string, code: string
     throw new Error("Não foi possível salvar seu cadastro. Tente novamente.");
   }
   await db.from("user_roles").insert({ user_id: created.user.id, role: "client" });
-  return { loginId, email };
+  return { created: true, loginId, email };
 }
 
 async function findProfile(db: Admin, identifier: string) {
@@ -123,26 +89,6 @@ export async function resolveLogin(identifier: string) {
   const db = admin();
   const profile = await findProfile(db, identifier);
   if (!profile) return { email: null, loginId: null };
-  return { email: loginEmail(String(profile.login_id)), loginId: String(profile.login_id) };
-}
-
-export async function startRecovery(identifier: string) {
-  const db = admin();
-  const profile = await findProfile(db, identifier);
-  if (!profile) throw new Error("Não encontramos essa conta. Confira o nome ou o ID de login.");
-  const phone = String(profile.phone);
-  const code = await issueCode(db, phone, "recovery");
-  return { code, maskedPhone: maskPhone(phone), loginId: String(profile.login_id) };
-}
-
-export async function finishRecovery(identifier: string, code: string, phone: string) {
-  const db = admin();
-  const profile = await findProfile(db, identifier);
-  if (!profile) throw new Error("Conta não encontrada.");
-  await consumeCode(db, String(profile.phone), "recovery", code);
-  const { error } = await db.auth.admin.updateUserById(String(profile.id), { password: phone });
-  if (error) throw new Error("Não foi possível atualizar o acesso.");
-  await db.from("profiles").update({ phone }).eq("id", profile.id);
   return { email: loginEmail(String(profile.login_id)), loginId: String(profile.login_id) };
 }
 
