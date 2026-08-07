@@ -22,7 +22,7 @@ import {
   formatPrice,
   onlyDigits,
   shortTime,
-  whatsappLink,
+  whatsappLinkTo,
 } from "@/lib/salon";
 
 export const Route = createFileRoute("/_authenticated/admin")({
