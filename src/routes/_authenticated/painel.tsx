@@ -552,7 +552,7 @@ function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {(services.data ?? []).map((s) => {
+      {(services.data ?? []).filter((s) => s.loyalty_eligible).map((s) => {
         const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
         const inCycle = count % 6;
         const eligible = count > 0 && inCycle === 5;
