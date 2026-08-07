@@ -126,7 +126,11 @@ function ClientPanel() {
 
       <Dialog open={welcomeOpen} onOpenChange={(open) => (open ? null : void closeWelcome())}>
         <DialogContent className="max-w-md overflow-hidden p-0">
-          <img src={WELCOME_IMAGE} alt="Bem-vinda à Jannah Nails, por Janaina Silva" className="w-full" />
+          <img
+            src={WELCOME_IMAGE}
+            alt="Bem-vinda à Jannah Nails, por Janaina Silva"
+            className="w-full"
+          />
           <div className="p-4">
             <Button className="w-full" onClick={() => void closeWelcome()}>
               Começar
@@ -153,7 +157,13 @@ function useServices() {
   });
 }
 
-function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; clientName: string }) {
+function BookingFlow({
+  clientId,
+  clientName,
+}: {
+  clientId?: string | undefined;
+  clientName: string;
+}) {
   const queryClient = useQueryClient();
   const services = useServices();
   const [serviceId, setServiceId] = useState<string | null>(null);
@@ -306,12 +316,7 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
     <div ref={topRef} className="scroll-mt-24">
       <div className="flex items-center gap-3">
         {step > 0 ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Voltar"
-            onClick={() => goTo(step - 1)}
-          >
+          <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => goTo(step - 1)}>
             <ArrowLeft size={18} />
           </Button>
         ) : (
@@ -355,7 +360,11 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
                     s.id === serviceId ? "ring-2 ring-ring" : "hover:shadow-lg"
                   }`}
                 >
-                  <StorageImage url={s.image_url} alt={s.name} className="h-36 w-full object-cover" />
+                  <StorageImage
+                    url={s.image_url}
+                    alt={s.name}
+                    className="h-36 w-full object-cover"
+                  />
                   <div className="p-4">
                     <p className="font-display text-lg">{s.name}</p>
                     <p className="text-sm text-muted-foreground">
@@ -409,8 +418,8 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
             ) : null}
             {service ? (
               <p className="mb-3 text-sm text-muted-foreground">
-                Duração do procedimento: {formatDuration(service.duration_minutes)} — mostramos só os
-                horários que cabem na agenda.
+                Duração do procedimento: {formatDuration(service.duration_minutes)} — mostramos só
+                os horários que cabem na agenda.
               </p>
             ) : null}
             <div className="flex flex-wrap gap-2">
@@ -489,7 +498,10 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   });
 
   async function cancel(id: string) {
-    const { error } = await supabase.from("appointments").update({ status: "cancelado" }).eq("id", id);
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status: "cancelado" })
+      .eq("id", id);
     if (error) {
       toast.error("Não foi possível cancelar.");
       return;
@@ -552,35 +564,37 @@ function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {(services.data ?? []).filter((s) => s.loyalty_eligible).map((s) => {
-        const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
-        const inCycle = count % 6;
-        const eligible = count > 0 && inCycle === 5;
-        return (
-          <article key={s.id} className="surface-card p-5">
-            <p className="font-display text-lg">{s.name}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
-            </p>
-            <div className="mt-3 flex gap-1.5">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <span
-                  key={index}
-                  className={`h-6 flex-1 rounded-full ${
-                    index < inCycle ? "bg-primary" : "bg-secondary"
-                  } ${index === 5 ? "border-2 border-gold" : ""}`}
-                />
-              ))}
-            </div>
-            <Progress className="mt-3" value={(inCycle / 6) * 100} />
-            <p className="mt-3 text-sm">
-              {eligible
-                ? "🎉 Seu próximo atendimento tem 20% de desconto!"
-                : `Faltam ${5 - inCycle} para ganhar 20% no 6º atendimento.`}
-            </p>
-          </article>
-        );
-      })}
+      {(services.data ?? [])
+        .filter((s) => s.loyalty_eligible)
+        .map((s) => {
+          const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
+          const inCycle = count % 6;
+          const eligible = count > 0 && inCycle === 5;
+          return (
+            <article key={s.id} className="surface-card p-5">
+              <p className="font-display text-lg">{s.name}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
+              </p>
+              <div className="mt-3 flex gap-1.5">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <span
+                    key={index}
+                    className={`h-6 flex-1 rounded-full ${
+                      index < inCycle ? "bg-primary" : "bg-secondary"
+                    } ${index === 5 ? "border-2 border-gold" : ""}`}
+                  />
+                ))}
+              </div>
+              <Progress className="mt-3" value={(inCycle / 6) * 100} />
+              <p className="mt-3 text-sm">
+                {eligible
+                  ? "🎉 Seu próximo atendimento tem 20% de desconto!"
+                  : `Faltam ${5 - inCycle} para ganhar 20% no 6º atendimento.`}
+              </p>
+            </article>
+          );
+        })}
     </div>
   );
 }
@@ -601,7 +615,9 @@ function Store({ clientName }: { clientName: string }) {
 
   const rows = products.data ?? [];
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">A loja está sendo abastecida. Volte logo!</p>;
+    return (
+      <p className="text-sm text-muted-foreground">A loja está sendo abastecida. Volte logo!</p>
+    );
   }
 
   return (
@@ -609,7 +625,12 @@ function Store({ clientName }: { clientName: string }) {
       {rows.map((p) => (
         <article key={p.id} className="surface-card overflow-hidden">
           {p.image_url ? (
-            <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" loading="lazy" />
+            <img
+              src={p.image_url}
+              alt={p.name}
+              className="h-40 w-full object-cover"
+              loading="lazy"
+            />
           ) : null}
           <div className="space-y-2 p-4">
             <Badge variant="secondary">{p.category}</Badge>
@@ -670,7 +691,12 @@ function Catalogs() {
           className="surface-card block overflow-hidden transition hover:shadow-lg"
         >
           {c.image_url ? (
-            <img src={c.image_url} alt={c.title} className="h-40 w-full object-cover" loading="lazy" />
+            <img
+              src={c.image_url}
+              alt={c.title}
+              className="h-40 w-full object-cover"
+              loading="lazy"
+            />
           ) : null}
           <div className="p-4">
             <p className="font-display text-lg">{c.title}</p>

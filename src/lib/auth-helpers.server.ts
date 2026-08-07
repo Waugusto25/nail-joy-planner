@@ -117,7 +117,8 @@ export async function adminDeleteClient(clientId: string) {
     .select("role")
     .eq("user_id", clientId)
     .eq("role", "admin");
-  if ((roles ?? []).length > 0) throw new Error("Não é possível excluir a conta da administradora.");
+  if ((roles ?? []).length > 0)
+    throw new Error("Não é possível excluir a conta da administradora.");
 
   await db.from("appointments").delete().eq("client_id", clientId);
   await db.from("user_roles").delete().eq("user_id", clientId);

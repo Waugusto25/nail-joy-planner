@@ -44,7 +44,8 @@ export const adminDeleteClientFn = createServerFn({ method: "POST" })
       _role: "admin",
     });
     if (!isAdmin) throw new Error("Acesso restrito à administradora.");
-    if (data.clientId === context.userId) throw new Error("Você não pode excluir sua própria conta.");
+    if (data.clientId === context.userId)
+      throw new Error("Você não pode excluir sua própria conta.");
     const { adminDeleteClient } = await import("./auth-helpers.server");
     return adminDeleteClient(data.clientId);
   });

@@ -132,7 +132,8 @@ function AgendaTab() {
   }
 
   const rows = appointments.data ?? [];
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhum agendamento.</p>;
+  if (rows.length === 0)
+    return <p className="text-sm text-muted-foreground">Nenhum agendamento.</p>;
 
   return (
     <div className="space-y-3">
@@ -266,10 +267,7 @@ function ClientsTab() {
   const clients = useQuery({
     queryKey: ["admin-clients"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("full_name");
+      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
       if (error) throw error;
       return data;
     },
@@ -528,7 +526,11 @@ function ServicesTab() {
       {(services.data ?? []).map((s) => (
         <article key={s.id} className="surface-card flex flex-wrap items-end gap-4 p-4">
           <div className="space-y-2">
-            <StorageImage url={s.image_url} alt={s.name} className="h-20 w-20 rounded-xl object-cover" />
+            <StorageImage
+              url={s.image_url}
+              alt={s.name}
+              className="h-20 w-20 rounded-xl object-cover"
+            />
             <div className="space-y-1">
               <Label htmlFor={`img-${s.id}`} className="text-xs">
                 {uploading === s.id ? "Enviando foto..." : "Trocar foto"}
@@ -552,7 +554,8 @@ function ServicesTab() {
               defaultValue={(s.price_cents / 100).toFixed(2)}
               onBlur={(e) =>
                 void update(s.id, {
-                  price_cents: Math.round(Number(e.target.value.replace(",", ".")) * 100) || s.price_cents,
+                  price_cents:
+                    Math.round(Number(e.target.value.replace(",", ".")) * 100) || s.price_cents,
                 })
               }
               className="w-32"
@@ -564,7 +567,9 @@ function ServicesTab() {
               id={`dur-${s.id}`}
               defaultValue={s.duration_minutes}
               onBlur={(e) =>
-                void update(s.id, { duration_minutes: Number(e.target.value) || s.duration_minutes })
+                void update(s.id, {
+                  duration_minutes: Number(e.target.value) || s.duration_minutes,
+                })
               }
               className="w-24"
             />
@@ -687,7 +692,12 @@ function SlotsTab() {
         </div>
         <div className="space-y-1">
           <Label htmlFor="slot-time">Horário</Label>
-          <Input id="slot-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          <Input
+            id="slot-time"
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
         </div>
         <Button onClick={() => void add()}>Adicionar horário</Button>
       </section>
