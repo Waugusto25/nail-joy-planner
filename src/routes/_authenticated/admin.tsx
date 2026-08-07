@@ -167,15 +167,16 @@ function AgendaTab() {
               <Button size="sm" variant="ghost" onClick={() => void setStatus(a.id, "cancelado")}>
                 Cancelar
               </Button>
-              {client ? (
+              {client && whatsappLinkTo(client.phone, "") ? (
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() =>
                     window.open(
-                      whatsappLink(
+                      whatsappLinkTo(
+                        client.phone,
                         `Olá, ${client.full_name}! Seu horário de ${(a.services as { name: string } | null)?.name} em ${formatDayLabel(a.day)} às ${shortTime(a.start_time)} está confirmado. — Jannah Nails`,
-                      ),
+                      )!,
                       "_blank",
                       "noopener",
                     )
@@ -301,9 +302,13 @@ function ClientsTab() {
               <Button
                 size="sm"
                 variant="outline"
+                disabled={!whatsappLinkTo(c.phone, "")}
                 onClick={() =>
                   window.open(
-                    whatsappLink(`Olá, ${c.full_name}! Aqui é a Janaina da Jannah Nails.`),
+                    whatsappLinkTo(
+                      c.phone,
+                      `Olá, ${c.full_name}! Aqui é a Janaina da Jannah Nails.`,
+                    )!,
                     "_blank",
                     "noopener",
                   )
