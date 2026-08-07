@@ -169,6 +169,36 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_breaks: {
+        Row: {
+          active: boolean
+          created_at: string
+          end_time: string
+          id: string
+          label: string | null
+          start_time: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          end_time: string
+          id?: string
+          label?: string | null
+          start_time: string
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          end_time?: string
+          id?: string
+          label?: string | null
+          start_time?: string
+          weekday?: number
+        }
+        Relationships: []
+      }
       schedule_slots: {
         Row: {
           active: boolean
@@ -197,6 +227,7 @@ export type Database = {
           duration_minutes: number
           id: string
           image_url: string | null
+          loyalty_eligible: boolean
           name: string
           price_cents: number
           sort_order: number
@@ -207,6 +238,7 @@ export type Database = {
           duration_minutes: number
           id?: string
           image_url?: string | null
+          loyalty_eligible?: boolean
           name: string
           price_cents: number
           sort_order?: number
@@ -217,6 +249,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           image_url?: string | null
+          loyalty_eligible?: boolean
           name?: string
           price_cents?: number
           sort_order?: number
