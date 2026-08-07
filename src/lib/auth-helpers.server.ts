@@ -31,6 +31,14 @@ export async function phoneAccess(fullName: string, phone: string) {
     .maybeSingle();
 
   if (existing) {
+    const { data: roles } = await db
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", existing.id)
+      .eq("role", "admin");
+    if ((roles ?? []).length > 0) {
+      throw new Error("Este telefone é da administradora. Use o acesso da administradora.");
+    }
     if (String(existing.full_name).trim() !== fullName.trim()) {
       await db.from("profiles").update({ full_name: fullName }).eq("id", existing.id);
       await db.auth.admin.updateUserById(String(existing.id), {
