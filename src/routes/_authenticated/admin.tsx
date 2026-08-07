@@ -13,11 +13,13 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
-import { adminUpdateClientFn } from "@/lib/auth.functions";
+import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
+import { SERVICE_IMAGE_BUCKET, StorageImage } from "@/components/app/storage-image";
 import {
   APPOINTMENT_STATUS,
   WEEKDAYS,
   formatDayLabel,
+  formatDuration,
   formatPhone,
   formatPrice,
   onlyDigits,
@@ -287,6 +289,23 @@ function ClientsTab() {
     }
   }
 
+  async function removeClient(clientId: string, name: string) {
+    if (
+      !window.confirm(
+        `Excluir a cliente ${name}? A conta e todos os agendamentos dela serão apagados.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await adminDeleteClientFn({ data: { clientId } });
+      toast.success("Cliente excluída.");
+      await queryClient.invalidateQueries();
+    } catch {
+      toast.error("Não foi possível excluir a cliente.");
+    }
+  }
+
   return (
     <div className="space-y-3">
       {(clients.data ?? []).map((c) => (
@@ -324,6 +343,13 @@ function ClientsTab() {
                 }}
               >
                 Editar telefone
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => void removeClient(c.id, c.full_name)}
+              >
+                Excluir
               </Button>
             </div>
           </div>
