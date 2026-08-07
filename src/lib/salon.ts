@@ -2,7 +2,7 @@ export const SALON_NAME = "Jannah Nails";
 export const OWNER_NAME = "Janaina Silva";
 export const WHATSAPP_NUMBER = "5535998844504";
 export const INSTAGRAM_HANDLE = "jannah_silvaah";
-export const INSTAGRAM_URL = "https://instagram.com/jannah_silvaah";
+export const INSTAGRAM_URL = "https://www.instagram.com/jannah_silvaah?igsh=OTRoZjFka2p0dDhn";
 export const AUTH_EMAIL_DOMAIN = "jannahnails.app";
 export const LOYALTY_CYCLE = 5;
 export const LOYALTY_DISCOUNT = 0.2;
@@ -74,4 +74,21 @@ export function shortTime(time: string) {
 
 export function whatsappLink(message: string) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
+
+/** Normalizes a Brazilian phone to wa.me format (adds country code 55 when missing). */
+export function toWhatsappNumber(phone: string) {
+  const d = onlyDigits(phone);
+  if (!d) return null;
+  if (d.length === 10 || d.length === 11) return `55${d}`;
+  if (d.length >= 12 && d.length <= 13 && d.startsWith("55")) return d;
+  if (d.length >= 12) return d;
+  return null;
+}
+
+/** WhatsApp link addressed to a specific person (e.g. the client). */
+export function whatsappLinkTo(phone: string, message: string) {
+  const number = toWhatsappNumber(phone);
+  if (!number) return null;
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
