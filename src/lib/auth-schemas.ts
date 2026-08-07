@@ -23,3 +23,4 @@ export const adminUpdateClientInput = z.object({
   clientId: z.string().uuid(),
   phone: phoneSchema,
 });
+export const adminDeleteClientInput = z.object({ clientId: z.string().uuid() });

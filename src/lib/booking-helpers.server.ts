@@ -14,10 +14,13 @@ export async function busyTimes(day: string) {
     .select("start_time, status, services(duration_minutes)")
     .eq("day", day)
     .in("status", ["pendente", "confirmado", "concluido"]);
-  return (data ?? []).map((r) => ({
-    start: String(r.start_time).slice(0, 5),
-    duration: Number(
-      (r.services as { duration_minutes: number } | null)?.duration_minutes ?? 60,
-    ),
-  }));
+  return (data ?? []).map((r) => {
+    const joined = r.services as unknown;
+    const service = Array.isArray(joined) ? joined[0] : joined;
+    const duration = (service as { duration_minutes?: number } | null)?.duration_minutes;
+    return {
+      start: String(r.start_time).slice(0, 5),
+      duration: Number(duration ?? 60),
+    };
+  });
 }
