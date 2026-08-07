@@ -155,6 +155,13 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
   const [day, setDay] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState(0);
+  const topRef = useRef<HTMLDivElement>(null);
+
+  function goTo(next: number) {
+    setStep(next);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   const slots = useQuery({
     queryKey: ["slots"],
