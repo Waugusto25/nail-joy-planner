@@ -19,7 +19,6 @@ import {
   APPOINTMENT_STATUS,
   WEEKDAYS,
   formatDayLabel,
-  formatDuration,
   formatPhone,
   formatPrice,
   onlyDigits,
