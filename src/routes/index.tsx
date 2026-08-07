@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { BrandMark } from "@/components/app/brand";
+import { PasswordInput } from "@/components/app/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -135,9 +136,8 @@ function LoginForm() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="login-password">Telefone (sua senha)</Label>
-          <Input
+          <PasswordInput
             id="login-password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="35998844504"
@@ -145,7 +145,7 @@ function LoginForm() {
             required
           />
           <p className="text-xs text-muted-foreground">
-            Use apenas os números do seu telefone, com DDD.
+            Use apenas os números do seu telefone, com DDD. Toque no olhinho para conferir.
           </p>
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
@@ -278,7 +278,7 @@ function SignupForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-phone">Telefone com DDD</Label>
-        <Input
+        <PasswordInput
           id="signup-phone"
           inputMode="numeric"
           value={phone}
@@ -288,7 +288,8 @@ function SignupForm() {
           required
         />
         <p className="text-xs text-muted-foreground">
-          O telefone será sua senha de acesso e receberá o código de verificação.
+          O telefone será sua senha de acesso e receberá o código de verificação. Toque no olhinho
+          para conferir.
         </p>
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
@@ -371,7 +372,7 @@ function RecoveryDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="rec-phone">Telefone atual (nova senha)</Label>
-              <Input
+              <PasswordInput
                 id="rec-phone"
                 inputMode="numeric"
                 maxLength={13}
