@@ -252,6 +252,7 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
       setServiceId(null);
       setDay(null);
       setTime(null);
+      goTo(0);
     } catch {
       toast.error("Esse horário pode ter sido ocupado. Escolha outro.");
       await queryClient.invalidateQueries({ queryKey: ["busy", day] });
@@ -260,107 +261,169 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
     }
   }
 
-  return (
-    <div className="space-y-6">
-      <section>
-        <h2 className="font-display text-xl">1. Escolha o serviço</h2>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          {(services.data ?? []).map((s) => {
-            const selected = s.id === serviceId;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => {
-                  setServiceId(s.id);
-                  setTime(null);
-                }}
-                className={`surface-card overflow-hidden text-left transition ${
-                  selected ? "ring-2 ring-ring" : "hover:shadow-lg"
-                }`}
-              >
-                {s.image_url ? (
-                  <img src={s.image_url} alt={s.name} className="h-36 w-full object-cover" loading="lazy" />
-                ) : null}
-                <div className="p-4">
-                  <p className="font-display text-lg">{s.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatPrice(s.price_cents)} · {formatDuration(s.duration_minutes)}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+  const titles = ["Escolha o procedimento", "Escolha a data", "Escolha o horário", "Confirme tudo"];
 
-      {serviceId ? (
-        <section>
-          <h2 className="font-display text-xl">2. Escolha o dia</h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {availableDays.map((d) => (
-              <Button
-                key={d}
-                variant={d === day ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setDay(d);
-                  setTime(null);
-                }}
-              >
-                {d.slice(8)}/{d.slice(5, 7)} · {WEEKDAYS[weekdayOf(d)]?.slice(0, 3)}
-              </Button>
-            ))}
-            {availableDays.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhuma data disponível no momento. Fale com a Janaina pelo WhatsApp.
+  return (
+    <div ref={topRef} className="scroll-mt-24">
+      <div className="flex items-center gap-3">
+        {step > 0 ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Voltar"
+            onClick={() => goTo(step - 1)}
+          >
+            <ArrowLeft size={18} />
+          </Button>
+        ) : (
+          <span className="w-9" />
+        )}
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Passo {step + 1} de 4
+          </p>
+          <h2 className="font-display text-xl">{titles[step]}</h2>
+        </div>
+      </div>
+
+      <div className="mt-3 flex gap-1.5">
+        {titles.map((t, index) => (
+          <span
+            key={t}
+            className={`h-1.5 flex-1 rounded-full ${index <= step ? "bg-primary" : "bg-secondary"}`}
+          />
+        ))}
+      </div>
+
+      <div className="mt-5 overflow-hidden">
+        <div
+          className="flex transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(-${step * 100}%)` }}
+        >
+          {/* 1. serviço */}
+          <section className="w-full shrink-0 px-0.5" aria-hidden={step !== 0}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(services.data ?? []).map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    setServiceId(s.id);
+                    setTime(null);
+                    goTo(1);
+                  }}
+                  className={`surface-card overflow-hidden text-left transition ${
+                    s.id === serviceId ? "ring-2 ring-ring" : "hover:shadow-lg"
+                  }`}
+                >
+                  {s.image_url ? (
+                    <img
+                      src={s.image_url}
+                      alt={s.name}
+                      className="h-36 w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="p-4">
+                    <p className="font-display text-lg">{s.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatPrice(s.price_cents)} · {formatDuration(s.duration_minutes)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* 2. data */}
+          <section className="w-full shrink-0 px-0.5" aria-hidden={step !== 1}>
+            {service ? (
+              <p className="mb-3 text-sm text-muted-foreground">
+                Procedimento: <strong>{service.name}</strong>
               </p>
             ) : null}
-          </div>
-        </section>
-      ) : null}
+            <div className="flex flex-wrap gap-2">
+              {availableDays.map((d) => (
+                <Button
+                  key={d}
+                  variant={d === day ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setDay(d);
+                    setTime(null);
+                    goTo(2);
+                  }}
+                >
+                  {d.slice(8)}/{d.slice(5, 7)} · {WEEKDAYS[weekdayOf(d)]?.slice(0, 3)}
+                </Button>
+              ))}
+              {availableDays.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma data disponível no momento. Fale com a Janaina pelo WhatsApp.
+                </p>
+              ) : null}
+            </div>
+          </section>
 
-      {day ? (
-        <section>
-          <h2 className="font-display text-xl">3. Escolha o horário</h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {dayTimes.map((t) => (
-              <Button
-                key={t}
-                variant={t === time ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTime(t)}
-              >
-                {t}
-              </Button>
-            ))}
-            {dayTimes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Todos os horários deste dia estão ocupados.</p>
+          {/* 3. horário */}
+          <section className="w-full shrink-0 px-0.5" aria-hidden={step !== 2}>
+            {day ? (
+              <p className="mb-3 text-sm capitalize text-muted-foreground">{formatDayLabel(day)}</p>
             ) : null}
-          </div>
-        </section>
-      ) : null}
+            <div className="flex flex-wrap gap-2">
+              {dayTimes.map((t) => (
+                <Button
+                  key={t}
+                  variant={t === time ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setTime(t);
+                    goTo(3);
+                  }}
+                >
+                  {t}
+                </Button>
+              ))}
+              {dayTimes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Todos os horários deste dia estão ocupados.
+                </p>
+              ) : null}
+            </div>
+          </section>
 
-      {service && day && time ? (
-        <section className="surface-card p-5">
-          <h2 className="font-display text-xl">Resumo da pré-reserva</h2>
-          <ul className="mt-3 space-y-1 text-sm">
-            <li>Serviço: {service.name}</li>
-            <li className="capitalize">Data: {formatDayLabel(day)}</li>
-            <li>Horário: {time}</li>
-            <li>
-              Valor: <strong>{formatPrice(price)}</strong>{" "}
-              {eligible ? <Badge className="ml-1">fidelidade -20%</Badge> : null}
-            </li>
-          </ul>
-          <p className="mt-3 text-xs text-muted-foreground">
-            A reserva fica pendente até a Janaina confirmar pelo WhatsApp.
-          </p>
-          <Button className="mt-4 w-full" onClick={() => void confirm()} disabled={saving}>
-            {saving ? "Enviando..." : "Reservar e falar no WhatsApp"}
-          </Button>
-        </section>
-      ) : null}
+          {/* 4. confirmação */}
+          <section className="w-full shrink-0 px-0.5" aria-hidden={step !== 3}>
+            {service && day && time ? (
+              <div className="surface-card p-5">
+                <p className="font-display text-lg">Resumo da pré-reserva</p>
+                <ul className="mt-3 space-y-1 text-sm">
+                  <li>Procedimento: {service.name}</li>
+                  <li className="capitalize">Data: {formatDayLabel(day)}</li>
+                  <li>Horário: {time}</li>
+                  <li>
+                    Valor: <strong>{formatPrice(price)}</strong>{" "}
+                    {eligible ? <Badge className="ml-1">fidelidade -20%</Badge> : null}
+                  </li>
+                </ul>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  A reserva fica pendente até a Janaina confirmar pelo WhatsApp.
+                </p>
+                <Button className="mt-4 w-full" onClick={() => void confirm()} disabled={saving}>
+                  {saving ? "Enviando..." : "Confirmar e falar no WhatsApp"}
+                </Button>
+                <Button variant="ghost" className="mt-2 w-full" onClick={() => goTo(0)}>
+                  Começar de novo
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Volte e escolha procedimento, data e horário.
+              </p>
+            )}
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
