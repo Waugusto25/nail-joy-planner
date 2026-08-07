@@ -354,7 +354,10 @@ function ServicesTab() {
     },
   });
 
-  async function update(id: string, patch: Record<string, unknown>) {
+  async function update(
+    id: string,
+    patch: { price_cents?: number; duration_minutes?: number; active?: boolean },
+  ) {
     const { error } = await supabase.from("services").update(patch).eq("id", id);
     if (error) {
       toast.error("Não foi possível salvar.");
