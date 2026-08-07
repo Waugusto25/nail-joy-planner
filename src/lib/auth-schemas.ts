@@ -17,24 +17,8 @@ export const nameSchema = z
 
 export const identifierSchema = z.string().trim().min(3, "Informe seu nome ou ID de login").max(80);
 
-export const codeSchema = z
-  .string()
-  .trim()
-  .regex(/^\d{4}$/, "O código tem 4 dígitos");
-
-export const startSignupInput = z.object({ fullName: nameSchema, phone: phoneSchema });
-export const finishSignupInput = z.object({
-  fullName: nameSchema,
-  phone: phoneSchema,
-  code: codeSchema,
-});
+export const phoneAccessInput = z.object({ fullName: nameSchema, phone: phoneSchema });
 export const resolveLoginInput = z.object({ identifier: identifierSchema });
-export const startRecoveryInput = z.object({ identifier: identifierSchema });
-export const finishRecoveryInput = z.object({
-  identifier: identifierSchema,
-  code: codeSchema,
-  phone: phoneSchema,
-});
 export const adminUpdateClientInput = z.object({
   clientId: z.string().uuid(),
   phone: phoneSchema,
