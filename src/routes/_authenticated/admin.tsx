@@ -13,7 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
-import { adminUpdateClientFn } from "@/lib/auth.functions";
+import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
+import { SERVICE_IMAGE_BUCKET, StorageImage } from "@/components/app/storage-image";
 import {
   APPOINTMENT_STATUS,
   WEEKDAYS,
@@ -131,7 +132,8 @@ function AgendaTab() {
   }
 
   const rows = appointments.data ?? [];
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhum agendamento.</p>;
+  if (rows.length === 0)
+    return <p className="text-sm text-muted-foreground">Nenhum agendamento.</p>;
 
   return (
     <div className="space-y-3">
@@ -265,10 +267,7 @@ function ClientsTab() {
   const clients = useQuery({
     queryKey: ["admin-clients"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("full_name");
+      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
       if (error) throw error;
       return data;
     },
@@ -284,6 +283,23 @@ function ClientsTab() {
       await queryClient.invalidateQueries();
     } catch {
       toast.error("Não foi possível atualizar.");
+    }
+  }
+
+  async function removeClient(clientId: string, name: string) {
+    if (
+      !window.confirm(
+        `Excluir a cliente ${name}? A conta e todos os agendamentos dela serão apagados.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await adminDeleteClientFn({ data: { clientId } });
+      toast.success("Cliente excluída.");
+      await queryClient.invalidateQueries();
+    } catch {
+      toast.error("Não foi possível excluir a cliente.");
     }
   }
 
@@ -325,6 +341,13 @@ function ClientsTab() {
               >
                 Editar telefone
               </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => void removeClient(c.id, c.full_name)}
+              >
+                Excluir
+              </Button>
             </div>
           </div>
           {editing === c.id ? (
@@ -350,6 +373,12 @@ function ClientsTab() {
 
 function ServicesTab() {
   const queryClient = useQueryClient();
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newPrice, setNewPrice] = useState("");
+  const [newDuration, setNewDuration] = useState("60");
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const [creating, setCreating] = useState(false);
   const services = useQuery({
     queryKey: ["admin-services"],
     queryFn: async () => {
@@ -361,7 +390,12 @@ function ServicesTab() {
 
   async function update(
     id: string,
-    patch: { price_cents?: number; duration_minutes?: number; active?: boolean },
+    patch: {
+      price_cents?: number;
+      duration_minutes?: number;
+      active?: boolean;
+      image_url?: string;
+    },
   ) {
     const { error } = await supabase.from("services").update(patch).eq("id", id);
     if (error) {
@@ -371,13 +405,148 @@ function ServicesTab() {
     await queryClient.invalidateQueries();
   }
 
+  async function uploadImage(file: File) {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+    const path = `servicos/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from(SERVICE_IMAGE_BUCKET)
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (error) throw error;
+    return path;
+  }
+
+  async function changeImage(id: string, file: File) {
+    setUploading(id);
+    try {
+      const path = await uploadImage(file);
+      await update(id, { image_url: path });
+      toast.success("Foto atualizada.");
+    } catch {
+      toast.error("Não foi possível enviar a foto.");
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  async function createService() {
+    const price = Math.round(Number(newPrice.replace(",", ".")) * 100);
+    const duration = Number(newDuration);
+    if (newName.trim().length < 3 || !price || !duration) {
+      toast.error("Informe nome, preço e duração.");
+      return;
+    }
+    setCreating(true);
+    try {
+      const image_url = newFile ? await uploadImage(newFile) : null;
+      const { error } = await supabase.from("services").insert({
+        name: newName.trim(),
+        price_cents: price,
+        duration_minutes: duration,
+        image_url,
+        loyalty_eligible: false,
+        sort_order: 99,
+      });
+      if (error) throw error;
+      toast.success("Procedimento avulso criado (não conta fidelidade).");
+      setNewName("");
+      setNewPrice("");
+      setNewDuration("60");
+      setNewFile(null);
+      await queryClient.invalidateQueries();
+    } catch {
+      toast.error("Não foi possível criar o procedimento.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function removeService(id: string, name: string) {
+    if (!window.confirm(`Excluir o procedimento avulso ${name}?`)) return;
+    const { error } = await supabase.from("services").delete().eq("id", id);
+    if (error) {
+      toast.error("Não foi possível excluir (pode ter agendamentos).");
+      return;
+    }
+    await queryClient.invalidateQueries();
+  }
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
+      <section className="surface-card space-y-3 p-5">
+        <p className="font-display text-lg">Novo procedimento avulso</p>
+        <p className="text-sm text-muted-foreground">
+          Procedimentos avulsos não somam pontos nem aparecem no cartão de fidelidade.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="new-service-name">Nome</Label>
+            <Input
+              id="new-service-name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              maxLength={60}
+              placeholder="Blindagem de unhas"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="new-service-price">Preço (R$)</Label>
+            <Input
+              id="new-service-price"
+              className="w-28"
+              value={newPrice}
+              onChange={(e) => setNewPrice(e.target.value)}
+              placeholder="60,00"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="new-service-duration">Duração (min)</Label>
+            <Input
+              id="new-service-duration"
+              className="w-24"
+              inputMode="numeric"
+              value={newDuration}
+              onChange={(e) => setNewDuration(onlyDigits(e.target.value))}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="new-service-image">Foto</Label>
+            <Input
+              id="new-service-image"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setNewFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
+          <Button onClick={() => void createService()} disabled={creating}>
+            {creating ? "Salvando..." : "Criar procedimento"}
+          </Button>
+        </div>
+      </section>
+
       {(services.data ?? []).map((s) => (
         <article key={s.id} className="surface-card flex flex-wrap items-end gap-4 p-4">
-          {s.image_url ? (
-            <img src={s.image_url} alt={s.name} className="h-20 w-20 rounded-xl object-cover" />
-          ) : null}
+          <div className="space-y-2">
+            <StorageImage
+              url={s.image_url}
+              alt={s.name}
+              className="h-20 w-20 rounded-xl object-cover"
+            />
+            <div className="space-y-1">
+              <Label htmlFor={`img-${s.id}`} className="text-xs">
+                {uploading === s.id ? "Enviando foto..." : "Trocar foto"}
+              </Label>
+              <Input
+                id={`img-${s.id}`}
+                type="file"
+                accept="image/*"
+                className="w-52"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void changeImage(s.id, file);
+                }}
+              />
+            </div>
+          </div>
           <div className="space-y-1">
             <Label htmlFor={`price-${s.id}`}>{s.name} — preço (R$)</Label>
             <Input
@@ -385,7 +554,8 @@ function ServicesTab() {
               defaultValue={(s.price_cents / 100).toFixed(2)}
               onBlur={(e) =>
                 void update(s.id, {
-                  price_cents: Math.round(Number(e.target.value.replace(",", ".")) * 100) || s.price_cents,
+                  price_cents:
+                    Math.round(Number(e.target.value.replace(",", ".")) * 100) || s.price_cents,
                 })
               }
               className="w-32"
@@ -397,7 +567,9 @@ function ServicesTab() {
               id={`dur-${s.id}`}
               defaultValue={s.duration_minutes}
               onBlur={(e) =>
-                void update(s.id, { duration_minutes: Number(e.target.value) || s.duration_minutes })
+                void update(s.id, {
+                  duration_minutes: Number(e.target.value) || s.duration_minutes,
+                })
               }
               className="w-24"
             />
@@ -410,6 +582,16 @@ function ServicesTab() {
             />
             <Label htmlFor={`active-${s.id}`}>Ativo</Label>
           </div>
+          <div className="flex items-center gap-3">
+            <Badge variant={s.loyalty_eligible ? "secondary" : "outline"}>
+              {s.loyalty_eligible ? "Fidelidade" : "Avulso"}
+            </Badge>
+            {!s.loyalty_eligible ? (
+              <Button variant="ghost" size="sm" onClick={() => void removeService(s.id, s.name)}>
+                Excluir
+              </Button>
+            ) : null}
+          </div>
         </article>
       ))}
     </div>
@@ -420,6 +602,10 @@ function SlotsTab() {
   const queryClient = useQueryClient();
   const [weekday, setWeekday] = useState(1);
   const [time, setTime] = useState("09:00");
+  const [breakWeekday, setBreakWeekday] = useState(1);
+  const [breakStart, setBreakStart] = useState("12:00");
+  const [breakEnd, setBreakEnd] = useState("13:00");
+  const [breakLabel, setBreakLabel] = useState("Almoço");
   const slots = useQuery({
     queryKey: ["admin-slots"],
     queryFn: async () => {
@@ -432,6 +618,43 @@ function SlotsTab() {
       return data;
     },
   });
+
+  const breaks = useQuery({
+    queryKey: ["admin-breaks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("schedule_breaks")
+        .select("*")
+        .order("weekday")
+        .order("start_time");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  async function addBreak() {
+    if (breakEnd <= breakStart) {
+      toast.error("O fim do intervalo deve ser depois do início.");
+      return;
+    }
+    const { error } = await supabase.from("schedule_breaks").insert({
+      weekday: breakWeekday,
+      start_time: `${breakStart}:00`,
+      end_time: `${breakEnd}:00`,
+      label: breakLabel.trim() || null,
+    });
+    if (error) {
+      toast.error("Não foi possível salvar o intervalo.");
+      return;
+    }
+    toast.success("Intervalo salvo.");
+    await queryClient.invalidateQueries();
+  }
+
+  async function removeBreak(id: string) {
+    await supabase.from("schedule_breaks").delete().eq("id", id);
+    await queryClient.invalidateQueries();
+  }
 
   async function add() {
     const { error } = await supabase
@@ -469,9 +692,84 @@ function SlotsTab() {
         </div>
         <div className="space-y-1">
           <Label htmlFor="slot-time">Horário</Label>
-          <Input id="slot-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          <Input
+            id="slot-time"
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
         </div>
         <Button onClick={() => void add()}>Adicionar horário</Button>
+      </section>
+
+      <section className="surface-card space-y-3 p-5">
+        <p className="font-display text-lg">Intervalos (almoço / café)</p>
+        <p className="text-sm text-muted-foreground">
+          Horários dentro do intervalo não aparecem para a cliente, e procedimentos que invadiriam a
+          pausa também são bloqueados.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="break-weekday">Dia da semana</Label>
+            <select
+              id="break-weekday"
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              value={breakWeekday}
+              onChange={(e) => setBreakWeekday(Number(e.target.value))}
+            >
+              {WEEKDAYS.map((label, index) => (
+                <option key={label} value={index}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="break-start">Início</Label>
+            <Input
+              id="break-start"
+              type="time"
+              value={breakStart}
+              onChange={(e) => setBreakStart(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="break-end">Fim</Label>
+            <Input
+              id="break-end"
+              type="time"
+              value={breakEnd}
+              onChange={(e) => setBreakEnd(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="break-label">Nome</Label>
+            <Input
+              id="break-label"
+              value={breakLabel}
+              maxLength={40}
+              onChange={(e) => setBreakLabel(e.target.value)}
+            />
+          </div>
+          <Button onClick={() => void addBreak()}>Adicionar intervalo</Button>
+        </div>
+        {(breaks.data ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum intervalo cadastrado.</p>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {(breaks.data ?? []).map((b) => (
+              <li key={b.id} className="flex items-center justify-between">
+                <span>
+                  {WEEKDAYS[b.weekday]} · {shortTime(b.start_time)} às {shortTime(b.end_time)}
+                  {b.label ? ` · ${b.label}` : ""}
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => void removeBreak(b.id)}>
+                  Remover
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

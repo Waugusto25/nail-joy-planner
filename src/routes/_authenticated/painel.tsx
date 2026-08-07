@@ -17,12 +17,17 @@ import {
   APPOINTMENT_STATUS,
   LOYALTY_DISCOUNT,
   WEEKDAYS,
+  addMinutes,
   formatDayLabel,
   formatDuration,
   formatPrice,
+  formatTimeRange,
+  overlaps,
   shortTime,
+  timeToMinutes,
   whatsappLink,
 } from "@/lib/salon";
+import { StorageImage } from "@/components/app/storage-image";
 
 const WELCOME_IMAGE = "/__l5e/assets-v1/5a73338f-8d2f-459f-8bb6-0dc055ee5917/boas-vindas.png";
 
@@ -121,7 +126,11 @@ function ClientPanel() {
 
       <Dialog open={welcomeOpen} onOpenChange={(open) => (open ? null : void closeWelcome())}>
         <DialogContent className="max-w-md overflow-hidden p-0">
-          <img src={WELCOME_IMAGE} alt="Bem-vinda à Jannah Nails, por Janaina Silva" className="w-full" />
+          <img
+            src={WELCOME_IMAGE}
+            alt="Bem-vinda à Jannah Nails, por Janaina Silva"
+            className="w-full"
+          />
           <div className="p-4">
             <Button className="w-full" onClick={() => void closeWelcome()}>
               Começar
@@ -148,7 +157,13 @@ function useServices() {
   });
 }
 
-function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; clientName: string }) {
+function BookingFlow({
+  clientId,
+  clientName,
+}: {
+  clientId?: string | undefined;
+  clientName: string;
+}) {
   const queryClient = useQueryClient();
   const services = useServices();
   const [serviceId, setServiceId] = useState<string | null>(null);
@@ -185,6 +200,19 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
     },
   });
 
+  const breaks = useQuery({
+    queryKey: ["breaks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("schedule_breaks")
+        .select("*")
+        .eq("active", true)
+        .order("start_time");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const busy = useQuery({
     queryKey: ["busy", day],
     enabled: Boolean(day),
@@ -212,25 +240,46 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
     );
   }, [slots.data, blocked.data]);
 
-  const dayTimes = useMemo(() => {
-    if (!day) return [];
-    const busySet = new Set(busy.data ?? []);
-    return (slots.data ?? [])
-      .filter((s) => s.weekday === weekdayOf(day))
-      .map((s) => shortTime(s.start_time))
-      .filter((t) => !busySet.has(t));
-  }, [day, slots.data, busy.data]);
-
   const service = (services.data ?? []).find((s) => s.id === serviceId);
+
+  const dayTimes = useMemo(() => {
+    if (!day || !service) return [];
+    const weekday = weekdayOf(day);
+    const duration = service.duration_minutes;
+    const busyRanges = (busy.data ?? []).map((b) => ({
+      start: timeToMinutes(b.start),
+      end: timeToMinutes(b.start) + b.duration,
+    }));
+    const breakRanges = (breaks.data ?? [])
+      .filter((b) => b.weekday === weekday)
+      .map((b) => ({ start: timeToMinutes(b.start_time), end: timeToMinutes(b.end_time) }));
+
+    return (slots.data ?? [])
+      .filter((s) => s.weekday === weekday)
+      .map((s) => shortTime(s.start_time))
+      .filter((t) => {
+        const start = timeToMinutes(t);
+        const end = start + duration;
+        if (end > 24 * 60) return false;
+        if (busyRanges.some((r) => overlaps(start, end, r.start, r.end))) return false;
+        // Bloqueia se o atendimento cair dentro do intervalo ou o invadir.
+        if (breakRanges.some((r) => overlaps(start, end, r.start, r.end))) return false;
+        return true;
+      })
+      .sort();
+  }, [day, service, slots.data, busy.data, breaks.data]);
+
   const completedForService = (history.data ?? []).filter(
     (a) => a.service_id === serviceId && a.status === "concluido",
   ).length;
-  const eligible = completedForService > 0 && completedForService % 6 === 5;
+  const loyaltyService = service?.loyalty_eligible ?? false;
+  const eligible = loyaltyService && completedForService > 0 && completedForService % 6 === 5;
   const price = service
     ? eligible
       ? Math.round(service.price_cents * (1 - LOYALTY_DISCOUNT))
       : service.price_cents
     : 0;
+  const endTime = service && time ? addMinutes(time, service.duration_minutes) : null;
 
   async function confirm() {
     if (!clientId || !service || !day || !time) return;
@@ -246,7 +295,7 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
       });
       if (error) throw error;
       await queryClient.invalidateQueries();
-      const text = `Olá, Janaina! Sou ${clientName} e fiz uma pré-reserva pelo app.%0A%0AServiço: ${service.name}%0AData: ${formatDayLabel(day)}%0AHorário: ${time}%0AValor: ${formatPrice(price)}${eligible ? " (com 20% de fidelidade)" : ""}%0A%0APode confirmar para mim?`;
+      const text = `Olá, Janaina! Sou ${clientName} e fiz uma pré-reserva pelo app.%0A%0AServiço: ${service.name}%0AData: ${formatDayLabel(day)}%0AInício: ${time}%0ATérmino previsto: ${addMinutes(time, service.duration_minutes)}%0ADuração: ${formatDuration(service.duration_minutes)}%0AValor: ${formatPrice(price)}${eligible ? " (com 20% de fidelidade)" : ""}%0A%0APode confirmar para mim?`;
       window.open(whatsappLink(decodeURIComponent(text)), "_blank", "noopener");
       toast.success("Pré-reserva criada! Confirme pelo WhatsApp.");
       setServiceId(null);
@@ -267,12 +316,7 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
     <div ref={topRef} className="scroll-mt-24">
       <div className="flex items-center gap-3">
         {step > 0 ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Voltar"
-            onClick={() => goTo(step - 1)}
-          >
+          <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => goTo(step - 1)}>
             <ArrowLeft size={18} />
           </Button>
         ) : (
@@ -316,19 +360,21 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
                     s.id === serviceId ? "ring-2 ring-ring" : "hover:shadow-lg"
                   }`}
                 >
-                  {s.image_url ? (
-                    <img
-                      src={s.image_url}
-                      alt={s.name}
-                      className="h-36 w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : null}
+                  <StorageImage
+                    url={s.image_url}
+                    alt={s.name}
+                    className="h-36 w-full object-cover"
+                  />
                   <div className="p-4">
                     <p className="font-display text-lg">{s.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {formatPrice(s.price_cents)} · {formatDuration(s.duration_minutes)}
                     </p>
+                    {!s.loyalty_eligible ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Avulso · não conta no cartão de fidelidade
+                      </p>
+                    ) : null}
                   </div>
                 </button>
               ))}
@@ -370,6 +416,12 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
             {day ? (
               <p className="mb-3 text-sm capitalize text-muted-foreground">{formatDayLabel(day)}</p>
             ) : null}
+            {service ? (
+              <p className="mb-3 text-sm text-muted-foreground">
+                Duração do procedimento: {formatDuration(service.duration_minutes)} — mostramos só
+                os horários que cabem na agenda.
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               {dayTimes.map((t) => (
                 <Button
@@ -381,12 +433,12 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
                     goTo(3);
                   }}
                 >
-                  {t}
+                  {t} – {service ? addMinutes(t, service.duration_minutes) : ""}
                 </Button>
               ))}
               {dayTimes.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Todos os horários deste dia estão ocupados.
+                  Nenhum horário livre neste dia para este procedimento.
                 </p>
               ) : null}
             </div>
@@ -400,7 +452,8 @@ function BookingFlow({ clientId, clientName }: { clientId?: string | undefined; 
                 <ul className="mt-3 space-y-1 text-sm">
                   <li>Procedimento: {service.name}</li>
                   <li className="capitalize">Data: {formatDayLabel(day)}</li>
-                  <li>Horário: {time}</li>
+                  <li>Horário: {formatTimeRange(time, service.duration_minutes)}</li>
+                  {endTime ? <li>Término previsto: {endTime}</li> : null}
                   <li>
                     Valor: <strong>{formatPrice(price)}</strong>{" "}
                     {eligible ? <Badge className="ml-1">fidelidade -20%</Badge> : null}
@@ -445,7 +498,10 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   });
 
   async function cancel(id: string) {
-    const { error } = await supabase.from("appointments").update({ status: "cancelado" }).eq("id", id);
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status: "cancelado" })
+      .eq("id", id);
     if (error) {
       toast.error("Não foi possível cancelar.");
       return;
@@ -508,35 +564,37 @@ function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {(services.data ?? []).map((s) => {
-        const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
-        const inCycle = count % 6;
-        const eligible = count > 0 && inCycle === 5;
-        return (
-          <article key={s.id} className="surface-card p-5">
-            <p className="font-display text-lg">{s.name}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
-            </p>
-            <div className="mt-3 flex gap-1.5">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <span
-                  key={index}
-                  className={`h-6 flex-1 rounded-full ${
-                    index < inCycle ? "bg-primary" : "bg-secondary"
-                  } ${index === 5 ? "border-2 border-gold" : ""}`}
-                />
-              ))}
-            </div>
-            <Progress className="mt-3" value={(inCycle / 6) * 100} />
-            <p className="mt-3 text-sm">
-              {eligible
-                ? "🎉 Seu próximo atendimento tem 20% de desconto!"
-                : `Faltam ${5 - inCycle} para ganhar 20% no 6º atendimento.`}
-            </p>
-          </article>
-        );
-      })}
+      {(services.data ?? [])
+        .filter((s) => s.loyalty_eligible)
+        .map((s) => {
+          const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
+          const inCycle = count % 6;
+          const eligible = count > 0 && inCycle === 5;
+          return (
+            <article key={s.id} className="surface-card p-5">
+              <p className="font-display text-lg">{s.name}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
+              </p>
+              <div className="mt-3 flex gap-1.5">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <span
+                    key={index}
+                    className={`h-6 flex-1 rounded-full ${
+                      index < inCycle ? "bg-primary" : "bg-secondary"
+                    } ${index === 5 ? "border-2 border-gold" : ""}`}
+                  />
+                ))}
+              </div>
+              <Progress className="mt-3" value={(inCycle / 6) * 100} />
+              <p className="mt-3 text-sm">
+                {eligible
+                  ? "🎉 Seu próximo atendimento tem 20% de desconto!"
+                  : `Faltam ${5 - inCycle} para ganhar 20% no 6º atendimento.`}
+              </p>
+            </article>
+          );
+        })}
     </div>
   );
 }
@@ -557,7 +615,9 @@ function Store({ clientName }: { clientName: string }) {
 
   const rows = products.data ?? [];
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">A loja está sendo abastecida. Volte logo!</p>;
+    return (
+      <p className="text-sm text-muted-foreground">A loja está sendo abastecida. Volte logo!</p>
+    );
   }
 
   return (
@@ -565,7 +625,12 @@ function Store({ clientName }: { clientName: string }) {
       {rows.map((p) => (
         <article key={p.id} className="surface-card overflow-hidden">
           {p.image_url ? (
-            <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" loading="lazy" />
+            <img
+              src={p.image_url}
+              alt={p.name}
+              className="h-40 w-full object-cover"
+              loading="lazy"
+            />
           ) : null}
           <div className="space-y-2 p-4">
             <Badge variant="secondary">{p.category}</Badge>
@@ -626,7 +691,12 @@ function Catalogs() {
           className="surface-card block overflow-hidden transition hover:shadow-lg"
         >
           {c.image_url ? (
-            <img src={c.image_url} alt={c.title} className="h-40 w-full object-cover" loading="lazy" />
+            <img
+              src={c.image_url}
+              alt={c.title}
+              className="h-40 w-full object-cover"
+              loading="lazy"
+            />
           ) : null}
           <div className="p-4">
             <p className="font-display text-lg">{c.title}</p>

@@ -72,6 +72,31 @@ export function shortTime(time: string) {
   return time.slice(0, 5);
 }
 
+/** "08:30" | "08:30:00" -> minutes since midnight */
+export function timeToMinutes(time: string) {
+  const [h, m] = time.slice(0, 5).split(":").map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
+/** minutes since midnight -> "08:30" (fully dynamic, supports any duration) */
+export function minutesToTime(minutes: number) {
+  const total = ((Math.round(minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+export function addMinutes(time: string, minutes: number) {
+  return minutesToTime(timeToMinutes(time) + minutes);
+}
+
+/** "08:30 às 09:45 (1h15)" */
+export function formatTimeRange(start: string, durationMinutes: number) {
+  return `${shortTime(start)} às ${addMinutes(start, durationMinutes)} (${formatDuration(durationMinutes)})`;
+}
+
+export function overlaps(startA: number, endA: number, startB: number, endB: number) {
+  return startA < endB && startB < endA;
+}
+
 export function whatsappLink(message: string) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }

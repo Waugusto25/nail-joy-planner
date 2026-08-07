@@ -108,3 +108,22 @@ export async function adminUpdateClientAccess(clientId: string, phone: string) {
   if (profileError) throw new Error("Não foi possível atualizar o telefone.");
   return { ok: true, domain: AUTH_EMAIL_DOMAIN };
 }
+
+/** Removes a client completely: appointments, profile, role and auth account. */
+export async function adminDeleteClient(clientId: string) {
+  const db = admin();
+  const { data: roles } = await db
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", clientId)
+    .eq("role", "admin");
+  if ((roles ?? []).length > 0)
+    throw new Error("Não é possível excluir a conta da administradora.");
+
+  await db.from("appointments").delete().eq("client_id", clientId);
+  await db.from("user_roles").delete().eq("user_id", clientId);
+  await db.from("profiles").delete().eq("id", clientId);
+  const { error } = await db.auth.admin.deleteUser(clientId);
+  if (error) throw new Error("Não foi possível excluir a conta da cliente.");
+  return { ok: true };
+}
