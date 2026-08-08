@@ -19,6 +19,7 @@ export type Database = {
           benefit_expiry_days: number
           id: boolean
           loyalty_enabled: boolean
+          max_advance_months: number
           referral_enabled: boolean
           updated_at: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           benefit_expiry_days?: number
           id?: boolean
           loyalty_enabled?: boolean
+          max_advance_months?: number
           referral_enabled?: boolean
           updated_at?: string
         }
@@ -33,6 +35,7 @@ export type Database = {
           benefit_expiry_days?: number
           id?: boolean
           loyalty_enabled?: boolean
+          max_advance_months?: number
           referral_enabled?: boolean
           updated_at?: string
         }
@@ -375,6 +378,30 @@ export type Database = {
           label?: string | null
           start_time?: string
           weekday?: number
+        }
+        Relationships: []
+      }
+      schedule_months: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          message: string | null
+          month: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          message?: string | null
+          month: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          message?: string | null
+          month?: string
         }
         Relationships: []
       }

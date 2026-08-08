@@ -23,6 +23,7 @@ import {
 } from "@/lib/calendar.functions";
 import { clearCancelledForAdminFn, hideCancelledForAdminFn } from "@/lib/cancel.functions";
 import { ManualAppointmentDialog } from "@/components/app/manual-appointment-dialog";
+import { MonthsManager } from "@/components/app/months-manager";
 import { FinanceTab } from "@/components/app/finance-tab";
 import { StoreOrdersTab } from "@/components/app/store-orders-tab";
 
@@ -967,6 +968,7 @@ function SlotsTab() {
 
   return (
     <div className="space-y-5">
+      <MonthsManager />
       <section className="surface-card flex flex-wrap items-end gap-3 p-5">
         <div className="space-y-1">
           <Label htmlFor="slot-weekday">Dia da semana</Label>

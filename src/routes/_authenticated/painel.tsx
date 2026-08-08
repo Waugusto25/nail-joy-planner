@@ -14,6 +14,15 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { useAppSettings } from "@/hooks/useSettings";
+import { useScheduleMonths } from "@/hooks/useScheduleMonths";
+import {
+  currentMonthKey,
+  daysUntilEndOfMonth,
+  monthKeyOf,
+  monthKeysFrom,
+  monthLabel,
+  monthShortLabel,
+} from "@/lib/months";
 import { busyTimesFn } from "@/lib/booking.functions";
 import { clientCancelAppointmentFn, hideCancelledForClientFn } from "@/lib/cancel.functions";
 import { consumeReferralFn } from "@/lib/loyalty.functions";
@@ -64,18 +73,6 @@ export const Route = createFileRoute("/_authenticated/painel")({
 });
 
 const todayISO = localTodayISO;
-
-function nextDays(count: number) {
-  const list: string[] = [];
-  const base = new Date();
-  for (let i = 0; i < count; i++) {
-    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i);
-    list.push(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-    );
-  }
-  return list;
-}
 
 function weekdayOf(day: string) {
   const [y, m, d] = day.split("-").map(Number);
@@ -207,6 +204,9 @@ function BookingFlow({
   const loyaltyEnabled = settings.data?.loyalty_enabled ?? true;
   const referralEnabled = settings.data?.referral_enabled ?? true;
   const expiryDays = settings.data?.benefit_expiry_days ?? 90;
+  const maxAdvanceMonths = settings.data?.max_advance_months ?? 2;
+  const scheduleMonths = useScheduleMonths();
+  const [monthKey, setMonthKey] = useState(() => currentMonthKey());
 
   function goTo(next: number) {
     setStep(next);
@@ -290,13 +290,33 @@ function BookingFlow({
     },
   });
 
+  // Meses visíveis: mês atual + antecedência máxima definida pela administradora.
+  const monthOptions = useMemo(() => {
+    const rows = new Map((scheduleMonths.data ?? []).map((m) => [m.month, m]));
+    return monthKeysFrom(maxAdvanceMonths + 1).map((key) => {
+      const row = rows.get(key);
+      return {
+        key,
+        active: row?.active ?? true,
+        message: row?.message ?? null,
+      };
+    });
+  }, [scheduleMonths.data, maxAdvanceMonths]);
+
+  const selectedMonth = useMemo(
+    () => monthOptions.find((m) => m.key === monthKey) ?? monthOptions[0],
+    [monthOptions, monthKey],
+  );
+
   const availableDays = useMemo(() => {
+    if (!selectedMonth || !selectedMonth.active) return [];
     const weekdaysWithSlots = new Set((slots.data ?? []).map((s) => s.weekday));
     const blockedSet = new Set(blocked.data ?? []);
-    return nextDays(35).filter(
+    const from = nowTick.day > `${selectedMonth.key}-01` ? nowTick.day : `${selectedMonth.key}-01`;
+    return daysUntilEndOfMonth(from, selectedMonth.key).filter(
       (d) => weekdaysWithSlots.has(weekdayOf(d)) && !blockedSet.has(d) && d >= nowTick.day,
     );
-  }, [slots.data, blocked.data, nowTick.day]);
+  }, [slots.data, blocked.data, nowTick.day, selectedMonth]);
 
   const service = (services.data ?? []).find((s) => s.id === serviceId);
 
@@ -369,9 +389,7 @@ function BookingFlow({
 
   const activeBenefit = benefitOptions.find((o) => o.value === benefit) ?? benefitOptions[0]!;
   const eligible = activeBenefit.percent > 0;
-  const price = service
-    ? Math.round(service.price_cents * (1 - activeBenefit.percent / 100))
-    : 0;
+  const price = service ? Math.round(service.price_cents * (1 - activeBenefit.percent / 100)) : 0;
   const endTime = service && time ? addMinutes(time, service.duration_minutes) : null;
 
   async function confirm() {
@@ -499,27 +517,59 @@ function BookingFlow({
                 Procedimento: <strong>{service.name}</strong>
               </p>
             ) : null}
-            <div className="flex flex-wrap gap-2">
-              {availableDays.map((d) => (
+            <div className="-mx-0.5 mb-3 flex gap-2 overflow-x-auto px-0.5 pb-1">
+              {monthOptions.map((m) => (
                 <Button
-                  key={d}
-                  variant={d === day ? "default" : "outline"}
+                  key={m.key}
                   size="sm"
+                  variant={m.key === selectedMonth?.key ? "default" : "outline"}
+                  className={`shrink-0 ${m.active ? "" : "opacity-50"}`}
                   onClick={() => {
-                    setDay(d);
-                    setTime(null);
-                    goTo(2);
+                    setMonthKey(m.key);
+                    if (day && monthKeyOf(day) !== m.key) {
+                      setDay(null);
+                      setTime(null);
+                    }
                   }}
                 >
-                  {d.slice(8)}/{d.slice(5, 7)} · {WEEKDAYS[weekdayOf(d)]?.slice(0, 3)}
+                  {monthShortLabel(m.key)}
                 </Button>
               ))}
-              {availableDays.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma data disponível no momento. Fale com a Janaina pelo WhatsApp.
-                </p>
-              ) : null}
             </div>
+            {selectedMonth && !selectedMonth.active ? (
+              <div className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm">
+                <p className="font-medium">
+                  Agendamentos para {monthLabel(selectedMonth.key)} ainda não estão abertos
+                </p>
+                {selectedMonth.message ? (
+                  <p className="mt-1 text-muted-foreground">{selectedMonth.message}</p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {availableDays.map((d) => (
+                  <Button
+                    key={d}
+                    variant={d === day ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setDay(d);
+                      setTime(null);
+                      goTo(2);
+                    }}
+                  >
+                    {d.slice(8)}/{d.slice(5, 7)} · {WEEKDAYS[weekdayOf(d)]?.slice(0, 3)}
+                  </Button>
+                ))}
+                {availableDays.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma data disponível em{" "}
+                    {selectedMonth ? monthLabel(selectedMonth.key) : "esse mês"}. Escolha outro mês
+                    ou fale com a Janaina pelo WhatsApp.
+                  </p>
+                ) : null}
+              </div>
+            )}
           </section>
 
           {/* 3. horário */}
@@ -734,39 +784,39 @@ function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         {(services.data ?? [])
-        .filter((s) => s.loyalty_eligible)
-        .map((s) => {
-          const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
-          const inCycle = count % LOYALTY_CYCLE;
-          const eligible = count > 0 && inCycle === 0;
-          return (
-            <article key={s.id} className="surface-card p-5">
-              <p className="font-display text-lg">{s.name}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
-              </p>
-              <div className="mt-3 flex gap-1.5">
-                {Array.from({ length: LOYALTY_CYCLE }).map((_, index) => (
-                  <span
-                    key={index}
-                    className={`h-6 flex-1 rounded-full ${
-                      eligible || index < inCycle ? "bg-primary" : "bg-secondary"
-                    } ${index === LOYALTY_CYCLE - 1 ? "border-2 border-gold" : ""}`}
-                  />
-                ))}
-              </div>
-              <Progress
-                className="mt-3"
-                value={eligible ? 100 : (inCycle / LOYALTY_CYCLE) * 100}
-              />
-              <p className="mt-3 text-sm">
-                {eligible
-                  ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
-                  : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
-              </p>
-            </article>
-          );
-        })}
+          .filter((s) => s.loyalty_eligible)
+          .map((s) => {
+            const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
+            const inCycle = count % LOYALTY_CYCLE;
+            const eligible = count > 0 && inCycle === 0;
+            return (
+              <article key={s.id} className="surface-card p-5">
+                <p className="font-display text-lg">{s.name}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
+                </p>
+                <div className="mt-3 flex gap-1.5">
+                  {Array.from({ length: LOYALTY_CYCLE }).map((_, index) => (
+                    <span
+                      key={index}
+                      className={`h-6 flex-1 rounded-full ${
+                        eligible || index < inCycle ? "bg-primary" : "bg-secondary"
+                      } ${index === LOYALTY_CYCLE - 1 ? "border-2 border-gold" : ""}`}
+                    />
+                  ))}
+                </div>
+                <Progress
+                  className="mt-3"
+                  value={eligible ? 100 : (inCycle / LOYALTY_CYCLE) * 100}
+                />
+                <p className="mt-3 text-sm">
+                  {eligible
+                    ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
+                    : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
+                </p>
+              </article>
+            );
+          })}
       </div>
     </div>
   );
@@ -817,8 +867,8 @@ function MyBenefits({ clientId }: { clientId?: string | undefined }) {
         <article className="surface-card p-5">
           <p className="font-display text-lg">Indique e ganhe</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sua amiga informa o seu telefone <strong>{profile.data?.phone ?? ""}</strong> no primeiro
-            acesso. Quando ela concluir o primeiro atendimento, você ganha{" "}
+            Sua amiga informa o seu telefone <strong>{profile.data?.phone ?? ""}</strong> no
+            primeiro acesso. Quando ela concluir o primeiro atendimento, você ganha{" "}
             {Math.round(REFERRAL_DISCOUNT * 100)}% de desconto.
           </p>
           <div className="mt-4 space-y-2">
@@ -840,7 +890,11 @@ function MyBenefits({ clientId }: { clientId?: string | undefined }) {
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/60 px-4 py-3 text-sm"
                 >
                   <span>Amiga indicada</span>
-                  <Badge variant={r.used_at || expired || r.status === "pendente" ? "secondary" : "default"}>
+                  <Badge
+                    variant={
+                      r.used_at || expired || r.status === "pendente" ? "secondary" : "default"
+                    }
+                  >
                     {label}
                   </Badge>
                 </div>
