@@ -627,19 +627,38 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   });
 
   async function cancel(id: string) {
-    const { error } = await supabase
-      .from("appointments")
-      .update({ status: "cancelado" })
-      .eq("id", id);
-    if (error) {
-      toast.error("Não foi possível cancelar.");
-      return;
+    if (!window.confirm("Deseja realmente cancelar este agendamento?")) return;
+    try {
+      const result = await clientCancelAppointmentFn({ data: { appointmentId: id } });
+      await queryClient.invalidateQueries();
+      toast.success(clientCancelConfirmation(result.day, result.start), { duration: 9000 });
+      if (result.adminAlert) {
+        const link = whatsappLink(result.adminAlert.message);
+        window.open(link, "_blank", "noopener");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível cancelar.");
     }
-    toast.success("Agendamento cancelado.");
-    await queryClient.invalidateQueries();
   }
 
-  const rows = appointments.data ?? [];
+  async function hideHistory(id: string) {
+    if (!window.confirm("Deseja remover este histórico?")) return;
+    try {
+      await hideCancelledForClientFn({ data: { appointmentId: id } });
+      await queryClient.invalidateQueries();
+      toast.success("Histórico removido.");
+    } catch {
+      toast.error("Não foi possível remover agora.");
+    }
+  }
+
+  const cancelCutoff = isoDaysAgo(CANCELLED_HISTORY_DAYS);
+  const rows = (appointments.data ?? []).filter((a) => {
+    if (a.status !== "cancelado") return true;
+    if (a.client_hidden_at) return false;
+    const marked = String(a.cancelled_at ?? a.created_at ?? "").slice(0, 10);
+    return marked >= cancelCutoff;
+  });
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">Você ainda não tem agendamentos.</p>;
   }
@@ -666,6 +685,16 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
             {a.status === "pendente" || a.status === "confirmado" ? (
               <Button variant="ghost" size="sm" onClick={() => void cancel(a.id)}>
                 Cancelar
+              </Button>
+            ) : null}
+            {a.status === "cancelado" ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Remover este histórico"
+                onClick={() => void hideHistory(a.id)}
+              >
+                <Trash2 size={16} />
               </Button>
             ) : null}
           </div>
