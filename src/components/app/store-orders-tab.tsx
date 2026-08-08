@@ -236,7 +236,9 @@ export function StoreOrdersTab() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button onClick={() => void save()}>{editingId ? "Salvar alterações" : "Registrar pedido"}</Button>
+          <Button onClick={() => void save()}>
+            {editingId ? "Salvar alterações" : "Registrar pedido"}
+          </Button>
           {editingId ? (
             <Button
               variant="ghost"

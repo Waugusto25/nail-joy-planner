@@ -230,88 +230,88 @@ function AgendaTab() {
 
   function renderCard(a: (typeof rows)[number]) {
     const client = (clients.data ?? []).find((c) => c.id === a.client_id) ?? null;
-        const service = a.services as { name: string; duration_minutes?: number } | null;
-        const noticeBase = {
-          name: client?.full_name ?? "linda",
-          day: a.day,
-          start: a.start_time,
-          durationMinutes: Number(service?.duration_minutes ?? 60),
-          serviceName: service?.name ?? "Procedimento",
-        };
-        const confirmNotice = client
-          ? { phone: client.phone, message: confirmationMessage(noticeBase) }
-          : undefined;
-        const cancelNotice = client
-          ? { phone: client.phone, message: cancellationMessage(noticeBase) }
-          : undefined;
-        return (
-          <article key={a.id} className="surface-card p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="font-display text-lg">{client?.full_name ?? "Cliente"}</p>
-                <p className="text-sm capitalize text-muted-foreground">
-                  {formatDayLabel(a.day)} · {shortTime(a.start_time)} ·{" "}
-                  {(a.services as { name: string } | null)?.name}
-                </p>
-                <p className="text-sm">
-                  {formatPrice(a.price_cents)}{" "}
-                  {a.discount_percent > 0
-                    ? `· ${BENEFIT_LABELS[a.benefit_type] ?? "Desconto"} (-${a.discount_percent}%)`
-                    : ""}
-                </p>
-                {client ? (
-                  <p className="text-xs text-muted-foreground">
-                    {formatPhone(client.phone)} · ID {client.login_id}
-                  </p>
-                ) : null}
-                {a.payment_method ? (
-                  <p className="text-xs text-muted-foreground">
-                    Pago em {PAYMENT_METHOD_LABELS[a.payment_method] ?? a.payment_method}
-                  </p>
-                ) : null}
-              </div>
-              <Badge variant="secondary">{APPOINTMENT_STATUS[a.status] ?? a.status}</Badge>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => void setStatus(a.id, "pendente")}
-                disabled={a.status === "pendente"}
-              >
-                Pendente
-              </Button>
-              <Button size="sm" onClick={() => void setStatus(a.id, "confirmado", confirmNotice)}>
-                Confirmar
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => void setStatus(a.id, "concluido")}>
-                Concluir
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => void setStatus(a.id, "cancelado", cancelNotice)}
-              >
-                Cancelar
-              </Button>
-              {client && whatsappLinkTo(client.phone, "") ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    window.open(
-                      whatsappLinkTo(client.phone, confirmationMessage(noticeBase))!,
-                      "_blank",
-                      "noopener",
-                    )
-                  }
-                >
-                  WhatsApp
-                </Button>
-              ) : null}
-            </div>
-          </article>
-        );
+    const service = a.services as { name: string; duration_minutes?: number } | null;
+    const noticeBase = {
+      name: client?.full_name ?? "linda",
+      day: a.day,
+      start: a.start_time,
+      durationMinutes: Number(service?.duration_minutes ?? 60),
+      serviceName: service?.name ?? "Procedimento",
+    };
+    const confirmNotice = client
+      ? { phone: client.phone, message: confirmationMessage(noticeBase) }
+      : undefined;
+    const cancelNotice = client
+      ? { phone: client.phone, message: cancellationMessage(noticeBase) }
+      : undefined;
+    return (
+      <article key={a.id} className="surface-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-lg">{client?.full_name ?? "Cliente"}</p>
+            <p className="text-sm capitalize text-muted-foreground">
+              {formatDayLabel(a.day)} · {shortTime(a.start_time)} ·{" "}
+              {(a.services as { name: string } | null)?.name}
+            </p>
+            <p className="text-sm">
+              {formatPrice(a.price_cents)}{" "}
+              {a.discount_percent > 0
+                ? `· ${BENEFIT_LABELS[a.benefit_type] ?? "Desconto"} (-${a.discount_percent}%)`
+                : ""}
+            </p>
+            {client ? (
+              <p className="text-xs text-muted-foreground">
+                {formatPhone(client.phone)} · ID {client.login_id}
+              </p>
+            ) : null}
+            {a.payment_method ? (
+              <p className="text-xs text-muted-foreground">
+                Pago em {PAYMENT_METHOD_LABELS[a.payment_method] ?? a.payment_method}
+              </p>
+            ) : null}
+          </div>
+          <Badge variant="secondary">{APPOINTMENT_STATUS[a.status] ?? a.status}</Badge>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => void setStatus(a.id, "pendente")}
+            disabled={a.status === "pendente"}
+          >
+            Pendente
+          </Button>
+          <Button size="sm" onClick={() => void setStatus(a.id, "confirmado", confirmNotice)}>
+            Confirmar
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => void setStatus(a.id, "concluido")}>
+            Concluir
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => void setStatus(a.id, "cancelado", cancelNotice)}
+          >
+            Cancelar
+          </Button>
+          {client && whatsappLinkTo(client.phone, "") ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                window.open(
+                  whatsappLinkTo(client.phone, confirmationMessage(noticeBase))!,
+                  "_blank",
+                  "noopener",
+                )
+              }
+            >
+              WhatsApp
+            </Button>
+          ) : null}
+        </div>
+      </article>
+    );
   }
 
   const pendentes = rows
@@ -494,7 +494,10 @@ function ClientsTab() {
   const adminIds = useQuery({
     queryKey: ["admin-role-ids"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
       if (error) throw error;
       return (data ?? []).map((r) => r.user_id as string);
     },
@@ -533,77 +536,77 @@ function ClientsTab() {
       {(clients.data ?? []).map((c) => {
         const isMaster = (adminIds.data ?? []).includes(c.id);
         return (
-        <article key={c.id} className="surface-card p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-display text-lg flex items-center gap-2">
-                {c.full_name}
-                {isMaster ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                    <Lock className="size-3" /> Administradora
-                  </span>
-                ) : null}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                ID {c.login_id} · {formatPhone(c.phone)}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!whatsappLinkTo(c.phone, "")}
-                onClick={() =>
-                  window.open(
-                    whatsappLinkTo(
-                      c.phone,
-                      `Olá, ${c.full_name}! Aqui é a Janaina da Jannah Nails.`,
-                    )!,
-                    "_blank",
-                    "noopener",
-                  )
-                }
-              >
-                WhatsApp
-              </Button>
-              {isMaster ? null : (
-                <>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setEditing(editing === c.id ? null : c.id);
-                      setPhone(c.phone);
-                    }}
-                  >
-                    Editar telefone
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => void removeClient(c.id, c.full_name)}
-                  >
-                    Excluir
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-          {editing === c.id ? (
-            <div className="mt-3 flex flex-wrap items-end gap-3">
-              <div className="space-y-1">
-                <Label htmlFor={`phone-${c.id}`}>Novo telefone (nova senha)</Label>
-                <Input
-                  id={`phone-${c.id}`}
-                  inputMode="numeric"
-                  maxLength={13}
-                  value={phone}
-                  onChange={(e) => setPhone(onlyDigits(e.target.value))}
-                />
+          <article key={c.id} className="surface-card p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-display text-lg flex items-center gap-2">
+                  {c.full_name}
+                  {isMaster ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                      <Lock className="size-3" /> Administradora
+                    </span>
+                  ) : null}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  ID {c.login_id} · {formatPhone(c.phone)}
+                </p>
               </div>
-              <Button onClick={() => void save(c.id)}>Salvar</Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!whatsappLinkTo(c.phone, "")}
+                  onClick={() =>
+                    window.open(
+                      whatsappLinkTo(
+                        c.phone,
+                        `Olá, ${c.full_name}! Aqui é a Janaina da Jannah Nails.`,
+                      )!,
+                      "_blank",
+                      "noopener",
+                    )
+                  }
+                >
+                  WhatsApp
+                </Button>
+                {isMaster ? null : (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setEditing(editing === c.id ? null : c.id);
+                        setPhone(c.phone);
+                      }}
+                    >
+                      Editar telefone
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => void removeClient(c.id, c.full_name)}
+                    >
+                      Excluir
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
-          ) : null}
-        </article>
+            {editing === c.id ? (
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor={`phone-${c.id}`}>Novo telefone (nova senha)</Label>
+                  <Input
+                    id={`phone-${c.id}`}
+                    inputMode="numeric"
+                    maxLength={13}
+                    value={phone}
+                    onChange={(e) => setPhone(onlyDigits(e.target.value))}
+                  />
+                </div>
+                <Button onClick={() => void save(c.id)}>Salvar</Button>
+              </div>
+            ) : null}
+          </article>
         );
       })}
     </div>

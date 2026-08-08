@@ -38,7 +38,11 @@ export function isoDaysAgo(days: number) {
 
 export function formatDateTime(value?: string | null) {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return new Date(value).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 export const WEEKDAYS = [
