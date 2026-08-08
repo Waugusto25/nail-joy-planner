@@ -17,7 +17,14 @@ export const completeAppointmentFn = createServerFn({ method: "POST" })
     });
     if (!isAdmin) throw new Error("Acesso restrito à administradora.");
     const { completeAppointment } = await import("./loyalty-helpers.server");
-    return completeAppointment(data.appointmentId, data.paymentMethod);
+    const result = await completeAppointment(data.appointmentId, data.paymentMethod);
+    try {
+      const { syncCalendarStatusColor } = await import("./calendar-helpers.server");
+      await syncCalendarStatusColor(data.appointmentId);
+    } catch (calendarError) {
+      console.error("Falha ao atualizar a cor do evento na Google Agenda", calendarError);
+    }
+    return result;
   });
 
 export const drawEventWinnerFn = createServerFn({ method: "POST" })
