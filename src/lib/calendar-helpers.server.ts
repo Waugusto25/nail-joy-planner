@@ -117,14 +117,14 @@ export async function syncAppointmentToCalendar(appointmentId: string) {
 
   const encodedCalendar = encodeURIComponent(CALENDAR_ID);
   if (appt.google_event_id) {
-    await gateway(`/calendars/${encodedCalendar}/events/${encodeURIComponent(appt.google_event_id)}`, {
-      method: "PATCH",
-      body,
-    });
+    await gateway(
+      `/calendars/${encodedCalendar}/events/${encodeURIComponent(appt.google_event_id)}?sendUpdates=all`,
+      { method: "PATCH", body },
+    );
     return { eventId: appt.google_event_id };
   }
 
-  const created = (await gateway(`/calendars/${encodedCalendar}/events`, {
+  const created = (await gateway(`/calendars/${encodedCalendar}/events?sendUpdates=all`, {
     method: "POST",
     body,
   })) as { id?: string } | null;
