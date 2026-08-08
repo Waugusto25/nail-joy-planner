@@ -227,13 +227,9 @@ function AgendaTab() {
   }
 
   const rows = appointments.data ?? [];
-  if (rows.length === 0)
-    return <p className="text-sm text-muted-foreground">Nenhum agendamento.</p>;
 
-  return (
-    <div className="space-y-3">
-      {rows.map((a) => {
-        const client = (clients.data ?? []).find((c) => c.id === a.client_id) ?? null;
+  function renderCard(a: (typeof rows)[number]) {
+    const client = (clients.data ?? []).find((c) => c.id === a.client_id) ?? null;
         const service = a.services as { name: string; duration_minutes?: number } | null;
         const noticeBase = {
           name: client?.full_name ?? "linda",
@@ -316,7 +312,81 @@ function AgendaTab() {
             </div>
           </article>
         );
-      })}
+  }
+
+  const pendentes = rows
+    .filter((a) => a.status === "pendente")
+    .slice()
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const confirmados = rows
+    .filter((a) => a.status === "confirmado")
+    .slice()
+    .sort((a, b) =>
+      a.day === b.day
+        ? String(a.start_time).localeCompare(String(b.start_time))
+        : a.day.localeCompare(b.day),
+    );
+  const concluidos = rows
+    .filter((a) => a.status === "concluido")
+    .slice()
+    .sort((a, b) => b.day.localeCompare(a.day));
+  const cancelados = rows
+    .filter((a) => a.status === "cancelado")
+    .slice()
+    .sort((a, b) => b.day.localeCompare(a.day));
+
+  const confirmedDays = [...new Set(confirmados.map((a) => a.day))];
+
+  return (
+    <div className="space-y-4">
+      <Tabs defaultValue="pendentes">
+        <TabsList className="flex w-full flex-wrap">
+          <TabsTrigger value="pendentes">Pré-agendamentos ({pendentes.length})</TabsTrigger>
+          <TabsTrigger value="confirmados">Confirmados ({confirmados.length})</TabsTrigger>
+          <TabsTrigger value="concluidos">Concluídos ({concluidos.length})</TabsTrigger>
+          <TabsTrigger value="cancelados">Cancelados ({cancelados.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pendentes" className="space-y-3 pt-4">
+          <p className="text-sm text-muted-foreground">
+            Novos pedidos aguardando confirmação, do mais recente para o mais antigo.
+          </p>
+          {pendentes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum pré-agendamento pendente.</p>
+          ) : (
+            pendentes.map(renderCard)
+          )}
+        </TabsContent>
+
+        <TabsContent value="confirmados" className="space-y-4 pt-4">
+          {confirmados.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum atendimento confirmado.</p>
+          ) : (
+            confirmedDays.map((day) => (
+              <section key={day} className="space-y-3">
+                <h3 className="font-display text-base capitalize">{dayGroupLabel(day)}</h3>
+                {confirmados.filter((a) => a.day === day).map(renderCard)}
+              </section>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="concluidos" className="space-y-3 pt-4">
+          {concluidos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum atendimento concluído.</p>
+          ) : (
+            concluidos.map(renderCard)
+          )}
+        </TabsContent>
+
+        <TabsContent value="cancelados" className="space-y-3 pt-4">
+          {cancelados.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum agendamento cancelado.</p>
+          ) : (
+            cancelados.map(renderCard)
+          )}
+        </TabsContent>
+      </Tabs>
       <BlockedDates />
       <Dialog open={payingId !== null} onOpenChange={(open) => !open && setPayingId(null)}>
         <DialogContent>
