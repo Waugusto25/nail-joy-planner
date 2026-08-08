@@ -386,22 +386,26 @@ function ClientsTab() {
               >
                 WhatsApp
               </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(editing === c.id ? null : c.id);
-                  setPhone(c.phone);
-                }}
-              >
-                Editar telefone
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => void removeClient(c.id, c.full_name)}
-              >
-                Excluir
-              </Button>
+              {isMaster ? null : (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditing(editing === c.id ? null : c.id);
+                      setPhone(c.phone);
+                    }}
+                  >
+                    Editar telefone
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => void removeClient(c.id, c.full_name)}
+                  >
+                    Excluir
+                  </Button>
+                </>
+              )}
             </div>
           </div>
           {editing === c.id ? (
@@ -420,7 +424,8 @@ function ClientsTab() {
             </div>
           ) : null}
         </article>
-      ))}
+        );
+      })}
     </div>
   );
 }
