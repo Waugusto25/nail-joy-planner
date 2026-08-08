@@ -39,7 +39,7 @@ export function useCurrentProfile() {
       const [{ data: row, error }, { data: roles }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, full_name, login_id, phone, welcome_seen")
+          .select("id, full_name, login_id, phone, email, welcome_seen")
           .eq("id", userId!)
           .maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", userId!),
@@ -53,6 +53,7 @@ export function useCurrentProfile() {
         full_name: string;
         login_id: string;
         phone: string;
+        email: string | null;
         welcome_seen: boolean;
         isAdmin: boolean;
       };

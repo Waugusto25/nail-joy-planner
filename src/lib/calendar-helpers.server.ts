@@ -83,7 +83,7 @@ export async function syncAppointmentToCalendar(appointmentId: string) {
   const appt = await loadAppointment(db, appointmentId);
   const { data: client } = await db
     .from("profiles")
-    .select("full_name, phone")
+    .select("full_name, phone, email")
     .eq("id", appt.client_id)
     .maybeSingle();
 
@@ -93,6 +93,7 @@ export async function syncAppointmentToCalendar(appointmentId: string) {
   const end = addMinutes(start, duration);
   const clientName = String(client?.full_name ?? "Cliente");
   const phone = String(client?.phone ?? "");
+  const clientEmail = String(client?.email ?? "").trim();
 
   const descriptionLines = [
     phone ? `WhatsApp: ${formatPhone(phone)}` : null,
@@ -109,6 +110,9 @@ export async function syncAppointmentToCalendar(appointmentId: string) {
     start: { dateTime: `${appt.day}T${start}:00`, timeZone: TIME_ZONE },
     end: { dateTime: `${appt.day}T${end}:00`, timeZone: TIME_ZONE },
     colorId: STATUS_COLOR_ID[appt.status] ?? STATUS_COLOR_ID["confirmado"]!,
+    // Com e-mail cadastrado, a cliente entra como convidada e o compromisso
+    // aparece automaticamente na Google Agenda dela. Sem e-mail, ignoramos.
+    ...(clientEmail ? { attendees: [{ email: clientEmail, displayName: clientName }] } : {}),
   };
 
   const encodedCalendar = encodeURIComponent(CALENDAR_ID);
