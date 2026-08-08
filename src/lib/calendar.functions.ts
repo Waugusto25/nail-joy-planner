@@ -24,6 +24,13 @@ export const confirmAppointmentFn = createServerFn({ method: "POST" })
     if (error) throw new Error("Não foi possível confirmar o atendimento.");
 
     try {
+      const { notifyClientStatusChange } = await import("./push-helpers.server");
+      await notifyClientStatusChange(data.appointmentId, "confirmado");
+    } catch (pushError) {
+      console.error("Falha ao notificar a cliente da confirmação", pushError);
+    }
+
+    try {
       const { syncAppointmentToCalendar } = await import("./calendar-helpers.server");
       await syncAppointmentToCalendar(data.appointmentId);
       return { calendar: "ok" as const };
@@ -48,6 +55,12 @@ export const cancelAppointmentFn = createServerFn({ method: "POST" })
       .update({ status: "cancelado" })
       .eq("id", data.appointmentId);
     if (error) throw new Error("Não foi possível cancelar o atendimento.");
+    try {
+      const { notifyClientStatusChange } = await import("./push-helpers.server");
+      await notifyClientStatusChange(data.appointmentId, "cancelado");
+    } catch (pushError) {
+      console.error("Falha ao notificar a cliente do cancelamento", pushError);
+    }
     try {
       const { removeAppointmentFromCalendar } = await import("./calendar-helpers.server");
       await removeAppointmentFromCalendar(data.appointmentId);
