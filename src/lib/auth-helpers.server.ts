@@ -125,6 +125,13 @@ export async function resolveLogin(identifier: string) {
 
 export async function adminUpdateClientAccess(clientId: string, phone: string) {
   const db = admin();
+  const { data: adminRoles } = await db
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", clientId)
+    .eq("role", "admin");
+  if ((adminRoles ?? []).length > 0)
+    throw new Error("Não é possível alterar a conta da administradora.");
   const { error } = await db.auth.admin.updateUserById(clientId, { password: phone });
   if (error) throw new Error("Não foi possível atualizar o acesso da cliente.");
   const { error: profileError } = await db.from("profiles").update({ phone }).eq("id", clientId);

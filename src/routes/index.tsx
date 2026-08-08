@@ -129,12 +129,12 @@ function PhoneAccessForm() {
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
       <div className="space-y-2">
-        <Label htmlFor="access-name">Nome completo</Label>
+        <Label htmlFor="access-name">Nome</Label>
         <Input
           id="access-name"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          placeholder="Maria Souza"
+          placeholder="Ex: Maria Silva"
           maxLength={80}
           required
         />
@@ -146,7 +146,7 @@ function PhoneAccessForm() {
           inputMode="numeric"
           value={phone}
           onChange={(e) => setPhone(onlyDigits(e.target.value))}
-          placeholder="35998844504"
+          placeholder="(35) 99999-9999"
           maxLength={13}
           required
         />
@@ -161,7 +161,7 @@ function PhoneAccessForm() {
           inputMode="numeric"
           value={referrerPhone}
           onChange={(e) => setReferrerPhone(onlyDigits(e.target.value))}
-          placeholder="Telefone da amiga com DDD"
+          placeholder="(35) 99999-9999"
           maxLength={13}
         />
         <p className="text-xs text-muted-foreground">
@@ -211,7 +211,7 @@ function AdminLoginForm() {
           id="admin-id"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
-          placeholder="JannahSilva"
+          placeholder="Seu ID de login"
           maxLength={80}
           required
         />
