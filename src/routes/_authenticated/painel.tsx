@@ -26,6 +26,7 @@ import {
 import { busyTimesFn } from "@/lib/booking.functions";
 import { clientCancelAppointmentFn, hideCancelledForClientFn } from "@/lib/cancel.functions";
 import { consumeReferralFn } from "@/lib/loyalty.functions";
+import { claimEventPrizeFn } from "@/lib/account.functions";
 import { notifyNewAppointmentFn } from "@/lib/push.functions";
 
 import {
@@ -55,6 +56,9 @@ import {
 import { StorageImage } from "@/components/app/storage-image";
 
 const WELCOME_IMAGE = "/__l5e/assets-v1/5a73338f-8d2f-459f-8bb6-0dc055ee5917/boas-vindas.png";
+
+/** Benefício reivindicado que já entra aplicado no pré-agendamento. */
+export type Claim = { benefit: "fidelidade" | "indicacao" | "premio"; eventId?: string };
 
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({
@@ -101,44 +105,56 @@ function ClientPanel() {
   }
 
   const firstName = data?.full_name?.split(" ")[0] ?? "";
+  const [tab, setTab] = useState("agendar");
+  const [claim, setClaim] = useState<Claim | null>(null);
+
+  function startClaim(next: Claim) {
+    setClaim(next);
+    setTab("agendar");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   return (
     <div className="bg-petal min-h-screen pb-16">
       <div className="bg-petal-veil" aria-hidden="true" />
       <AppHeader
         title={firstName ? `Olá, ${firstName}!` : "Meu painel"}
-        subtitle={data?.login_id ? `ID de login: ${data.login_id}` : undefined}
         audience="cliente"
       />
 
       <main className="mx-auto w-full max-w-4xl px-4 py-6">
-        <Tabs defaultValue="agendar">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="-mx-4 flex h-auto w-[calc(100%+2rem)] max-w-none flex-nowrap justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-4 py-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:w-full sm:rounded-lg sm:bg-muted sm:px-1 [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="agendar">Agendar</TabsTrigger>
             <TabsTrigger value="meus">Meus horários</TabsTrigger>
-            {loyaltyEnabled ? <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger> : null}
+            <TabsTrigger value="loja">Loja</TabsTrigger>
+            <TabsTrigger value="catalogos">Catálogo</TabsTrigger>
             <TabsTrigger value="beneficios">Meus benefícios</TabsTrigger>
             <TabsTrigger value="eventos">Eventos</TabsTrigger>
-            <TabsTrigger value="loja">Loja</TabsTrigger>
-            <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
+            {loyaltyEnabled ? <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger> : null}
           </TabsList>
 
           <TabsContent value="agendar" className="pt-6">
-            <BookingFlow clientId={data?.id} clientName={data?.full_name ?? ""} />
+            <BookingFlow
+              clientId={data?.id}
+              clientName={data?.full_name ?? ""}
+              claim={claim}
+              onClaimUsed={() => setClaim(null)}
+            />
           </TabsContent>
           <TabsContent value="meus" className="pt-6">
             <MyAppointments clientId={data?.id} />
           </TabsContent>
           {loyaltyEnabled ? (
             <TabsContent value="fidelidade" className="pt-6">
-              <LoyaltyCards clientId={data?.id} />
+              <LoyaltyCards clientId={data?.id} onClaim={startClaim} />
             </TabsContent>
           ) : null}
           <TabsContent value="beneficios" className="pt-6">
-            <MyBenefits clientId={data?.id} />
+            <MyBenefits clientId={data?.id} onClaim={startClaim} />
           </TabsContent>
           <TabsContent value="eventos" className="pt-6">
-            <EventsList />
+            <EventsList clientId={data?.id} onClaim={startClaim} />
           </TabsContent>
           <TabsContent value="loja" className="pt-6">
             <Store clientName={data?.full_name ?? ""} />
