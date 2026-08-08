@@ -23,6 +23,7 @@ import {
 } from "@/lib/calendar.functions";
 import { clearCancelledForAdminFn, hideCancelledForAdminFn } from "@/lib/cancel.functions";
 import { ManualAppointmentDialog } from "@/components/app/manual-appointment-dialog";
+import { MonthsManager } from "@/components/app/months-manager";
 import { FinanceTab } from "@/components/app/finance-tab";
 import { StoreOrdersTab } from "@/components/app/store-orders-tab";
 
