@@ -14,10 +14,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
+import { completeAppointmentFn, drawEventWinnerFn } from "@/lib/loyalty.functions";
 import { SERVICE_IMAGE_BUCKET, StorageImage } from "@/components/app/storage-image";
 import {
   APPOINTMENT_STATUS,
+  BENEFIT_LABELS,
+  LOYALTY_CYCLE,
+  LOYALTY_DISCOUNT,
+  REFERRAL_DISCOUNT,
   WEEKDAYS,
+  formatDateTime,
   formatDayLabel,
   formatPhone,
   formatPrice,
@@ -70,6 +76,8 @@ function AdminPanel() {
             <TabsTrigger value="clientes">Clientes</TabsTrigger>
             <TabsTrigger value="servicos">Serviços</TabsTrigger>
             <TabsTrigger value="horarios">Horários</TabsTrigger>
+            <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger>
+            <TabsTrigger value="eventos">Eventos</TabsTrigger>
             <TabsTrigger value="loja">Loja</TabsTrigger>
             <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
           </TabsList>
@@ -84,6 +92,12 @@ function AdminPanel() {
           </TabsContent>
           <TabsContent value="horarios" className="pt-6">
             <SlotsTab />
+          </TabsContent>
+          <TabsContent value="fidelidade" className="pt-6">
+            <LoyaltyTab />
+          </TabsContent>
+          <TabsContent value="eventos" className="pt-6">
+            <EventsTab />
           </TabsContent>
           <TabsContent value="loja" className="pt-6">
             <ProductsTab />
@@ -122,6 +136,24 @@ function AgendaTab() {
   });
 
   async function setStatus(id: string, status: string) {
+    if (status === "concluido") {
+      try {
+        const { notifications } = await completeAppointmentFn({ data: { appointmentId: id } });
+        await queryClient.invalidateQueries();
+        toast.success("Atendimento concluído.");
+        for (const n of notifications) {
+          const message =
+            n.kind === "indicacao"
+              ? `Olá, ${n.name}! ${n.detail} concluiu o primeiro atendimento e você ganhou ${Math.round(REFERRAL_DISCOUNT * 100)}% de desconto no seu próximo procedimento. — Jannah Nails`
+              : `Olá, ${n.name}! Você completou o cartão de fidelidade de ${n.detail} e ganhou ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto no próximo atendimento. — Jannah Nails`;
+          const link = whatsappLinkTo(n.phone, message);
+          if (link) window.open(link, "_blank", "noopener");
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Não foi possível concluir.");
+      }
+      return;
+    }
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) {
       toast.error("Não foi possível atualizar.");
@@ -149,7 +181,10 @@ function AgendaTab() {
                   {(a.services as { name: string } | null)?.name}
                 </p>
                 <p className="text-sm">
-                  {formatPrice(a.price_cents)} {a.discount_applied ? "· fidelidade -20%" : ""}
+                  {formatPrice(a.price_cents)}{" "}
+                  {a.discount_percent > 0
+                    ? `· ${BENEFIT_LABELS[a.benefit_type] ?? "Desconto"} (-${a.discount_percent}%)`
+                    : ""}
                 </p>
                 {client ? (
                   <p className="text-xs text-muted-foreground">
@@ -1019,6 +1054,317 @@ function CatalogsTab() {
             <Button variant="ghost" size="sm" onClick={() => void remove(c.id)}>
               Remover
             </Button>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LoyaltyTab() {
+  const queryClient = useQueryClient();
+  const settings = useQuery({
+    queryKey: ["app-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("loyalty_enabled, referral_enabled, benefit_expiry_days")
+        .eq("id", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const [days, setDays] = useState("");
+
+  useEffect(() => {
+    if (settings.data) setDays(String(settings.data.benefit_expiry_days));
+  }, [settings.data]);
+
+  const referrals = useQuery({
+    queryKey: ["admin-referrals"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("referrals")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const clients = useQuery({
+    queryKey: ["admin-clients"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  async function save(patch: {
+    loyalty_enabled?: boolean;
+    referral_enabled?: boolean;
+    benefit_expiry_days?: number;
+  }) {
+    const { error } = await supabase.from("app_settings").update(patch).eq("id", true);
+    if (error) {
+      toast.error("Não foi possível salvar.");
+      return;
+    }
+    toast.success("Configuração atualizada.");
+    await queryClient.invalidateQueries();
+  }
+
+  const nameOf = (id: string) =>
+    (clients.data ?? []).find((c) => c.id === id)?.full_name ?? "Cliente";
+  const loyaltyEnabled = settings.data?.loyalty_enabled ?? true;
+  const referralEnabled = settings.data?.referral_enabled ?? true;
+
+  return (
+    <div className="space-y-6">
+      <section className="surface-card space-y-4 p-5">
+        <p className="font-display text-lg">Programas de benefício</p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Cartão de fidelidade</p>
+            <p className="text-xs text-muted-foreground">
+              {LOYALTY_CYCLE} procedimentos do mesmo tipo dão {Math.round(LOYALTY_DISCOUNT * 100)}%
+              no próximo. Ao desativar, as clientes recebem o reembolso parcial de 4% por
+              procedimento já acumulado.
+            </p>
+          </div>
+          <Switch
+            checked={loyaltyEnabled}
+            onCheckedChange={(v) => void save({ loyalty_enabled: v })}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Programa de indicação</p>
+            <p className="text-xs text-muted-foreground">
+              {Math.round(REFERRAL_DISCOUNT * 100)}% de desconto para quem indica, liberado só
+              depois do primeiro atendimento concluído da indicada.
+            </p>
+          </div>
+          <Switch
+            checked={referralEnabled}
+            onCheckedChange={(v) => void save({ referral_enabled: v })}
+          />
+        </div>
+        <div className="grid gap-2 sm:max-w-xs">
+          <Label htmlFor="expiry-days">Validade dos benefícios (dias)</Label>
+          <div className="flex gap-2">
+            <Input
+              id="expiry-days"
+              inputMode="numeric"
+              value={days}
+              onChange={(e) => setDays(onlyDigits(e.target.value))}
+              maxLength={3}
+            />
+            <Button
+              variant="outline"
+              onClick={() => void save({ benefit_expiry_days: Number(days) || 90 })}
+            >
+              Salvar
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Sugerido entre 60 e 90 dias. Pontos e cupons mais antigos que isso deixam de valer.
+          </p>
+        </div>
+      </section>
+
+      <section className="surface-card p-5">
+        <p className="font-display text-lg">Indicações</p>
+        <div className="mt-3 space-y-2">
+          {(referrals.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma indicação registrada.</p>
+          ) : null}
+          {(referrals.data ?? []).map((r) => (
+            <div
+              key={r.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/60 px-4 py-3 text-sm"
+            >
+              <span>
+                {nameOf(r.referrer_id)} indicou {nameOf(r.referred_id)}
+              </span>
+              <Badge variant="secondary">
+                {r.used_at
+                  ? `Usado em ${formatDateTime(r.used_at)}`
+                  : r.status === "pendente"
+                    ? "Aguardando 1º atendimento"
+                    : `Válido até ${formatDateTime(r.expires_at)}`}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function EventsTab() {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    prize: "",
+    rules: "",
+    starts_on: "",
+    ends_on: "",
+  });
+
+  const events = useQuery({
+    queryKey: ["admin-events"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .order("starts_on", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  async function add() {
+    if (!form.title.trim() || !form.starts_on || !form.ends_on) {
+      toast.error("Informe título e o período do evento.");
+      return;
+    }
+    const { error } = await supabase.from("events").insert({
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      prize: form.prize.trim() || null,
+      rules: form.rules.trim() || null,
+      starts_on: form.starts_on,
+      ends_on: form.ends_on,
+    });
+    if (error) {
+      toast.error("Não foi possível criar o evento.");
+      return;
+    }
+    setForm({ title: "", description: "", prize: "", rules: "", starts_on: "", ends_on: "" });
+    toast.success("Evento publicado.");
+    await queryClient.invalidateQueries();
+  }
+
+  async function toggle(id: string, active: boolean) {
+    await supabase.from("events").update({ active }).eq("id", id);
+    await queryClient.invalidateQueries();
+  }
+
+  async function remove(id: string) {
+    await supabase.from("events").delete().eq("id", id);
+    toast.success("Evento removido.");
+    await queryClient.invalidateQueries();
+  }
+
+  async function draw(id: string) {
+    try {
+      const result = await drawEventWinnerFn({ data: { eventId: id } });
+      await queryClient.invalidateQueries();
+      toast.success(`Ganhadora: ${result.winnerName} (${result.participants} participantes)`);
+      const link = whatsappLinkTo(
+        result.winnerPhone,
+        `Parabéns, ${result.winnerName}! Você foi sorteada no evento da Jannah Nails. Vamos combinar a entrega do seu prêmio! — Jannah Nails`,
+      );
+      if (link) window.open(link, "_blank", "noopener");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível sortear.");
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="surface-card grid gap-3 p-5 sm:grid-cols-2">
+        <p className="font-display text-lg sm:col-span-2">Novo evento ou sorteio</p>
+        <div className="space-y-2">
+          <Label htmlFor="event-title">Título</Label>
+          <Input
+            id="event-title"
+            value={form.title}
+            maxLength={80}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="event-prize">Prêmio</Label>
+          <Input
+            id="event-prize"
+            value={form.prize}
+            maxLength={80}
+            onChange={(e) => setForm({ ...form, prize: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="event-start">Início</Label>
+          <Input
+            id="event-start"
+            type="date"
+            value={form.starts_on}
+            onChange={(e) => setForm({ ...form, starts_on: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="event-end">Fim</Label>
+          <Input
+            id="event-end"
+            type="date"
+            value={form.ends_on}
+            onChange={(e) => setForm({ ...form, ends_on: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="event-desc">Descrição</Label>
+          <Textarea
+            id="event-desc"
+            value={form.description}
+            maxLength={300}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="event-rules">Regras de participação</Label>
+          <Textarea
+            id="event-rules"
+            value={form.rules}
+            maxLength={300}
+            placeholder="Ex.: participam as clientes com atendimento no período do evento."
+            onChange={(e) => setForm({ ...form, rules: e.target.value })}
+          />
+        </div>
+        <Button className="sm:col-span-2" onClick={() => void add()}>
+          Publicar evento
+        </Button>
+      </section>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {(events.data ?? []).map((e) => (
+          <article key={e.id} className="surface-card p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-display text-lg">{e.title}</p>
+                <p className="text-xs capitalize text-muted-foreground">
+                  {formatDayLabel(e.starts_on)} até {formatDayLabel(e.ends_on)}
+                </p>
+              </div>
+              <Switch checked={e.active} onCheckedChange={(v) => void toggle(e.id, v)} />
+            </div>
+            {e.prize ? <p className="mt-2 text-sm">Prêmio: {e.prize}</p> : null}
+            {e.winner_name ? (
+              <p className="mt-2 text-sm">
+                🎉 Ganhadora: <strong>{e.winner_name}</strong> ({formatDateTime(e.drawn_at)})
+              </p>
+            ) : null}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => void draw(e.id)}>
+                {e.winner_name ? "Sortear novamente" : "Sortear ganhadora"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => void remove(e.id)}>
+                Remover
+              </Button>
+            </div>
           </article>
         ))}
       </div>

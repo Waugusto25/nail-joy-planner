@@ -12,16 +12,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
+import { useAppSettings } from "@/hooks/useSettings";
 import { busyTimesFn } from "@/lib/booking.functions";
+import { consumeReferralFn } from "@/lib/loyalty.functions";
 import {
   APPOINTMENT_STATUS,
+  LOYALTY_CYCLE,
   LOYALTY_DISCOUNT,
+  LOYALTY_PARTIAL_STEP,
+  REFERRAL_DISCOUNT,
   WEEKDAYS,
   addMinutes,
+  formatDateTime,
   formatDayLabel,
   formatDuration,
   formatPrice,
   formatTimeRange,
+  isoDaysAgo,
   overlaps,
   shortTime,
   timeToMinutes,
@@ -72,6 +79,8 @@ function ClientPanel() {
   const navigate = useNavigate();
   const { profile } = useCurrentProfile();
   const data = profile.data;
+  const settings = useAppSettings();
+  const loyaltyEnabled = settings.data?.loyalty_enabled ?? true;
 
   useEffect(() => {
     if (data?.isAdmin) void navigate({ to: "/admin", replace: true });
@@ -101,7 +110,9 @@ function ClientPanel() {
           <TabsList className="flex w-full flex-wrap">
             <TabsTrigger value="agendar">Agendar</TabsTrigger>
             <TabsTrigger value="meus">Meus horários</TabsTrigger>
-            <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger>
+            {loyaltyEnabled ? <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger> : null}
+            <TabsTrigger value="beneficios">Meus benefícios</TabsTrigger>
+            <TabsTrigger value="eventos">Eventos</TabsTrigger>
             <TabsTrigger value="loja">Loja</TabsTrigger>
             <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
           </TabsList>
@@ -112,8 +123,16 @@ function ClientPanel() {
           <TabsContent value="meus" className="pt-6">
             <MyAppointments clientId={data?.id} />
           </TabsContent>
-          <TabsContent value="fidelidade" className="pt-6">
-            <LoyaltyCards clientId={data?.id} />
+          {loyaltyEnabled ? (
+            <TabsContent value="fidelidade" className="pt-6">
+              <LoyaltyCards clientId={data?.id} />
+            </TabsContent>
+          ) : null}
+          <TabsContent value="beneficios" className="pt-6">
+            <MyBenefits clientId={data?.id} />
+          </TabsContent>
+          <TabsContent value="eventos" className="pt-6">
+            <EventsList />
           </TabsContent>
           <TabsContent value="loja" className="pt-6">
             <Store clientName={data?.full_name ?? ""} />
@@ -171,7 +190,12 @@ function BookingFlow({
   const [time, setTime] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(0);
+  const [benefit, setBenefit] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
+  const settings = useAppSettings();
+  const loyaltyEnabled = settings.data?.loyalty_enabled ?? true;
+  const referralEnabled = settings.data?.referral_enabled ?? true;
+  const expiryDays = settings.data?.benefit_expiry_days ?? 90;
 
   function goTo(next: number) {
     setStep(next);
@@ -225,8 +249,24 @@ function BookingFlow({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("service_id, status")
+        .select("service_id, status, day")
         .eq("client_id", clientId!);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const coupons = useQuery({
+    queryKey: ["referral-coupons", clientId],
+    enabled: Boolean(clientId) && referralEnabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("referrals")
+        .select("id, earned_at, expires_at")
+        .eq("referrer_id", clientId!)
+        .eq("status", "concluido")
+        .is("used_at", null)
+        .gt("expires_at", new Date().toISOString());
       if (error) throw error;
       return data;
     },
@@ -269,15 +309,46 @@ function BookingFlow({
       .sort();
   }, [day, service, slots.data, busy.data, breaks.data]);
 
+  const since = isoDaysAgo(expiryDays);
   const completedForService = (history.data ?? []).filter(
-    (a) => a.service_id === serviceId && a.status === "concluido",
+    (a) => a.service_id === serviceId && a.status === "concluido" && a.day >= since,
   ).length;
   const loyaltyService = service?.loyalty_eligible ?? false;
-  const eligible = loyaltyService && completedForService > 0 && completedForService % 6 === 5;
+  const inCycle = completedForService % LOYALTY_CYCLE;
+  const loyaltyReady = loyaltyEnabled && loyaltyService && completedForService > 0 && inCycle === 0;
+  const partialPercent =
+    !loyaltyEnabled && loyaltyService ? Math.round(inCycle * LOYALTY_PARTIAL_STEP * 100) : 0;
+  const couponCount = coupons.data?.length ?? 0;
+
+  // Regra de cumulação: só um benefício por atendimento.
+  const benefitOptions = useMemo(() => {
+    const list: { value: string; label: string; percent: number }[] = [];
+    if (loyaltyReady)
+      list.push({
+        value: "fidelidade",
+        label: `Fidelidade -${Math.round(LOYALTY_DISCOUNT * 100)}%`,
+        percent: Math.round(LOYALTY_DISCOUNT * 100),
+      });
+    if (couponCount > 0)
+      list.push({
+        value: "indicacao",
+        label: `Indicação -${Math.round(REFERRAL_DISCOUNT * 100)}% (${couponCount} disponível${couponCount === 1 ? "" : "eis"})`,
+        percent: Math.round(REFERRAL_DISCOUNT * 100),
+      });
+    if (partialPercent > 0)
+      list.push({
+        value: "parcial",
+        label: `Reembolso de pontos -${partialPercent}%`,
+        percent: partialPercent,
+      });
+    list.push({ value: "nenhum", label: "Sem desconto", percent: 0 });
+    return list;
+  }, [loyaltyReady, couponCount, partialPercent]);
+
+  const activeBenefit = benefitOptions.find((o) => o.value === benefit) ?? benefitOptions[0]!;
+  const eligible = activeBenefit.percent > 0;
   const price = service
-    ? eligible
-      ? Math.round(service.price_cents * (1 - LOYALTY_DISCOUNT))
-      : service.price_cents
+    ? Math.round(service.price_cents * (1 - activeBenefit.percent / 100))
     : 0;
   const endTime = service && time ? addMinutes(time, service.duration_minutes) : null;
 
@@ -285,22 +356,33 @@ function BookingFlow({
     if (!clientId || !service || !day || !time) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("appointments").insert({
-        client_id: clientId,
-        service_id: service.id,
-        day,
-        start_time: `${time}:00`,
-        price_cents: price,
-        discount_applied: eligible,
-      });
+      const { data: row, error } = await supabase
+        .from("appointments")
+        .insert({
+          client_id: clientId,
+          service_id: service.id,
+          day,
+          start_time: `${time}:00`,
+          price_cents: price,
+          discount_applied: eligible,
+          benefit_type: activeBenefit.value,
+          discount_percent: activeBenefit.percent,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      if (activeBenefit.value === "indicacao" && row?.id) {
+        await consumeReferralFn({ data: { appointmentId: row.id } });
+      }
       await queryClient.invalidateQueries();
-      const text = `Olá, Janaina! Sou ${clientName} e fiz uma pré-reserva pelo app.%0A%0AServiço: ${service.name}%0AData: ${formatDayLabel(day)}%0AInício: ${time}%0ATérmino previsto: ${addMinutes(time, service.duration_minutes)}%0ADuração: ${formatDuration(service.duration_minutes)}%0AValor: ${formatPrice(price)}${eligible ? " (com 20% de fidelidade)" : ""}%0A%0APode confirmar para mim?`;
+      const benefitNote = eligible ? ` (com ${activeBenefit.label})` : "";
+      const text = `Olá, Janaina! Sou ${clientName} e fiz uma pré-reserva pelo app.%0A%0AServiço: ${service.name}%0AData: ${formatDayLabel(day)}%0AInício: ${time}%0ATérmino previsto: ${addMinutes(time, service.duration_minutes)}%0ADuração: ${formatDuration(service.duration_minutes)}%0AValor: ${formatPrice(price)}${benefitNote}%0A%0APode confirmar para mim?`;
       window.open(whatsappLink(decodeURIComponent(text)), "_blank", "noopener");
       toast.success("Pré-reserva criada! Confirme pelo WhatsApp.");
       setServiceId(null);
       setDay(null);
       setTime(null);
+      setBenefit(null);
       goTo(0);
     } catch {
       toast.error("Esse horário pode ter sido ocupado. Escolha outro.");
@@ -456,9 +538,30 @@ function BookingFlow({
                   {endTime ? <li>Término previsto: {endTime}</li> : null}
                   <li>
                     Valor: <strong>{formatPrice(price)}</strong>{" "}
-                    {eligible ? <Badge className="ml-1">fidelidade -20%</Badge> : null}
+                    {eligible ? <Badge className="ml-1">{activeBenefit.label}</Badge> : null}
                   </li>
                 </ul>
+                {benefitOptions.length > 1 ? (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium">Benefício deste atendimento</p>
+                    <p className="text-xs text-muted-foreground">
+                      Apenas um benefício pode ser usado por atendimento.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {benefitOptions.map((o) => (
+                        <Button
+                          key={o.value}
+                          type="button"
+                          size="sm"
+                          variant={o.value === activeBenefit.value ? "default" : "outline"}
+                          onClick={() => setBenefit(o.value)}
+                        >
+                          {o.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <p className="mt-3 text-xs text-muted-foreground">
                   A reserva fica pendente até a Janaina confirmar pelo WhatsApp.
                 </p>
@@ -548,28 +651,36 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
 
 function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
   const services = useServices();
+  const settings = useAppSettings();
+  const expiryDays = settings.data?.benefit_expiry_days ?? 90;
   const done = useQuery({
-    queryKey: ["loyalty", clientId],
+    queryKey: ["loyalty", clientId, expiryDays],
     enabled: Boolean(clientId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
         .select("service_id")
         .eq("client_id", clientId!)
-        .eq("status", "concluido");
+        .eq("status", "concluido")
+        .gte("day", isoDaysAgo(expiryDays));
       if (error) throw error;
       return data;
     },
   });
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {(services.data ?? [])
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Os atendimentos contam por {expiryDays} dias. Ao completar {LOYALTY_CYCLE} procedimentos do
+        mesmo tipo, o próximo sai com {Math.round(LOYALTY_DISCOUNT * 100)}% de desconto.
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {(services.data ?? [])
         .filter((s) => s.loyalty_eligible)
         .map((s) => {
           const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
-          const inCycle = count % 6;
-          const eligible = count > 0 && inCycle === 5;
+          const inCycle = count % LOYALTY_CYCLE;
+          const eligible = count > 0 && inCycle === 0;
           return (
             <article key={s.id} className="surface-card p-5">
               <p className="font-display text-lg">{s.name}</p>
@@ -577,24 +688,187 @@ function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
                 {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
               </p>
               <div className="mt-3 flex gap-1.5">
-                {Array.from({ length: 6 }).map((_, index) => (
+                {Array.from({ length: LOYALTY_CYCLE }).map((_, index) => (
                   <span
                     key={index}
                     className={`h-6 flex-1 rounded-full ${
-                      index < inCycle ? "bg-primary" : "bg-secondary"
-                    } ${index === 5 ? "border-2 border-gold" : ""}`}
+                      eligible || index < inCycle ? "bg-primary" : "bg-secondary"
+                    } ${index === LOYALTY_CYCLE - 1 ? "border-2 border-gold" : ""}`}
                   />
                 ))}
               </div>
-              <Progress className="mt-3" value={(inCycle / 6) * 100} />
+              <Progress
+                className="mt-3"
+                value={eligible ? 100 : (inCycle / LOYALTY_CYCLE) * 100}
+              />
               <p className="mt-3 text-sm">
                 {eligible
-                  ? "🎉 Seu próximo atendimento tem 20% de desconto!"
-                  : `Faltam ${5 - inCycle} para ganhar 20% no 6º atendimento.`}
+                  ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
+                  : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
               </p>
             </article>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function MyBenefits({ clientId }: { clientId?: string | undefined }) {
+  const { profile } = useCurrentProfile();
+  const settings = useAppSettings();
+  const referralEnabled = settings.data?.referral_enabled ?? true;
+  const services = useServices();
+
+  const referrals = useQuery({
+    queryKey: ["my-referrals", clientId],
+    enabled: Boolean(clientId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("referrals")
+        .select("id, status, earned_at, expires_at, used_at, referrer_id")
+        .eq("referrer_id", clientId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const used = useQuery({
+    queryKey: ["benefit-history", clientId],
+    enabled: Boolean(clientId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("id, day, service_id, benefit_type, discount_percent, price_cents, status")
+        .eq("client_id", clientId!)
+        .gt("discount_percent", 0)
+        .order("day", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const serviceName = (id: string) =>
+    (services.data ?? []).find((s) => s.id === id)?.name ?? "Procedimento";
+  const now = Date.now();
+
+  return (
+    <div className="space-y-6">
+      {referralEnabled ? (
+        <article className="surface-card p-5">
+          <p className="font-display text-lg">Indique e ganhe</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sua amiga informa o seu telefone <strong>{profile.data?.phone ?? ""}</strong> no primeiro
+            acesso. Quando ela concluir o primeiro atendimento, você ganha{" "}
+            {Math.round(REFERRAL_DISCOUNT * 100)}% de desconto.
+          </p>
+          <div className="mt-4 space-y-2">
+            {(referrals.data ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma indicação registrada ainda.</p>
+            ) : null}
+            {(referrals.data ?? []).map((r) => {
+              const expired = r.expires_at ? new Date(r.expires_at).getTime() < now : false;
+              const label = r.used_at
+                ? `Usado em ${formatDateTime(r.used_at)}`
+                : r.status === "pendente"
+                  ? "Aguardando o primeiro atendimento da amiga"
+                  : expired
+                    ? `Expirou em ${formatDateTime(r.expires_at)}`
+                    : `Disponível até ${formatDateTime(r.expires_at)}`;
+              return (
+                <div
+                  key={r.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/60 px-4 py-3 text-sm"
+                >
+                  <span>Amiga indicada</span>
+                  <Badge variant={r.used_at || expired || r.status === "pendente" ? "secondary" : "default"}>
+                    {label}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+      ) : null}
+
+      <article className="surface-card p-5">
+        <p className="font-display text-lg">Histórico de benefícios usados</p>
+        <div className="mt-3 space-y-2">
+          {(used.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Você ainda não usou nenhum desconto. Continue acumulando!
+            </p>
+          ) : null}
+          {(used.data ?? []).map((a) => (
+            <div
+              key={a.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/60 px-4 py-3 text-sm"
+            >
+              <span className="capitalize">
+                {formatDayLabel(a.day)} · {serviceName(a.service_id)}
+              </span>
+              <span>
+                <Badge className="mr-2">-{a.discount_percent}%</Badge>
+                {formatPrice(a.price_cents)} · {APPOINTMENT_STATUS[a.status] ?? a.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function EventsList() {
+  const events = useQuery({
+    queryKey: ["events"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("active", true)
+        .order("starts_on", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if ((events.data ?? []).length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Nenhum evento ativo agora. Fique de olho: sorteios e promoções aparecem por aqui.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {(events.data ?? []).map((e) => (
+        <article key={e.id} className="surface-card overflow-hidden">
+          <StorageImage url={e.image_url} alt={e.title} className="h-40 w-full object-cover" />
+          <div className="p-5">
+            <p className="font-display text-lg">{e.title}</p>
+            <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
+              {formatDayLabel(e.starts_on)} até {formatDayLabel(e.ends_on)}
+            </p>
+            {e.description ? <p className="mt-2 text-sm">{e.description}</p> : null}
+            {e.prize ? (
+              <p className="mt-2 text-sm">
+                Prêmio: <strong>{e.prize}</strong>
+              </p>
+            ) : null}
+            {e.rules ? (
+              <p className="mt-2 text-xs text-muted-foreground">Como participar: {e.rules}</p>
+            ) : null}
+            {e.winner_name ? (
+              <p className="mt-3 text-sm">
+                🎉 Ganhadora: <strong>{e.winner_name}</strong> ({formatDateTime(e.drawn_at)})
+              </p>
+            ) : null}
+          </div>
+        </article>
+      ))}
     </div>
   );
 }

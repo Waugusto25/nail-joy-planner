@@ -17,7 +17,16 @@ export const nameSchema = z
 
 export const identifierSchema = z.string().trim().min(3, "Informe seu nome ou ID de login").max(80);
 
-export const phoneAccessInput = z.object({ fullName: nameSchema, phone: phoneSchema });
+export const phoneAccessInput = z.object({
+  fullName: nameSchema,
+  phone: phoneSchema,
+  referrerPhone: z
+    .string()
+    .trim()
+    .max(20)
+    .optional()
+    .transform((v) => (v ? v.replace(/\D/g, "") : "")),
+});
 export const resolveLoginInput = z.object({ identifier: identifierSchema });
 export const adminUpdateClientInput = z.object({
   clientId: z.string().uuid(),
