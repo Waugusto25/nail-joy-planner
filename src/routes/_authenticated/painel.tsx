@@ -16,7 +16,7 @@ import { useAppSettings } from "@/hooks/useSettings";
 import { busyTimesFn } from "@/lib/booking.functions";
 import { consumeReferralFn } from "@/lib/loyalty.functions";
 import { notifyNewAppointmentFn } from "@/lib/push.functions";
-import { PushToggle } from "@/components/app/push-toggle";
+
 import {
   APPOINTMENT_STATUS,
   LOYALTY_CYCLE,
@@ -106,14 +106,12 @@ function ClientPanel() {
       <AppHeader
         title={firstName ? `Olá, ${firstName}!` : "Meu painel"}
         subtitle={data?.login_id ? `ID de login: ${data.login_id}` : undefined}
+        audience="cliente"
       />
 
       <main className="mx-auto w-full max-w-4xl px-4 py-6">
-        <div className="mb-4">
-          <PushToggle audience="cliente" />
-        </div>
         <Tabs defaultValue="agendar">
-          <TabsList className="flex w-full flex-wrap">
+          <TabsList className="-mx-4 flex h-auto w-[calc(100%+2rem)] max-w-none flex-nowrap justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-4 py-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:w-full sm:rounded-lg sm:bg-muted sm:px-1 [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="agendar">Agendar</TabsTrigger>
             <TabsTrigger value="meus">Meus horários</TabsTrigger>
             {loyaltyEnabled ? <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger> : null}

@@ -3,6 +3,7 @@ import { Bell, BellOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { VAPID_PUBLIC_KEY } from "@/lib/push-schemas";
 import {
   removePushSubscriptionFn,
@@ -30,8 +31,8 @@ function keyToBase64(buffer: ArrayBuffer | null) {
 
 type Props = { audience: "admin" | "cliente" };
 
-/** Liga/desliga as notificações push neste dispositivo. */
-export function PushToggle({ audience }: Props) {
+/** Estado e ações das notificações push neste dispositivo. */
+function usePush() {
   const [supported, setSupported] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -103,15 +104,66 @@ export function PushToggle({ audience }: Props) {
     }
   }
 
-  if (!supported) return null;
+  return { supported, enabled, busy, enable, disable };
+}
 
-  const description = enabled
+function describe(audience: Props["audience"], enabled: boolean) {
+  return enabled
     ? audience === "admin"
       ? "Você recebe um alerta na tela de bloqueio a cada novo pré-agendamento."
       : "Você recebe um lembrete 24h antes do seu atendimento."
     : audience === "admin"
       ? "Ative para ser avisada na hora em que uma cliente fizer um pré-agendamento."
       : "Ative para receber o lembrete automático 24h antes do seu horário.";
+}
+
+/** Sininho discreto no cabeçalho, com popover para ativar/desativar. */
+export function PushBell({ audience }: Props) {
+  const push = usePush();
+  if (!push.supported) return null;
+  const { enabled, busy, enable, disable } = push;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 rounded-full"
+          aria-label={enabled ? "Notificações ativadas" : "Notificações desativadas"}
+        >
+          {enabled ? (
+            <Bell className="text-primary" size={18} />
+          ) : (
+            <BellOff className="text-muted-foreground" size={18} />
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 space-y-3">
+        <div>
+          <p className="text-sm font-medium text-foreground">Notificações no celular</p>
+          <p className="text-xs text-muted-foreground">{describe(audience, enabled)}</p>
+        </div>
+        <Button
+          size="sm"
+          className="w-full"
+          variant={enabled ? "outline" : "default"}
+          disabled={busy}
+          onClick={enabled ? disable : enable}
+        >
+          {busy ? <Loader2 className="animate-spin" size={16} /> : enabled ? "Desativar" : "Ativar"}
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Liga/desliga as notificações push neste dispositivo (cartão completo). */
+export function PushToggle({ audience }: Props) {
+  const push = usePush();
+  if (!push.supported) return null;
+  const { enabled, busy, enable, disable } = push;
+  const description = describe(audience, enabled);
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-card/70 p-4 sm:flex-row sm:items-center sm:justify-between">

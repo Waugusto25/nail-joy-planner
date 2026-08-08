@@ -19,7 +19,7 @@ import { completeAppointmentFn, drawEventWinnerFn } from "@/lib/loyalty.function
 import { cancelAppointmentFn, confirmAppointmentFn } from "@/lib/calendar.functions";
 import { FinanceTab } from "@/components/app/finance-tab";
 import { StoreOrdersTab } from "@/components/app/store-orders-tab";
-import { PushToggle } from "@/components/app/push-toggle";
+
 import {
   Dialog,
   DialogContent,
@@ -87,13 +87,10 @@ function AdminPanel() {
   return (
     <div className="bg-petal min-h-screen pb-16">
       <div className="bg-petal-veil" aria-hidden="true" />
-      <AppHeader title="Painel administrativo" subtitle="Janaina Silva" />
+      <AppHeader title="Painel administrativo" subtitle="Janaina Silva" audience="admin" />
       <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        <div className="mb-4">
-          <PushToggle audience="admin" />
-        </div>
         <Tabs defaultValue="agenda">
-          <TabsList className="flex w-full flex-wrap">
+          <TabsList className="-mx-4 flex h-auto w-[calc(100%+2rem)] max-w-none flex-nowrap justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-4 py-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:w-full sm:rounded-lg sm:bg-muted sm:px-1 [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
             <TabsTrigger value="clientes">Clientes</TabsTrigger>
@@ -340,7 +337,7 @@ function AgendaTab() {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="pendentes">
-        <TabsList className="flex w-full flex-wrap">
+        <TabsList className="mt-2 -mx-4 flex h-auto w-[calc(100%+2rem)] max-w-none flex-nowrap justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-4 py-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:w-full sm:rounded-lg sm:bg-muted sm:px-1 [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="pendentes">Pré-agendamentos ({pendentes.length})</TabsTrigger>
           <TabsTrigger value="confirmados">Confirmados ({confirmados.length})</TabsTrigger>
           <TabsTrigger value="concluidos">Concluídos ({concluidos.length})</TabsTrigger>
