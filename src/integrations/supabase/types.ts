@@ -176,6 +176,8 @@ export type Database = {
           id: string
           image_url: string | null
           prize: string | null
+          prize_claimed_appointment_id: string | null
+          prize_claimed_at: string | null
           rules: string | null
           starts_on: string
           title: string
@@ -191,6 +193,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           prize?: string | null
+          prize_claimed_appointment_id?: string | null
+          prize_claimed_at?: string | null
           rules?: string | null
           starts_on: string
           title: string
@@ -206,13 +210,23 @@ export type Database = {
           id?: string
           image_url?: string | null
           prize?: string | null
+          prize_claimed_appointment_id?: string | null
+          prize_claimed_at?: string | null
           rules?: string | null
           starts_on?: string
           title?: string
           winner_id?: string | null
           winner_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_prize_claimed_appointment_id_fkey"
+            columns: ["prize_claimed_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -250,6 +264,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          email: string | null
           full_name: string
           id: string
           login_id: string
@@ -258,6 +273,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email?: string | null
           full_name: string
           id: string
           login_id: string
@@ -266,6 +282,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email?: string | null
           full_name?: string
           id?: string
           login_id?: string

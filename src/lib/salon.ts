@@ -16,7 +16,17 @@ export const BENEFIT_LABELS: Record<string, string> = {
   fidelidade: "Fidelidade -20%",
   parcial: "Reembolso de pontos",
   indicacao: "Indicação -10%",
+  premio: "Prêmio de sorteio",
 };
+
+/** Etiqueta de destaque para reivindicações de prêmio, cupom ou fidelidade. */
+export function claimTag(benefitType: string) {
+  if (benefitType === "premio") return "🎁 Resgate de prêmio";
+  if (benefitType === "indicacao") return "🎁 Resgate de cupom de indicação";
+  if (benefitType === "fidelidade") return "⭐ Reivindicação de fidelidade";
+  if (benefitType === "parcial") return "⭐ Reembolso de pontos";
+  return null;
+}
 
 /** Formas de pagamento aceitas no fechamento de caixa. */
 export const PAYMENT_METHODS = [

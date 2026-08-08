@@ -26,6 +26,7 @@ import {
 import { busyTimesFn } from "@/lib/booking.functions";
 import { clientCancelAppointmentFn, hideCancelledForClientFn } from "@/lib/cancel.functions";
 import { consumeReferralFn } from "@/lib/loyalty.functions";
+import { claimEventPrizeFn } from "@/lib/account.functions";
 import { notifyNewAppointmentFn } from "@/lib/push.functions";
 
 import {
@@ -55,6 +56,9 @@ import {
 import { StorageImage } from "@/components/app/storage-image";
 
 const WELCOME_IMAGE = "/__l5e/assets-v1/5a73338f-8d2f-459f-8bb6-0dc055ee5917/boas-vindas.png";
+
+/** Benefício reivindicado que já entra aplicado no pré-agendamento. */
+export type Claim = { benefit: "fidelidade" | "indicacao" | "premio"; eventId?: string };
 
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({
@@ -101,44 +105,56 @@ function ClientPanel() {
   }
 
   const firstName = data?.full_name?.split(" ")[0] ?? "";
+  const [tab, setTab] = useState("agendar");
+  const [claim, setClaim] = useState<Claim | null>(null);
+
+  function startClaim(next: Claim) {
+    setClaim(next);
+    setTab("agendar");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   return (
     <div className="bg-petal min-h-screen pb-16">
       <div className="bg-petal-veil" aria-hidden="true" />
       <AppHeader
         title={firstName ? `Olá, ${firstName}!` : "Meu painel"}
-        subtitle={data?.login_id ? `ID de login: ${data.login_id}` : undefined}
         audience="cliente"
       />
 
       <main className="mx-auto w-full max-w-4xl px-4 py-6">
-        <Tabs defaultValue="agendar">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="-mx-4 flex h-auto w-[calc(100%+2rem)] max-w-none flex-nowrap justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-4 py-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:w-full sm:rounded-lg sm:bg-muted sm:px-1 [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="agendar">Agendar</TabsTrigger>
             <TabsTrigger value="meus">Meus horários</TabsTrigger>
-            {loyaltyEnabled ? <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger> : null}
+            <TabsTrigger value="loja">Loja</TabsTrigger>
+            <TabsTrigger value="catalogos">Catálogo</TabsTrigger>
             <TabsTrigger value="beneficios">Meus benefícios</TabsTrigger>
             <TabsTrigger value="eventos">Eventos</TabsTrigger>
-            <TabsTrigger value="loja">Loja</TabsTrigger>
-            <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
+            {loyaltyEnabled ? <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger> : null}
           </TabsList>
 
           <TabsContent value="agendar" className="pt-6">
-            <BookingFlow clientId={data?.id} clientName={data?.full_name ?? ""} />
+            <BookingFlow
+              clientId={data?.id}
+              clientName={data?.full_name ?? ""}
+              claim={claim}
+              onClaimUsed={() => setClaim(null)}
+            />
           </TabsContent>
           <TabsContent value="meus" className="pt-6">
             <MyAppointments clientId={data?.id} />
           </TabsContent>
           {loyaltyEnabled ? (
             <TabsContent value="fidelidade" className="pt-6">
-              <LoyaltyCards clientId={data?.id} />
+              <LoyaltyCards clientId={data?.id} onClaim={startClaim} />
             </TabsContent>
           ) : null}
           <TabsContent value="beneficios" className="pt-6">
-            <MyBenefits clientId={data?.id} />
+            <MyBenefits clientId={data?.id} onClaim={startClaim} />
           </TabsContent>
           <TabsContent value="eventos" className="pt-6">
-            <EventsList />
+            <EventsList clientId={data?.id} onClaim={startClaim} />
           </TabsContent>
           <TabsContent value="loja" className="pt-6">
             <Store clientName={data?.full_name ?? ""} />
@@ -187,9 +203,13 @@ function useServices() {
 function BookingFlow({
   clientId,
   clientName,
+  claim,
+  onClaimUsed,
 }: {
   clientId?: string | undefined;
   clientName: string;
+  claim?: Claim | null;
+  onClaimUsed?: () => void;
 }) {
   const queryClient = useQueryClient();
   const services = useServices();
@@ -207,6 +227,13 @@ function BookingFlow({
   const maxAdvanceMonths = settings.data?.max_advance_months ?? 2;
   const scheduleMonths = useScheduleMonths();
   const [monthKey, setMonthKey] = useState(() => currentMonthKey());
+
+  // Reivindicação: já entra com o benefício aplicado, no passo do procedimento.
+  useEffect(() => {
+    if (!claim) return;
+    setBenefit(claim.benefit);
+    setStep(0);
+  }, [claim]);
 
   function goTo(next: number) {
     setStep(next);
@@ -383,12 +410,18 @@ function BookingFlow({
         label: `Reembolso de pontos -${partialPercent}%`,
         percent: partialPercent,
       });
+    if (claim?.benefit === "premio")
+      list.push({
+        value: "premio",
+        label: "🎁 Prêmio de sorteio",
+        percent: 0,
+      });
     list.push({ value: "nenhum", label: "Sem desconto", percent: 0 });
     return list;
-  }, [loyaltyReady, couponCount, partialPercent]);
+  }, [loyaltyReady, couponCount, partialPercent, claim?.benefit]);
 
   const activeBenefit = benefitOptions.find((o) => o.value === benefit) ?? benefitOptions[0]!;
-  const eligible = activeBenefit.percent > 0;
+  const eligible = activeBenefit.percent > 0 || activeBenefit.value === "premio";
   const price = service ? Math.round(service.price_cents * (1 - activeBenefit.percent / 100)) : 0;
   const endTime = service && time ? addMinutes(time, service.duration_minutes) : null;
 
@@ -414,6 +447,13 @@ function BookingFlow({
       if (activeBenefit.value === "indicacao" && row?.id) {
         await consumeReferralFn({ data: { appointmentId: row.id } });
       }
+      if (activeBenefit.value === "premio" && row?.id && claim?.eventId) {
+        try {
+          await claimEventPrizeFn({ data: { eventId: claim.eventId, appointmentId: row.id } });
+        } catch (prizeError) {
+          console.error("Falha ao registrar o resgate do prêmio", prizeError);
+        }
+      }
       if (row?.id) {
         try {
           await notifyNewAppointmentFn({ data: { appointmentId: row.id } });
@@ -430,6 +470,7 @@ function BookingFlow({
       setDay(null);
       setTime(null);
       setBenefit(null);
+      onClaimUsed?.();
       goTo(0);
     } catch {
       toast.error("Esse horário pode ter sido ocupado. Escolha outro.");
@@ -443,6 +484,20 @@ function BookingFlow({
 
   return (
     <div ref={topRef} className="scroll-mt-24">
+      {claim ? (
+        <div className="mb-4 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm">
+          <p className="font-medium">
+            {claim.benefit === "premio"
+              ? "🎁 Resgate de prêmio em andamento"
+              : claim.benefit === "indicacao"
+                ? "🎁 Cupom de indicação aplicado"
+                : "⭐ Fidelidade aplicada"}
+          </p>
+          <p className="text-muted-foreground">
+            Escolha o procedimento, a data e o horário — o benefício já vai junto na comanda.
+          </p>
+        </div>
+      ) : null}
       <div className="flex items-center gap-3">
         {step > 0 ? (
           <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => goTo(step - 1)}>
@@ -757,7 +812,13 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   );
 }
 
-function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
+function LoyaltyCards({
+  clientId,
+  onClaim,
+}: {
+  clientId?: string | undefined;
+  onClaim?: (claim: Claim) => void;
+}) {
   const services = useServices();
   const settings = useAppSettings();
   const expiryDays = settings.data?.benefit_expiry_days ?? 90;
@@ -814,6 +875,15 @@ function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
                     ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
                     : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
                 </p>
+                {eligible ? (
+                  <Button
+                    className="mt-3 w-full"
+                    size="sm"
+                    onClick={() => onClaim?.({ benefit: "fidelidade" })}
+                  >
+                    Reivindicar desconto
+                  </Button>
+                ) : null}
               </article>
             );
           })}
@@ -822,7 +892,13 @@ function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
   );
 }
 
-function MyBenefits({ clientId }: { clientId?: string | undefined }) {
+function MyBenefits({
+  clientId,
+  onClaim,
+}: {
+  clientId?: string | undefined;
+  onClaim?: (claim: Claim) => void;
+}) {
   const { profile } = useCurrentProfile();
   const settings = useAppSettings();
   const referralEnabled = settings.data?.referral_enabled ?? true;
@@ -860,6 +936,12 @@ function MyBenefits({ clientId }: { clientId?: string | undefined }) {
   const serviceName = (id: string) =>
     (services.data ?? []).find((s) => s.id === id)?.name ?? "Procedimento";
   const now = Date.now();
+  const availableCoupons = (referrals.data ?? []).filter(
+    (r) =>
+      r.status === "concluido" &&
+      !r.used_at &&
+      (r.expires_at ? new Date(r.expires_at).getTime() > now : true),
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -901,6 +983,12 @@ function MyBenefits({ clientId }: { clientId?: string | undefined }) {
               );
             })}
           </div>
+          {availableCoupons > 0 ? (
+            <Button className="mt-4 w-full" onClick={() => onClaim?.({ benefit: "indicacao" })}>
+              Reivindicar cupom de {Math.round(REFERRAL_DISCOUNT * 100)}% ({availableCoupons}{" "}
+              disponível{availableCoupons === 1 ? "" : "eis"})
+            </Button>
+          ) : null}
         </article>
       ) : null}
 
@@ -932,7 +1020,13 @@ function MyBenefits({ clientId }: { clientId?: string | undefined }) {
   );
 }
 
-function EventsList() {
+function EventsList({
+  clientId,
+  onClaim,
+}: {
+  clientId?: string | undefined;
+  onClaim?: (claim: Claim) => void;
+}) {
   const events = useQuery({
     queryKey: ["events"],
     queryFn: async () => {
@@ -977,6 +1071,20 @@ function EventsList() {
               <p className="mt-3 text-sm">
                 🎉 Ganhadora: <strong>{e.winner_name}</strong> ({formatDateTime(e.drawn_at)})
               </p>
+            ) : null}
+            {clientId && e.winner_id === clientId ? (
+              e.prize_claimed_at ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Prêmio reivindicado em {formatDateTime(e.prize_claimed_at)}.
+                </p>
+              ) : (
+                <Button
+                  className="mt-3 w-full"
+                  onClick={() => onClaim?.({ benefit: "premio", eventId: e.id })}
+                >
+                  Reivindicar prêmio 🎁
+                </Button>
+              )
             ) : null}
           </div>
         </article>
