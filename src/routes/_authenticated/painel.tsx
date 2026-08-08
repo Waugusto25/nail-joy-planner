@@ -216,6 +216,9 @@ function BookingFlow({
   const loyaltyEnabled = settings.data?.loyalty_enabled ?? true;
   const referralEnabled = settings.data?.referral_enabled ?? true;
   const expiryDays = settings.data?.benefit_expiry_days ?? 90;
+  const maxAdvanceMonths = settings.data?.max_advance_months ?? 2;
+  const scheduleMonths = useScheduleMonths();
+  const [monthKey, setMonthKey] = useState(() => currentMonthKey());
 
   function goTo(next: number) {
     setStep(next);
@@ -299,13 +302,33 @@ function BookingFlow({
     },
   });
 
+  // Meses visíveis: mês atual + antecedência máxima definida pela administradora.
+  const monthOptions = useMemo(() => {
+    const rows = new Map((scheduleMonths.data ?? []).map((m) => [m.month, m]));
+    return monthKeysFrom(maxAdvanceMonths + 1).map((key) => {
+      const row = rows.get(key);
+      return {
+        key,
+        active: row?.active ?? true,
+        message: row?.message ?? null,
+      };
+    });
+  }, [scheduleMonths.data, maxAdvanceMonths]);
+
+  const selectedMonth = useMemo(
+    () => monthOptions.find((m) => m.key === monthKey) ?? monthOptions[0],
+    [monthOptions, monthKey],
+  );
+
   const availableDays = useMemo(() => {
+    if (!selectedMonth || !selectedMonth.active) return [];
     const weekdaysWithSlots = new Set((slots.data ?? []).map((s) => s.weekday));
     const blockedSet = new Set(blocked.data ?? []);
-    return nextDays(35).filter(
+    const from = nowTick.day > `${selectedMonth.key}-01` ? nowTick.day : `${selectedMonth.key}-01`;
+    return daysUntilEndOfMonth(from, selectedMonth.key).filter(
       (d) => weekdaysWithSlots.has(weekdayOf(d)) && !blockedSet.has(d) && d >= nowTick.day,
     );
-  }, [slots.data, blocked.data, nowTick.day]);
+  }, [slots.data, blocked.data, nowTick.day, selectedMonth]);
 
   const service = (services.data ?? []).find((s) => s.id === serviceId);
 
