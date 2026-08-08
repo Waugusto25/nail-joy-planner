@@ -18,6 +18,7 @@ import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
 import { completeAppointmentFn, drawEventWinnerFn } from "@/lib/loyalty.functions";
 import { cancelAppointmentFn, confirmAppointmentFn } from "@/lib/calendar.functions";
 import { FinanceTab } from "@/components/app/finance-tab";
+import { StoreOrdersTab } from "@/components/app/store-orders-tab";
 import { PushToggle } from "@/components/app/push-toggle";
 import {
   Dialog,
@@ -38,6 +39,7 @@ import {
   WEEKDAYS,
   cancellationMessage,
   confirmationMessage,
+  dayGroupLabel,
   formatDateTime,
   formatDayLabel,
   formatPhone,
