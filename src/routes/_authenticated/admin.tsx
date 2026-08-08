@@ -131,6 +131,7 @@ function AdminPanel() {
 
 function AgendaTab() {
   const queryClient = useQueryClient();
+  const [payingId, setPayingId] = useState<string | null>(null);
   const appointments = useQuery({
     queryKey: ["admin-appointments"],
     queryFn: async () => {
@@ -153,32 +154,52 @@ function AgendaTab() {
     },
   });
 
+  async function complete(id: string, paymentMethod: string) {
+    try {
+      const { notifications } = await completeAppointmentFn({
+        data: { appointmentId: id, paymentMethod },
+      });
+      setPayingId(null);
+      await queryClient.invalidateQueries();
+      toast.success("Atendimento concluído e registrado no caixa.");
+      for (const n of notifications) {
+        const message =
+          n.kind === "indicacao"
+            ? `Olá, ${n.name}! ${n.detail} concluiu o primeiro atendimento e você ganhou ${Math.round(REFERRAL_DISCOUNT * 100)}% de desconto no seu próximo procedimento. — Jannah Nails`
+            : `Olá, ${n.name}! Você completou o cartão de fidelidade de ${n.detail} e ganhou ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto no próximo atendimento. — Jannah Nails`;
+        const link = whatsappLinkTo(n.phone, message);
+        if (link) window.open(link, "_blank", "noopener");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível concluir.");
+    }
+  }
+
   async function setStatus(id: string, status: string) {
     if (status === "concluido") {
-      try {
-        const { notifications } = await completeAppointmentFn({ data: { appointmentId: id } });
-        await queryClient.invalidateQueries();
-        toast.success("Atendimento concluído.");
-        for (const n of notifications) {
-          const message =
-            n.kind === "indicacao"
-              ? `Olá, ${n.name}! ${n.detail} concluiu o primeiro atendimento e você ganhou ${Math.round(REFERRAL_DISCOUNT * 100)}% de desconto no seu próximo procedimento. — Jannah Nails`
-              : `Olá, ${n.name}! Você completou o cartão de fidelidade de ${n.detail} e ganhou ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto no próximo atendimento. — Jannah Nails`;
-          const link = whatsappLinkTo(n.phone, message);
-          if (link) window.open(link, "_blank", "noopener");
-        }
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Não foi possível concluir.");
+      setPayingId(id);
+      return;
+    }
+    try {
+      if (status === "confirmado") {
+        const result = await confirmAppointmentFn({ data: { appointmentId: id } });
+        toast.success(
+          result.calendar === "ok"
+            ? "Confirmado e adicionado à Google Agenda."
+            : "Confirmado. Não foi possível criar o evento na Google Agenda.",
+        );
+      } else if (status === "cancelado") {
+        await cancelAppointmentFn({ data: { appointmentId: id } });
+        toast.success("Atendimento cancelado.");
+      } else {
+        const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
+        if (error) throw new Error("Não foi possível atualizar.");
+        toast.success("Agendamento atualizado.");
       }
-      return;
+      await queryClient.invalidateQueries();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar.");
     }
-    const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
-    if (error) {
-      toast.error("Não foi possível atualizar.");
-      return;
-    }
-    toast.success("Agendamento atualizado.");
-    await queryClient.invalidateQueries();
   }
 
   const rows = appointments.data ?? [];
@@ -209,10 +230,23 @@ function AgendaTab() {
                     {formatPhone(client.phone)} · ID {client.login_id}
                   </p>
                 ) : null}
+                {a.payment_method ? (
+                  <p className="text-xs text-muted-foreground">
+                    Pago em {PAYMENT_METHOD_LABELS[a.payment_method] ?? a.payment_method}
+                  </p>
+                ) : null}
               </div>
               <Badge variant="secondary">{APPOINTMENT_STATUS[a.status] ?? a.status}</Badge>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void setStatus(a.id, "pendente")}
+                disabled={a.status === "pendente"}
+              >
+                Pendente
+              </Button>
               <Button size="sm" onClick={() => void setStatus(a.id, "confirmado")}>
                 Confirmar
               </Button>
@@ -245,6 +279,27 @@ function AgendaTab() {
         );
       })}
       <BlockedDates />
+      <Dialog open={payingId !== null} onOpenChange={(open) => !open && setPayingId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Forma de pagamento</DialogTitle>
+            <DialogDescription>
+              Escolha como a cliente pagou para concluir o atendimento e fechar o caixa.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            {PAYMENT_METHODS.map((m) => (
+              <Button
+                key={m.value}
+                variant="outline"
+                onClick={() => payingId && void complete(payingId, m.value)}
+              >
+                {m.label}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
