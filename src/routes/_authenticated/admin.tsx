@@ -16,12 +16,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
 import { completeAppointmentFn, drawEventWinnerFn } from "@/lib/loyalty.functions";
+import { cancelAppointmentFn, confirmAppointmentFn } from "@/lib/calendar.functions";
+import { FinanceTab } from "@/components/app/finance-tab";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { SERVICE_IMAGE_BUCKET, StorageImage } from "@/components/app/storage-image";
 import {
   APPOINTMENT_STATUS,
   BENEFIT_LABELS,
   LOYALTY_CYCLE,
   LOYALTY_DISCOUNT,
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_LABELS,
   REFERRAL_DISCOUNT,
   WEEKDAYS,
   formatDateTime,
@@ -76,6 +87,7 @@ function AdminPanel() {
         <Tabs defaultValue="agenda">
           <TabsList className="flex w-full flex-wrap">
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
+            <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
             <TabsTrigger value="clientes">Clientes</TabsTrigger>
             <TabsTrigger value="servicos">Serviços</TabsTrigger>
             <TabsTrigger value="horarios">Horários</TabsTrigger>
@@ -86,6 +98,9 @@ function AdminPanel() {
           </TabsList>
           <TabsContent value="agenda" className="pt-6">
             <AgendaTab />
+          </TabsContent>
+          <TabsContent value="financeiro" className="pt-6">
+            <FinanceTab />
           </TabsContent>
           <TabsContent value="clientes" className="pt-6">
             <ClientsTab />
