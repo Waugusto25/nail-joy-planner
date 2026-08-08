@@ -151,6 +151,8 @@ function ClientPanel() {
         </Tabs>
       </main>
 
+      <NotificationPrompt active={!welcomeOpen} />
+
       <Dialog open={welcomeOpen} onOpenChange={(open) => (open ? null : void closeWelcome())}>
         <DialogContent className="max-w-md overflow-hidden p-0">
           <img
