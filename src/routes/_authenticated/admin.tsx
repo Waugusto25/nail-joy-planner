@@ -329,7 +329,7 @@ function AgendaTab() {
     .slice()
     .sort((a, b) => b.day.localeCompare(a.day));
   const cancelados = rows
-    .filter((a) => a.status === "cancelado")
+    .filter((a) => a.status === "cancelado" && !a.admin_hidden_at)
     .slice()
     .sort((a, b) => b.day.localeCompare(a.day));
 
@@ -381,7 +381,14 @@ function AgendaTab() {
           {cancelados.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum agendamento cancelado.</p>
           ) : (
-            cancelados.map(renderCard)
+            <>
+              <div className="flex justify-end">
+                <Button size="sm" variant="outline" onClick={() => void clearCancelled()}>
+                  <Trash2 size={16} /> Limpar todos os cancelados
+                </Button>
+              </div>
+              {cancelados.map(renderCard)}
+            </>
           )}
         </TabsContent>
       </Tabs>
