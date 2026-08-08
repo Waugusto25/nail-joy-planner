@@ -74,18 +74,6 @@ export const Route = createFileRoute("/_authenticated/painel")({
 
 const todayISO = localTodayISO;
 
-function nextDays(count: number) {
-  const list: string[] = [];
-  const base = new Date();
-  for (let i = 0; i < count; i++) {
-    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i);
-    list.push(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-    );
-  }
-  return list;
-}
-
 function weekdayOf(day: string) {
   const [y, m, d] = day.split("-").map(Number);
   return new Date(y!, (m ?? 1) - 1, d ?? 1).getDay();
