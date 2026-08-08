@@ -64,32 +64,47 @@
   --color-gold: var(--gold);
   --shadow-soft: var(--shadow-soft);
   --shadow-lift: var(--shadow-lift);
+  --shadow-card: var(--shadow-card);
+  --color-input-surface: var(--input-surface);
+  --color-input-border: var(--input-border);
+  --color-input-foreground: var(--input-foreground);
+  --color-input-placeholder: var(--input-placeholder);
+  --color-card-accent: var(--card-border-accent);
 }
 
 :root {
   --radius: 1rem;
-  --background: oklch(0.983 0.012 45);
-  --foreground: oklch(0.31 0.055 15);
-  --card: oklch(0.995 0.006 60);
-  --card-foreground: oklch(0.31 0.055 15);
+  --background: oklch(0.972 0.016 350);
+  --foreground: oklch(0.27 0.075 350);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.27 0.075 350);
   --popover: oklch(0.995 0.006 60);
-  --popover-foreground: oklch(0.31 0.055 15);
+  --popover-foreground: oklch(0.27 0.075 350);
   --primary: oklch(0.53 0.125 12);
   --primary-foreground: oklch(0.985 0.01 50);
   --secondary: oklch(0.935 0.035 22);
   --secondary-foreground: oklch(0.4 0.09 14);
   --muted: oklch(0.955 0.018 40);
-  --muted-foreground: oklch(0.52 0.04 18);
+  /* Bordô elegante (#5C1D38) — contraste forte para textos de apoio. */
+  --muted-foreground: oklch(0.34 0.093 349);
   --accent: oklch(0.9 0.055 20);
   --accent-foreground: oklch(0.36 0.08 14);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0.01 50);
-  --border: oklch(0.905 0.028 28);
-  --input: oklch(0.905 0.028 28);
-  --ring: oklch(0.63 0.11 14);
+  --border: oklch(0.888 0.045 345);
+  --input: oklch(0.842 0.062 345);
+  --ring: oklch(0.58 0.15 350);
   --gold: oklch(0.72 0.09 72);
+  /* Campos de digitação: fundo #F9F9F9, borda #E0B0C8, texto vinho escuro. */
+  --input-surface: oklch(0.978 0.001 0);
+  --input-border: oklch(0.842 0.062 345);
+  --input-foreground: oklch(0.245 0.078 350);
+  --input-placeholder: oklch(0.53 0.05 350);
+  --card-border-accent: oklch(0.83 0.075 350);
   --shadow-soft: 0 2px 14px oklch(0.53 0.125 12 / 0.08);
   --shadow-lift: 0 12px 34px oklch(0.53 0.125 12 / 0.16);
+  /* 0 8px 24px rgba(214, 51, 132, 0.12) */
+  --shadow-card: 0 8px 24px oklch(0.6 0.21 355 / 0.12);
   --chart-1: oklch(0.62 0.14 12);
   --chart-2: oklch(0.72 0.09 72);
   --chart-3: oklch(0.66 0.1 340);
@@ -138,6 +153,12 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+  --input-surface: oklch(0.24 0.04 265);
+  --input-border: oklch(1 0 0 / 18%);
+  --input-foreground: oklch(0.984 0.003 247.858);
+  --input-placeholder: oklch(0.704 0.04 256.788);
+  --card-border-accent: oklch(1 0 0 / 14%);
+  --shadow-card: 0 8px 24px oklch(0 0 0 / 0.4);
 }
 
 @layer base {
@@ -166,16 +187,59 @@
 
 @utility surface-card {
   background-color: var(--color-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-card-accent);
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-card);
 }
 
 @utility bg-petal {
-  background-image: radial-gradient(
-      110% 80% at 10% 0%,
-      oklch(0.93 0.05 20 / 0.85) 0%,
-      transparent 60%
+  position: relative;
+  isolation: isolate;
+  /* Gradiente rosa-bege (#FFF0F5) -> champanhe acetinado. */
+  background-color: oklch(0.972 0.016 350);
+  background-image: linear-gradient(
+      175deg,
+      oklch(0.978 0.018 350) 0%,
+      oklch(0.968 0.022 348) 42%,
+      oklch(0.962 0.028 78) 100%
     ),
-    radial-gradient(90% 70% at 100% 10%, oklch(0.95 0.04 45 / 0.9) 0%, transparent 55%);
+    radial-gradient(120% 70% at 12% -5%, oklch(0.94 0.05 350 / 0.55) 0%, transparent 62%),
+    radial-gradient(95% 60% at 100% 4%, oklch(0.95 0.045 75 / 0.6) 0%, transparent 58%);
+  background-attachment: fixed, scroll, scroll;
+}
+
+/* Marca d'água: silhuetas de folhas e brilhos finos em rosa/dourado. */
+@utility bg-petal {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image:
+      radial-gradient(
+        42% 12% at 18% 22%,
+        oklch(0.78 0.07 145 / 0.16) 0%,
+        transparent 70%
+      ),
+      radial-gradient(
+        34% 10% at 86% 44%,
+        oklch(0.78 0.07 145 / 0.13) 0%,
+        transparent 70%
+      ),
+      radial-gradient(
+        38% 11% at 30% 78%,
+        oklch(0.8 0.06 150 / 0.12) 0%,
+        transparent 70%
+      ),
+      radial-gradient(circle at 8% 12%, oklch(0.86 0.1 75 / 0.5) 0 1.4px, transparent 2px),
+      radial-gradient(circle at 26% 6%, oklch(0.85 0.09 350 / 0.45) 0 1.2px, transparent 2px),
+      radial-gradient(circle at 64% 16%, oklch(0.86 0.1 75 / 0.42) 0 1.6px, transparent 2px),
+      radial-gradient(circle at 92% 26%, oklch(0.85 0.09 350 / 0.4) 0 1.2px, transparent 2px),
+      radial-gradient(circle at 14% 52%, oklch(0.86 0.1 75 / 0.4) 0 1.3px, transparent 2px),
+      radial-gradient(circle at 48% 62%, oklch(0.85 0.09 350 / 0.36) 0 1.1px, transparent 2px),
+      radial-gradient(circle at 78% 74%, oklch(0.86 0.1 75 / 0.4) 0 1.5px, transparent 2px),
+      radial-gradient(circle at 34% 92%, oklch(0.85 0.09 350 / 0.36) 0 1.2px, transparent 2px);
+  }
 }
