@@ -11,9 +11,8 @@ export const phoneSchema = z
 export const nameSchema = z
   .string()
   .trim()
-  .min(3, "Informe seu nome completo")
-  .max(80, "Nome muito longo")
-  .refine((v) => v.includes(" "), { message: "Informe nome e sobrenome" });
+  .min(2, "Informe seu nome")
+  .max(80, "Nome muito longo");
 
 export const identifierSchema = z.string().trim().min(3, "Informe seu nome ou ID de login").max(80);
 
