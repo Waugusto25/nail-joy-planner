@@ -18,6 +18,7 @@ import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
 import { completeAppointmentFn, drawEventWinnerFn } from "@/lib/loyalty.functions";
 import { cancelAppointmentFn, confirmAppointmentFn } from "@/lib/calendar.functions";
 import { FinanceTab } from "@/components/app/finance-tab";
+import { PushToggle } from "@/components/app/push-toggle";
 import {
   Dialog,
   DialogContent,
@@ -84,6 +85,9 @@ function AdminPanel() {
       <div className="bg-petal-veil" aria-hidden="true" />
       <AppHeader title="Painel administrativo" subtitle="Janaina Silva" />
       <main className="mx-auto w-full max-w-5xl px-4 py-6">
+        <div className="mb-4">
+          <PushToggle audience="admin" />
+        </div>
         <Tabs defaultValue="agenda">
           <TabsList className="flex w-full flex-wrap">
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
