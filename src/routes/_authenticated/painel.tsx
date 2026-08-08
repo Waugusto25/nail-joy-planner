@@ -14,6 +14,15 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { useAppSettings } from "@/hooks/useSettings";
+import { useScheduleMonths } from "@/hooks/useScheduleMonths";
+import {
+  currentMonthKey,
+  daysUntilEndOfMonth,
+  monthKeyOf,
+  monthKeysFrom,
+  monthLabel,
+  monthShortLabel,
+} from "@/lib/months";
 import { busyTimesFn } from "@/lib/booking.functions";
 import { clientCancelAppointmentFn, hideCancelledForClientFn } from "@/lib/cancel.functions";
 import { consumeReferralFn } from "@/lib/loyalty.functions";
