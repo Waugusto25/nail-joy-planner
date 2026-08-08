@@ -236,3 +236,25 @@ export function cancellationMessage(n: AppointmentNotice) {
     `Qualquer dúvida, me chame. Um beijo! 🥰 — ${SALON_NAME}`,
   ].join("\n");
 }
+
+/** Alerta enviado à administradora quando a própria cliente cancela pelo app. */
+export function adminCancellationAlert(n: AppointmentNotice) {
+  const start = shortTime(n.start);
+  return [
+    "⚠️ Agendamento Cancelado pela Cliente!",
+    "",
+    `Cliente: ${n.name}`,
+    `Serviço: ${n.serviceName}`,
+    `Data/Horário: ${formatDayLabel(n.day)} às ${start}`,
+    "",
+    "O horário correspondente foi automaticamente liberado na sua agenda do aplicativo.",
+  ].join("\n");
+}
+
+/** Mensagem cortês exibida à cliente após o cancelamento. */
+export function clientCancelConfirmation(day: string, start: string) {
+  return `Seu agendamento para o dia ${formatDayLabel(day)} às ${shortTime(start)} foi cancelado com sucesso. Agradecemos por nos avisar com antecedência! Esperamos ver você em breve. 💖`;
+}
+
+/** Dias que um cancelamento fica visível no histórico da cliente. */
+export const CANCELLED_HISTORY_DAYS = 3;
