@@ -892,7 +892,13 @@ function LoyaltyCards({
   );
 }
 
-function MyBenefits({ clientId }: { clientId?: string | undefined }) {
+function MyBenefits({
+  clientId,
+  onClaim,
+}: {
+  clientId?: string | undefined;
+  onClaim?: (claim: Claim) => void;
+}) {
   const { profile } = useCurrentProfile();
   const settings = useAppSettings();
   const referralEnabled = settings.data?.referral_enabled ?? true;
@@ -930,6 +936,12 @@ function MyBenefits({ clientId }: { clientId?: string | undefined }) {
   const serviceName = (id: string) =>
     (services.data ?? []).find((s) => s.id === id)?.name ?? "Procedimento";
   const now = Date.now();
+  const availableCoupons = (referrals.data ?? []).filter(
+    (r) =>
+      r.status === "concluido" &&
+      !r.used_at &&
+      (r.expires_at ? new Date(r.expires_at).getTime() > now : true),
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -971,6 +983,12 @@ function MyBenefits({ clientId }: { clientId?: string | undefined }) {
               );
             })}
           </div>
+          {availableCoupons > 0 ? (
+            <Button className="mt-4 w-full" onClick={() => onClaim?.({ benefit: "indicacao" })}>
+              Reivindicar cupom de {Math.round(REFERRAL_DISCOUNT * 100)}% ({availableCoupons}{" "}
+              disponível{availableCoupons === 1 ? "" : "eis"})
+            </Button>
+          ) : null}
         </article>
       ) : null}
 
@@ -1002,7 +1020,13 @@ function MyBenefits({ clientId }: { clientId?: string | undefined }) {
   );
 }
 
-function EventsList() {
+function EventsList({
+  clientId,
+  onClaim,
+}: {
+  clientId?: string | undefined;
+  onClaim?: (claim: Claim) => void;
+}) {
   const events = useQuery({
     queryKey: ["events"],
     queryFn: async () => {
@@ -1047,6 +1071,20 @@ function EventsList() {
               <p className="mt-3 text-sm">
                 🎉 Ganhadora: <strong>{e.winner_name}</strong> ({formatDateTime(e.drawn_at)})
               </p>
+            ) : null}
+            {clientId && e.winner_id === clientId ? (
+              e.prize_claimed_at ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Prêmio reivindicado em {formatDateTime(e.prize_claimed_at)}.
+                </p>
+              ) : (
+                <Button
+                  className="mt-3 w-full"
+                  onClick={() => onClaim?.({ benefit: "premio", eventId: e.id })}
+                >
+                  Reivindicar prêmio 🎁
+                </Button>
+              )
             ) : null}
           </div>
         </article>
