@@ -50,6 +50,7 @@ function AuthPage() {
 
   return (
     <main className="bg-petal min-h-screen px-4 py-10">
+      <div className="bg-petal-veil" aria-hidden="true" />
       <div className="mx-auto w-full max-w-md">
         <BrandMark subtitle="Studio de unhas" />
         <h1 className="sr-only">
