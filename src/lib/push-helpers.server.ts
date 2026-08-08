@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   addMinutes,
   cancellationMessage,
+  claimTag,
   confirmationMessage,
   formatDayLabel,
   formatPrice,
@@ -88,7 +89,9 @@ export async function notifyAdminsNewAppointment(appointmentId: string) {
   const db = admin();
   const { data: appt } = await db
     .from("appointments")
-    .select("id, client_id, day, start_time, price_cents, services(name, duration_minutes)")
+    .select(
+      "id, client_id, day, start_time, price_cents, benefit_type, discount_percent, services(name, duration_minutes)",
+    )
     .eq("id", appointmentId)
     .maybeSingle();
   if (!appt) return { sent: 0 };
@@ -108,9 +111,15 @@ export async function notifyAdminsNewAppointment(appointmentId: string) {
   const { data: admins } = await db.from("user_roles").select("user_id").eq("role", "admin");
   const rows = await subscriptionsFor(db, (admins ?? []).map((r) => String(r.user_id)));
 
+  const tag = claimTag(String(appt.benefit_type ?? "nenhum"));
+  const percent = Number(appt.discount_percent ?? 0);
+  const claimLine = tag
+    ? `\n${tag}${percent > 0 ? ` (-${percent}%)` : ""} — confira o benefício no painel.`
+    : "";
+
   return sendToSubscriptions(db, rows, {
-    title: "Novo pré-agendamento 💅",
-    body: `${client?.full_name ?? "Cliente"} — ${service?.name ?? "Procedimento"}\n${formatDayLabel(String(appt.day))} às ${start} (até ${end}) • ${formatPrice(Number(appt.price_cents))}`,
+    title: tag ? `Novo pré-agendamento com ${tag}` : "Novo pré-agendamento 💅",
+    body: `${client?.full_name ?? "Cliente"} — ${service?.name ?? "Procedimento"}\n${formatDayLabel(String(appt.day))} às ${start} (até ${end}) • ${formatPrice(Number(appt.price_cents))}${claimLine}`,
     url: "/admin",
     tag: `novo-${appointmentId}`,
   });

@@ -274,6 +274,9 @@ function AgendaTab() {
       <article key={a.id} className="surface-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
+            {claimTag(a.benefit_type) ? (
+              <Badge className="mb-1.5">{claimTag(a.benefit_type)}</Badge>
+            ) : null}
             <p className="font-display text-lg">{client?.full_name ?? "Cliente"}</p>
             <p className="text-sm capitalize text-muted-foreground">
               {formatDayLabel(a.day)} · {shortTime(a.start_time)} ·{" "}
