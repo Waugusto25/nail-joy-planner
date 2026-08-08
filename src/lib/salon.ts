@@ -18,6 +18,18 @@ export const BENEFIT_LABELS: Record<string, string> = {
   indicacao: "Indicação -10%",
 };
 
+/** Formas de pagamento aceitas no fechamento de caixa. */
+export const PAYMENT_METHODS = [
+  { value: "pix", label: "PIX" },
+  { value: "credito", label: "Cartão de crédito" },
+  { value: "debito", label: "Cartão de débito" },
+  { value: "dinheiro", label: "Dinheiro" },
+] as const;
+
+export const PAYMENT_METHOD_LABELS: Record<string, string> = Object.fromEntries(
+  PAYMENT_METHODS.map((m) => [m.value, m.label]),
+);
+
 /** ISO date (YYYY-MM-DD) de N dias atrás — janela de validade dos pontos. */
 export function isoDaysAgo(days: number) {
   const d = new Date(Date.now() - days * 86400000);

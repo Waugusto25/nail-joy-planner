@@ -17,7 +17,7 @@ export const completeAppointmentFn = createServerFn({ method: "POST" })
     });
     if (!isAdmin) throw new Error("Acesso restrito à administradora.");
     const { completeAppointment } = await import("./loyalty-helpers.server");
-    return completeAppointment(data.appointmentId);
+    return completeAppointment(data.appointmentId, data.paymentMethod);
   });
 
 export const drawEventWinnerFn = createServerFn({ method: "POST" })

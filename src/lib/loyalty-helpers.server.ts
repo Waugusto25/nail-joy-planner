@@ -29,7 +29,7 @@ async function settings(db: SupabaseClient) {
  * - a indicação só vira cupom depois que a amiga indicada conclui o 1º atendimento (antifraude);
  * - a cada ciclo completo de procedimentos, avisa a fidelidade.
  */
-export async function completeAppointment(appointmentId: string) {
+export async function completeAppointment(appointmentId: string, paymentMethod: string) {
   const db = admin();
   const { data: appt } = await db
     .from("appointments")
@@ -40,7 +40,11 @@ export async function completeAppointment(appointmentId: string) {
 
   const { error } = await db
     .from("appointments")
-    .update({ status: "concluido" })
+    .update({
+      status: "concluido",
+      payment_method: paymentMethod,
+      completed_at: new Date().toISOString(),
+    })
     .eq("id", appointmentId);
   if (error) throw new Error("Não foi possível concluir o atendimento.");
 
