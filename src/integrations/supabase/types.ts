@@ -14,12 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          benefit_expiry_days: number
+          id: boolean
+          loyalty_enabled: boolean
+          referral_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          benefit_expiry_days?: number
+          id?: boolean
+          loyalty_enabled?: boolean
+          referral_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          benefit_expiry_days?: number
+          id?: boolean
+          loyalty_enabled?: boolean
+          referral_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
+          benefit_type: string
           client_id: string
           created_at: string
           day: string
           discount_applied: boolean
+          discount_percent: number
           id: string
           notes: string | null
           price_cents: number
@@ -28,10 +54,12 @@ export type Database = {
           status: string
         }
         Insert: {
+          benefit_type?: string
           client_id: string
           created_at?: string
           day: string
           discount_applied?: boolean
+          discount_percent?: number
           id?: string
           notes?: string | null
           price_cents?: number
@@ -40,10 +68,12 @@ export type Database = {
           status?: string
         }
         Update: {
+          benefit_type?: string
           client_id?: string
           created_at?: string
           day?: string
           discount_applied?: boolean
+          discount_percent?: number
           id?: string
           notes?: string | null
           price_cents?: number
@@ -109,6 +139,54 @@ export type Database = {
         }
         Relationships: []
       }
+      events: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          drawn_at: string | null
+          ends_on: string
+          id: string
+          image_url: string | null
+          prize: string | null
+          rules: string | null
+          starts_on: string
+          title: string
+          winner_id: string | null
+          winner_name: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          drawn_at?: string | null
+          ends_on: string
+          id?: string
+          image_url?: string | null
+          prize?: string | null
+          rules?: string | null
+          starts_on: string
+          title: string
+          winner_id?: string | null
+          winner_name?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          drawn_at?: string | null
+          ends_on?: string
+          id?: string
+          image_url?: string | null
+          prize?: string | null
+          rules?: string | null
+          starts_on?: string
+          title?: string
+          winner_id?: string | null
+          winner_name?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active: boolean
@@ -168,6 +246,53 @@ export type Database = {
           welcome_seen?: boolean
         }
         Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          earned_at: string | null
+          expires_at: string | null
+          id: string
+          notified: boolean
+          referred_id: string
+          referrer_id: string
+          status: string
+          used_appointment_id: string | null
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          earned_at?: string | null
+          expires_at?: string | null
+          id?: string
+          notified?: boolean
+          referred_id: string
+          referrer_id: string
+          status?: string
+          used_appointment_id?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          earned_at?: string | null
+          expires_at?: string | null
+          id?: string
+          notified?: boolean
+          referred_id?: string
+          referrer_id?: string
+          status?: string
+          used_appointment_id?: string | null
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_used_appointment_id_fkey"
+            columns: ["used_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schedule_breaks: {
         Row: {
