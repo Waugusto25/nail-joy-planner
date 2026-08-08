@@ -206,10 +206,8 @@
     radial-gradient(120% 70% at 12% -5%, oklch(0.94 0.05 350 / 0.55) 0%, transparent 62%),
     radial-gradient(95% 60% at 100% 4%, oklch(0.95 0.045 75 / 0.6) 0%, transparent 58%);
   background-attachment: fixed, scroll, scroll;
-}
 
-/* Marca d'água: silhuetas de folhas e brilhos finos em rosa/dourado. */
-@utility bg-petal {
+  /* Marca d'água: silhuetas de folhas e brilhos finos em rosa/dourado. */
   &::before {
     content: "";
     position: absolute;
