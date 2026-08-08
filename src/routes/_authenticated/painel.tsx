@@ -12,16 +12,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
+import { useAppSettings } from "@/hooks/useSettings";
 import { busyTimesFn } from "@/lib/booking.functions";
+import { consumeReferralFn } from "@/lib/loyalty.functions";
 import {
   APPOINTMENT_STATUS,
+  LOYALTY_CYCLE,
   LOYALTY_DISCOUNT,
+  LOYALTY_PARTIAL_STEP,
+  REFERRAL_DISCOUNT,
   WEEKDAYS,
   addMinutes,
+  formatDateTime,
   formatDayLabel,
   formatDuration,
   formatPrice,
   formatTimeRange,
+  isoDaysAgo,
   overlaps,
   shortTime,
   timeToMinutes,
@@ -72,6 +79,8 @@ function ClientPanel() {
   const navigate = useNavigate();
   const { profile } = useCurrentProfile();
   const data = profile.data;
+  const settings = useAppSettings();
+  const loyaltyEnabled = settings.data?.loyalty_enabled ?? true;
 
   useEffect(() => {
     if (data?.isAdmin) void navigate({ to: "/admin", replace: true });
@@ -101,7 +110,9 @@ function ClientPanel() {
           <TabsList className="flex w-full flex-wrap">
             <TabsTrigger value="agendar">Agendar</TabsTrigger>
             <TabsTrigger value="meus">Meus horários</TabsTrigger>
-            <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger>
+            {loyaltyEnabled ? <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger> : null}
+            <TabsTrigger value="beneficios">Meus benefícios</TabsTrigger>
+            <TabsTrigger value="eventos">Eventos</TabsTrigger>
             <TabsTrigger value="loja">Loja</TabsTrigger>
             <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
           </TabsList>
@@ -112,8 +123,16 @@ function ClientPanel() {
           <TabsContent value="meus" className="pt-6">
             <MyAppointments clientId={data?.id} />
           </TabsContent>
-          <TabsContent value="fidelidade" className="pt-6">
-            <LoyaltyCards clientId={data?.id} />
+          {loyaltyEnabled ? (
+            <TabsContent value="fidelidade" className="pt-6">
+              <LoyaltyCards clientId={data?.id} />
+            </TabsContent>
+          ) : null}
+          <TabsContent value="beneficios" className="pt-6">
+            <MyBenefits clientId={data?.id} />
+          </TabsContent>
+          <TabsContent value="eventos" className="pt-6">
+            <EventsList />
           </TabsContent>
           <TabsContent value="loja" className="pt-6">
             <Store clientName={data?.full_name ?? ""} />
