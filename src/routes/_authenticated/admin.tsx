@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Lock } from "lucide-react";
 
 import { AppHeader } from "@/components/app/app-header";
 import { Button } from "@/components/ui/button";
