@@ -1102,7 +1102,11 @@ function LoyaltyTab() {
     },
   });
 
-  async function save(patch: Record<string, unknown>) {
+  async function save(patch: {
+    loyalty_enabled?: boolean;
+    referral_enabled?: boolean;
+    benefit_expiry_days?: number;
+  }) {
     const { error } = await supabase.from("app_settings").update(patch).eq("id", true);
     if (error) {
       toast.error("Não foi possível salvar.");
