@@ -101,13 +101,14 @@ function AuthPage() {
 function PhoneAccessForm() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [referrerPhone, setReferrerPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
     try {
-      const result = await phoneAccessFn({ data: { fullName, phone } });
+      const result = await phoneAccessFn({ data: { fullName, phone, referrerPhone } });
       const { error } = await supabase.auth.signInWithPassword({
         email: result.email,
         password: onlyDigits(phone),
@@ -150,6 +151,21 @@ function PhoneAccessForm() {
         />
         <p className="text-xs text-muted-foreground">
           Seu telefone é o seu acesso. Toque no olhinho para conferir os números.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="access-referrer">Quem indicou você? (opcional)</Label>
+        <Input
+          id="access-referrer"
+          inputMode="numeric"
+          value={referrerPhone}
+          onChange={(e) => setReferrerPhone(onlyDigits(e.target.value))}
+          placeholder="Telefone da amiga com DDD"
+          maxLength={13}
+        />
+        <p className="text-xs text-muted-foreground">
+          A amiga que te indicou ganha 10% de desconto depois do seu primeiro atendimento
+          concluído.
         </p>
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
