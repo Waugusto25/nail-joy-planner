@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { InstallPrompt } from "@/components/app/install-prompt";
 import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
@@ -97,13 +98,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Acesse sua conta Jannah Nails para agendar manicure e pedicure, acompanhar seu cartão de fidelidade e ver a loja da Janaina." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ba08da18e48b1b14f5a8da62b09b9c70/id-preview-4387bade--f96d0623-3d94-4c29-b904-ecb9c33dfe92.lovable.app-1786135683876.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ba08da18e48b1b14f5a8da62b09b9c70/id-preview-4387bade--f96d0623-3d94-4c29-b904-ecb9c33dfe92.lovable.app-1786135683876.png" },
+      { name: "theme-color", content: "#B4325A" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "Jannah Nails" },
+      { name: "mobile-web-app-capable", content: "yes" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -150,6 +158,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster position="top-center" richColors />
+      <InstallPrompt />
     </QueryClientProvider>
   );
 }
