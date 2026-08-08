@@ -203,9 +203,13 @@ function useServices() {
 function BookingFlow({
   clientId,
   clientName,
+  claim,
+  onClaimUsed,
 }: {
   clientId?: string | undefined;
   clientName: string;
+  claim?: Claim | null;
+  onClaimUsed?: () => void;
 }) {
   const queryClient = useQueryClient();
   const services = useServices();
@@ -223,6 +227,13 @@ function BookingFlow({
   const maxAdvanceMonths = settings.data?.max_advance_months ?? 2;
   const scheduleMonths = useScheduleMonths();
   const [monthKey, setMonthKey] = useState(() => currentMonthKey());
+
+  // Reivindicação: já entra com o benefício aplicado, no passo do procedimento.
+  useEffect(() => {
+    if (!claim) return;
+    setBenefit(claim.benefit);
+    setStep(0);
+  }, [claim]);
 
   function goTo(next: number) {
     setStep(next);
@@ -399,12 +410,18 @@ function BookingFlow({
         label: `Reembolso de pontos -${partialPercent}%`,
         percent: partialPercent,
       });
+    if (claim?.benefit === "premio")
+      list.push({
+        value: "premio",
+        label: "🎁 Prêmio de sorteio",
+        percent: 0,
+      });
     list.push({ value: "nenhum", label: "Sem desconto", percent: 0 });
     return list;
-  }, [loyaltyReady, couponCount, partialPercent]);
+  }, [loyaltyReady, couponCount, partialPercent, claim?.benefit]);
 
   const activeBenefit = benefitOptions.find((o) => o.value === benefit) ?? benefitOptions[0]!;
-  const eligible = activeBenefit.percent > 0;
+  const eligible = activeBenefit.percent > 0 || activeBenefit.value === "premio";
   const price = service ? Math.round(service.price_cents * (1 - activeBenefit.percent / 100)) : 0;
   const endTime = service && time ? addMinutes(time, service.duration_minutes) : null;
 
@@ -430,6 +447,13 @@ function BookingFlow({
       if (activeBenefit.value === "indicacao" && row?.id) {
         await consumeReferralFn({ data: { appointmentId: row.id } });
       }
+      if (activeBenefit.value === "premio" && row?.id && claim?.eventId) {
+        try {
+          await claimEventPrizeFn({ data: { eventId: claim.eventId, appointmentId: row.id } });
+        } catch (prizeError) {
+          console.error("Falha ao registrar o resgate do prêmio", prizeError);
+        }
+      }
       if (row?.id) {
         try {
           await notifyNewAppointmentFn({ data: { appointmentId: row.id } });
@@ -446,6 +470,7 @@ function BookingFlow({
       setDay(null);
       setTime(null);
       setBenefit(null);
+      onClaimUsed?.();
       goTo(0);
     } catch {
       toast.error("Esse horário pode ter sido ocupado. Escolha outro.");
@@ -459,6 +484,20 @@ function BookingFlow({
 
   return (
     <div ref={topRef} className="scroll-mt-24">
+      {claim ? (
+        <div className="mb-4 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm">
+          <p className="font-medium">
+            {claim.benefit === "premio"
+              ? "🎁 Resgate de prêmio em andamento"
+              : claim.benefit === "indicacao"
+                ? "🎁 Cupom de indicação aplicado"
+                : "⭐ Fidelidade aplicada"}
+          </p>
+          <p className="text-muted-foreground">
+            Escolha o procedimento, a data e o horário — o benefício já vai junto na comanda.
+          </p>
+        </div>
+      ) : null}
       <div className="flex items-center gap-3">
         {step > 0 ? (
           <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => goTo(step - 1)}>
@@ -773,7 +812,13 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   );
 }
 
-function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
+function LoyaltyCards({
+  clientId,
+  onClaim,
+}: {
+  clientId?: string | undefined;
+  onClaim?: (claim: Claim) => void;
+}) {
   const services = useServices();
   const settings = useAppSettings();
   const expiryDays = settings.data?.benefit_expiry_days ?? 90;
@@ -830,6 +875,15 @@ function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
                     ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
                     : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
                 </p>
+                {eligible ? (
+                  <Button
+                    className="mt-3 w-full"
+                    size="sm"
+                    onClick={() => onClaim?.({ benefit: "fidelidade" })}
+                  >
+                    Reivindicar desconto
+                  </Button>
+                ) : null}
               </article>
             );
           })}
