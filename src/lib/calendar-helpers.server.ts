@@ -148,3 +148,28 @@ export async function removeAppointmentFromCalendar(appointmentId: string) {
   await db.from("appointments").update({ google_event_id: null }).eq("id", appointmentId);
   return { removed: true };
 }
+
+/**
+ * Atualiza apenas a cor do compromisso conforme o status atual do atendimento.
+ * Se o evento ainda não existir na agenda, cria o compromisso completo.
+ */
+export async function syncCalendarStatusColor(appointmentId: string) {
+  const db = admin();
+  const { data } = await db
+    .from("appointments")
+    .select("status, google_event_id")
+    .eq("id", appointmentId)
+    .maybeSingle();
+  if (!data) throw new Error("Agendamento não encontrado.");
+  const colorId = STATUS_COLOR_ID[String(data.status)];
+  if (!colorId) return { updated: false };
+  if (!data.google_event_id) {
+    await syncAppointmentToCalendar(appointmentId);
+    return { updated: true };
+  }
+  await gateway(
+    `/calendars/${encodeURIComponent(CALENDAR_ID)}/events/${encodeURIComponent(String(data.google_event_id))}`,
+    { method: "PATCH", body: { colorId } },
+  );
+  return { updated: true };
+}
