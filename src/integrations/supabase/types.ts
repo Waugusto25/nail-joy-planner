@@ -40,7 +40,11 @@ export type Database = {
       }
       appointments: {
         Row: {
+          admin_hidden_at: string | null
           benefit_type: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_hidden_at: string | null
           client_id: string
           completed_at: string | null
           created_at: string
@@ -58,7 +62,11 @@ export type Database = {
           status: string
         }
         Insert: {
+          admin_hidden_at?: string | null
           benefit_type?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_hidden_at?: string | null
           client_id: string
           completed_at?: string | null
           created_at?: string
@@ -76,7 +84,11 @@ export type Database = {
           status?: string
         }
         Update: {
+          admin_hidden_at?: string | null
           benefit_type?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_hidden_at?: string | null
           client_id?: string
           completed_at?: string | null
           created_at?: string
