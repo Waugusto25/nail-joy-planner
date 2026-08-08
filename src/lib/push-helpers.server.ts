@@ -43,7 +43,11 @@ export async function sendToSubscriptions(db: SupabaseClient, rows: Row[], notic
           subscription,
           keys,
         );
-        const response = await fetch(row.endpoint, payload);
+        const response = await fetch(row.endpoint, {
+          method: payload.method,
+          headers: payload.headers as unknown as Record<string, string>,
+          body: payload.body as unknown as BodyInit,
+        });
         if (response.status === 404 || response.status === 410) {
           dead.push(row.id);
           return;
