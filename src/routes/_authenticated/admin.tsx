@@ -36,6 +36,8 @@ import {
   PAYMENT_METHOD_LABELS,
   REFERRAL_DISCOUNT,
   WEEKDAYS,
+  cancellationMessage,
+  confirmationMessage,
   formatDateTime,
   formatDayLabel,
   formatPhone,
