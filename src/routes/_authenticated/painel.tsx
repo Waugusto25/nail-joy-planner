@@ -5,6 +5,7 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppHeader } from "@/components/app/app-header";
+import { NotificationPrompt } from "@/components/app/notification-prompt";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
