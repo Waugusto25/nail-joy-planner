@@ -100,6 +100,7 @@ function AdminPanel() {
             <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger>
             <TabsTrigger value="eventos">Eventos</TabsTrigger>
             <TabsTrigger value="loja">Loja</TabsTrigger>
+            <TabsTrigger value="pedidos">Pedidos da Loja</TabsTrigger>
             <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
           </TabsList>
           <TabsContent value="agenda" className="pt-6">
@@ -125,6 +126,9 @@ function AdminPanel() {
           </TabsContent>
           <TabsContent value="loja" className="pt-6">
             <ProductsTab />
+          </TabsContent>
+          <TabsContent value="pedidos" className="pt-6">
+            <StoreOrdersTab />
           </TabsContent>
           <TabsContent value="catalogos" className="pt-6">
             <CatalogsTab />
