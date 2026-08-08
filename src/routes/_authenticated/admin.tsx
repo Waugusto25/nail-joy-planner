@@ -447,7 +447,13 @@ function BlockedDates() {
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <Label htmlFor="block-day">Data</Label>
-          <Input id="block-day" type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+          <Input
+            id="block-day"
+            type="date"
+            min={localTodayISO()}
+            value={day}
+            onChange={(e) => setDay(e.target.value)}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="block-reason">Motivo</Label>
