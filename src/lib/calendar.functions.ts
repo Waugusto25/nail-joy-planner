@@ -52,7 +52,11 @@ export const cancelAppointmentFn = createServerFn({ method: "POST" })
     await assertAdmin(context as never);
     const { error } = await context.supabase
       .from("appointments")
-      .update({ status: "cancelado" })
+      .update({
+        status: "cancelado",
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: "admin",
+      })
       .eq("id", data.appointmentId);
     if (error) throw new Error("Não foi possível cancelar o atendimento.");
     try {
