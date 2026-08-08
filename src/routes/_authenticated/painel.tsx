@@ -389,9 +389,7 @@ function BookingFlow({
 
   const activeBenefit = benefitOptions.find((o) => o.value === benefit) ?? benefitOptions[0]!;
   const eligible = activeBenefit.percent > 0;
-  const price = service
-    ? Math.round(service.price_cents * (1 - activeBenefit.percent / 100))
-    : 0;
+  const price = service ? Math.round(service.price_cents * (1 - activeBenefit.percent / 100)) : 0;
   const endTime = service && time ? addMinutes(time, service.duration_minutes) : null;
 
   async function confirm() {
@@ -548,28 +546,29 @@ function BookingFlow({
                 ) : null}
               </div>
             ) : (
-            <div className="flex flex-wrap gap-2">
-              {availableDays.map((d) => (
-                <Button
-                  key={d}
-                  variant={d === day ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setDay(d);
-                    setTime(null);
-                    goTo(2);
-                  }}
-                >
-                  {d.slice(8)}/{d.slice(5, 7)} · {WEEKDAYS[weekdayOf(d)]?.slice(0, 3)}
-                </Button>
-              ))}
-              {availableDays.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma data disponível em {selectedMonth ? monthLabel(selectedMonth.key) : "esse mês"}.
-                  Escolha outro mês ou fale com a Janaina pelo WhatsApp.
-                </p>
-              ) : null}
-            </div>
+              <div className="flex flex-wrap gap-2">
+                {availableDays.map((d) => (
+                  <Button
+                    key={d}
+                    variant={d === day ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setDay(d);
+                      setTime(null);
+                      goTo(2);
+                    }}
+                  >
+                    {d.slice(8)}/{d.slice(5, 7)} · {WEEKDAYS[weekdayOf(d)]?.slice(0, 3)}
+                  </Button>
+                ))}
+                {availableDays.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma data disponível em{" "}
+                    {selectedMonth ? monthLabel(selectedMonth.key) : "esse mês"}. Escolha outro mês
+                    ou fale com a Janaina pelo WhatsApp.
+                  </p>
+                ) : null}
+              </div>
             )}
           </section>
 
@@ -785,39 +784,39 @@ function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         {(services.data ?? [])
-        .filter((s) => s.loyalty_eligible)
-        .map((s) => {
-          const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
-          const inCycle = count % LOYALTY_CYCLE;
-          const eligible = count > 0 && inCycle === 0;
-          return (
-            <article key={s.id} className="surface-card p-5">
-              <p className="font-display text-lg">{s.name}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
-              </p>
-              <div className="mt-3 flex gap-1.5">
-                {Array.from({ length: LOYALTY_CYCLE }).map((_, index) => (
-                  <span
-                    key={index}
-                    className={`h-6 flex-1 rounded-full ${
-                      eligible || index < inCycle ? "bg-primary" : "bg-secondary"
-                    } ${index === LOYALTY_CYCLE - 1 ? "border-2 border-gold" : ""}`}
-                  />
-                ))}
-              </div>
-              <Progress
-                className="mt-3"
-                value={eligible ? 100 : (inCycle / LOYALTY_CYCLE) * 100}
-              />
-              <p className="mt-3 text-sm">
-                {eligible
-                  ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
-                  : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
-              </p>
-            </article>
-          );
-        })}
+          .filter((s) => s.loyalty_eligible)
+          .map((s) => {
+            const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
+            const inCycle = count % LOYALTY_CYCLE;
+            const eligible = count > 0 && inCycle === 0;
+            return (
+              <article key={s.id} className="surface-card p-5">
+                <p className="font-display text-lg">{s.name}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
+                </p>
+                <div className="mt-3 flex gap-1.5">
+                  {Array.from({ length: LOYALTY_CYCLE }).map((_, index) => (
+                    <span
+                      key={index}
+                      className={`h-6 flex-1 rounded-full ${
+                        eligible || index < inCycle ? "bg-primary" : "bg-secondary"
+                      } ${index === LOYALTY_CYCLE - 1 ? "border-2 border-gold" : ""}`}
+                    />
+                  ))}
+                </div>
+                <Progress
+                  className="mt-3"
+                  value={eligible ? 100 : (inCycle / LOYALTY_CYCLE) * 100}
+                />
+                <p className="mt-3 text-sm">
+                  {eligible
+                    ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
+                    : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
+                </p>
+              </article>
+            );
+          })}
       </div>
     </div>
   );
@@ -868,8 +867,8 @@ function MyBenefits({ clientId }: { clientId?: string | undefined }) {
         <article className="surface-card p-5">
           <p className="font-display text-lg">Indique e ganhe</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sua amiga informa o seu telefone <strong>{profile.data?.phone ?? ""}</strong> no primeiro
-            acesso. Quando ela concluir o primeiro atendimento, você ganha{" "}
+            Sua amiga informa o seu telefone <strong>{profile.data?.phone ?? ""}</strong> no
+            primeiro acesso. Quando ela concluir o primeiro atendimento, você ganha{" "}
             {Math.round(REFERRAL_DISCOUNT * 100)}% de desconto.
           </p>
           <div className="mt-4 space-y-2">
@@ -891,7 +890,11 @@ function MyBenefits({ clientId }: { clientId?: string | undefined }) {
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/60 px-4 py-3 text-sm"
                 >
                   <span>Amiga indicada</span>
-                  <Badge variant={r.used_at || expired || r.status === "pendente" ? "secondary" : "default"}>
+                  <Badge
+                    variant={
+                      r.used_at || expired || r.status === "pendente" ? "secondary" : "default"
+                    }
+                  >
                     {label}
                   </Badge>
                 </div>
