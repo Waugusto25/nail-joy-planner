@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppHeader } from "@/components/app/app-header";
@@ -14,18 +14,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { useAppSettings } from "@/hooks/useSettings";
 import { busyTimesFn } from "@/lib/booking.functions";
+import { clientCancelAppointmentFn, hideCancelledForClientFn } from "@/lib/cancel.functions";
 import { consumeReferralFn } from "@/lib/loyalty.functions";
 import { notifyNewAppointmentFn } from "@/lib/push.functions";
 
 import {
   APPOINTMENT_STATUS,
   BOOKING_LEAD_MINUTES,
+  CANCELLED_HISTORY_DAYS,
   LOYALTY_CYCLE,
   LOYALTY_DISCOUNT,
   LOYALTY_PARTIAL_STEP,
   REFERRAL_DISCOUNT,
   WEEKDAYS,
   addMinutes,
+  clientCancelConfirmation,
   currentMinutes,
   formatDateTime,
   formatDayLabel,
