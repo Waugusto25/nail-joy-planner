@@ -968,6 +968,7 @@ function SlotsTab() {
 
   return (
     <div className="space-y-5">
+      <MonthsManager />
       <section className="surface-card flex flex-wrap items-end gap-3 p-5">
         <div className="space-y-1">
           <Label htmlFor="slot-weekday">Dia da semana</Label>
