@@ -6,6 +6,28 @@ export const INSTAGRAM_URL = "https://www.instagram.com/jannah_silvaah?igsh=OTRo
 export const AUTH_EMAIL_DOMAIN = "jannahnails.app";
 export const LOYALTY_CYCLE = 5;
 export const LOYALTY_DISCOUNT = 0.2;
+/** Cada procedimento acumulado vale 4% quando o programa é desativado. */
+export const LOYALTY_PARTIAL_STEP = 0.04;
+/** Desconto imediato por indicação concluída. */
+export const REFERRAL_DISCOUNT = 0.1;
+
+export const BENEFIT_LABELS: Record<string, string> = {
+  nenhum: "Sem desconto",
+  fidelidade: "Fidelidade -20%",
+  parcial: "Reembolso de pontos",
+  indicacao: "Indicação -10%",
+};
+
+/** ISO date (YYYY-MM-DD) de N dias atrás — janela de validade dos pontos. */
+export function isoDaysAgo(days: number) {
+  const d = new Date(Date.now() - days * 86400000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function formatDateTime(value?: string | null) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
 
 export const WEEKDAYS = [
   "Domingo",
