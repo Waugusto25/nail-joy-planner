@@ -59,9 +59,7 @@ export const Route = createFileRoute("/_authenticated/painel")({
   component: ClientPanel,
 });
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+const todayISO = localTodayISO;
 
 function nextDays(count: number) {
   const list: string[] = [];
