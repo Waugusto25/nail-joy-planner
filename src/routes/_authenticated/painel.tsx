@@ -190,7 +190,12 @@ function BookingFlow({
   const [time, setTime] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(0);
+  const [benefit, setBenefit] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
+  const settings = useAppSettings();
+  const loyaltyEnabled = settings.data?.loyalty_enabled ?? true;
+  const referralEnabled = settings.data?.referral_enabled ?? true;
+  const expiryDays = settings.data?.benefit_expiry_days ?? 90;
 
   function goTo(next: number) {
     setStep(next);
@@ -244,8 +249,24 @@ function BookingFlow({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("service_id, status")
+        .select("service_id, status, day")
         .eq("client_id", clientId!);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const coupons = useQuery({
+    queryKey: ["referral-coupons", clientId],
+    enabled: Boolean(clientId) && referralEnabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("referrals")
+        .select("id, earned_at, expires_at")
+        .eq("referrer_id", clientId!)
+        .eq("status", "concluido")
+        .is("used_at", null)
+        .gt("expires_at", new Date().toISOString());
       if (error) throw error;
       return data;
     },
@@ -288,15 +309,46 @@ function BookingFlow({
       .sort();
   }, [day, service, slots.data, busy.data, breaks.data]);
 
+  const since = isoDaysAgo(expiryDays);
   const completedForService = (history.data ?? []).filter(
-    (a) => a.service_id === serviceId && a.status === "concluido",
+    (a) => a.service_id === serviceId && a.status === "concluido" && a.day >= since,
   ).length;
   const loyaltyService = service?.loyalty_eligible ?? false;
-  const eligible = loyaltyService && completedForService > 0 && completedForService % 6 === 5;
+  const inCycle = completedForService % LOYALTY_CYCLE;
+  const loyaltyReady = loyaltyEnabled && loyaltyService && completedForService > 0 && inCycle === 0;
+  const partialPercent =
+    !loyaltyEnabled && loyaltyService ? Math.round(inCycle * LOYALTY_PARTIAL_STEP * 100) : 0;
+  const couponCount = coupons.data?.length ?? 0;
+
+  // Regra de cumulação: só um benefício por atendimento.
+  const benefitOptions = useMemo(() => {
+    const list: { value: string; label: string; percent: number }[] = [];
+    if (loyaltyReady)
+      list.push({
+        value: "fidelidade",
+        label: `Fidelidade -${Math.round(LOYALTY_DISCOUNT * 100)}%`,
+        percent: Math.round(LOYALTY_DISCOUNT * 100),
+      });
+    if (couponCount > 0)
+      list.push({
+        value: "indicacao",
+        label: `Indicação -${Math.round(REFERRAL_DISCOUNT * 100)}% (${couponCount} disponível${couponCount === 1 ? "" : "eis"})`,
+        percent: Math.round(REFERRAL_DISCOUNT * 100),
+      });
+    if (partialPercent > 0)
+      list.push({
+        value: "parcial",
+        label: `Reembolso de pontos -${partialPercent}%`,
+        percent: partialPercent,
+      });
+    list.push({ value: "nenhum", label: "Sem desconto", percent: 0 });
+    return list;
+  }, [loyaltyReady, couponCount, partialPercent]);
+
+  const activeBenefit = benefitOptions.find((o) => o.value === benefit) ?? benefitOptions[0]!;
+  const eligible = activeBenefit.percent > 0;
   const price = service
-    ? eligible
-      ? Math.round(service.price_cents * (1 - LOYALTY_DISCOUNT))
-      : service.price_cents
+    ? Math.round(service.price_cents * (1 - activeBenefit.percent / 100))
     : 0;
   const endTime = service && time ? addMinutes(time, service.duration_minutes) : null;
 
@@ -304,22 +356,33 @@ function BookingFlow({
     if (!clientId || !service || !day || !time) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("appointments").insert({
-        client_id: clientId,
-        service_id: service.id,
-        day,
-        start_time: `${time}:00`,
-        price_cents: price,
-        discount_applied: eligible,
-      });
+      const { data: row, error } = await supabase
+        .from("appointments")
+        .insert({
+          client_id: clientId,
+          service_id: service.id,
+          day,
+          start_time: `${time}:00`,
+          price_cents: price,
+          discount_applied: eligible,
+          benefit_type: activeBenefit.value,
+          discount_percent: activeBenefit.percent,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      if (activeBenefit.value === "indicacao" && row?.id) {
+        await consumeReferralFn({ data: { appointmentId: row.id } });
+      }
       await queryClient.invalidateQueries();
-      const text = `Olá, Janaina! Sou ${clientName} e fiz uma pré-reserva pelo app.%0A%0AServiço: ${service.name}%0AData: ${formatDayLabel(day)}%0AInício: ${time}%0ATérmino previsto: ${addMinutes(time, service.duration_minutes)}%0ADuração: ${formatDuration(service.duration_minutes)}%0AValor: ${formatPrice(price)}${eligible ? " (com 20% de fidelidade)" : ""}%0A%0APode confirmar para mim?`;
+      const benefitNote = eligible ? ` (com ${activeBenefit.label})` : "";
+      const text = `Olá, Janaina! Sou ${clientName} e fiz uma pré-reserva pelo app.%0A%0AServiço: ${service.name}%0AData: ${formatDayLabel(day)}%0AInício: ${time}%0ATérmino previsto: ${addMinutes(time, service.duration_minutes)}%0ADuração: ${formatDuration(service.duration_minutes)}%0AValor: ${formatPrice(price)}${benefitNote}%0A%0APode confirmar para mim?`;
       window.open(whatsappLink(decodeURIComponent(text)), "_blank", "noopener");
       toast.success("Pré-reserva criada! Confirme pelo WhatsApp.");
       setServiceId(null);
       setDay(null);
       setTime(null);
+      setBenefit(null);
       goTo(0);
     } catch {
       toast.error("Esse horário pode ter sido ocupado. Escolha outro.");
@@ -475,9 +538,30 @@ function BookingFlow({
                   {endTime ? <li>Término previsto: {endTime}</li> : null}
                   <li>
                     Valor: <strong>{formatPrice(price)}</strong>{" "}
-                    {eligible ? <Badge className="ml-1">fidelidade -20%</Badge> : null}
+                    {eligible ? <Badge className="ml-1">{activeBenefit.label}</Badge> : null}
                   </li>
                 </ul>
+                {benefitOptions.length > 1 ? (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium">Benefício deste atendimento</p>
+                    <p className="text-xs text-muted-foreground">
+                      Apenas um benefício pode ser usado por atendimento.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {benefitOptions.map((o) => (
+                        <Button
+                          key={o.value}
+                          type="button"
+                          size="sm"
+                          variant={o.value === activeBenefit.value ? "default" : "outline"}
+                          onClick={() => setBenefit(o.value)}
+                        >
+                          {o.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <p className="mt-3 text-xs text-muted-foreground">
                   A reserva fica pendente até a Janaina confirmar pelo WhatsApp.
                 </p>
