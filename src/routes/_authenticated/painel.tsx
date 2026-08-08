@@ -15,6 +15,8 @@ import { useCurrentProfile } from "@/hooks/useSession";
 import { useAppSettings } from "@/hooks/useSettings";
 import { busyTimesFn } from "@/lib/booking.functions";
 import { consumeReferralFn } from "@/lib/loyalty.functions";
+import { notifyNewAppointmentFn } from "@/lib/push.functions";
+import { PushToggle } from "@/components/app/push-toggle";
 import {
   APPOINTMENT_STATUS,
   LOYALTY_CYCLE,
@@ -107,6 +109,9 @@ function ClientPanel() {
       />
 
       <main className="mx-auto w-full max-w-4xl px-4 py-6">
+        <div className="mb-4">
+          <PushToggle audience="cliente" />
+        </div>
         <Tabs defaultValue="agendar">
           <TabsList className="flex w-full flex-wrap">
             <TabsTrigger value="agendar">Agendar</TabsTrigger>
@@ -374,6 +379,13 @@ function BookingFlow({
       if (error) throw error;
       if (activeBenefit.value === "indicacao" && row?.id) {
         await consumeReferralFn({ data: { appointmentId: row.id } });
+      }
+      if (row?.id) {
+        try {
+          await notifyNewAppointmentFn({ data: { appointmentId: row.id } });
+        } catch (notifyError) {
+          console.error("Falha ao avisar a administradora", notifyError);
+        }
       }
       await queryClient.invalidateQueries();
       const benefitNote = eligible ? ` (com ${activeBenefit.label})` : "";
