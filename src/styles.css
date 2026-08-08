@@ -207,37 +207,57 @@
     radial-gradient(95% 60% at 100% 4%, oklch(0.95 0.045 75 / 0.6) 0%, transparent 58%);
   background-attachment: fixed, scroll, scroll;
 
-  /* Marca d'água: silhuetas de folhas e brilhos finos em rosa/dourado. */
+  /* Folhas em traço fino nos cantos + ondas discretas. */
   &::before {
     content: "";
     position: absolute;
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    opacity: 0.5;
+    opacity: 0.55;
     background-image:
-      radial-gradient(
-        42% 12% at 18% 22%,
-        oklch(0.78 0.07 145 / 0.16) 0%,
-        transparent 70%
-      ),
-      radial-gradient(
-        34% 10% at 86% 44%,
-        oklch(0.78 0.07 145 / 0.13) 0%,
-        transparent 70%
-      ),
-      radial-gradient(
-        38% 11% at 30% 78%,
-        oklch(0.8 0.06 150 / 0.12) 0%,
-        transparent 70%
-      ),
-      radial-gradient(circle at 8% 12%, oklch(0.86 0.1 75 / 0.5) 0 1.4px, transparent 2px),
-      radial-gradient(circle at 26% 6%, oklch(0.85 0.09 350 / 0.45) 0 1.2px, transparent 2px),
-      radial-gradient(circle at 64% 16%, oklch(0.86 0.1 75 / 0.42) 0 1.6px, transparent 2px),
-      radial-gradient(circle at 92% 26%, oklch(0.85 0.09 350 / 0.4) 0 1.2px, transparent 2px),
-      radial-gradient(circle at 14% 52%, oklch(0.86 0.1 75 / 0.4) 0 1.3px, transparent 2px),
-      radial-gradient(circle at 48% 62%, oklch(0.85 0.09 350 / 0.36) 0 1.1px, transparent 2px),
-      radial-gradient(circle at 78% 74%, oklch(0.86 0.1 75 / 0.4) 0 1.5px, transparent 2px),
-      radial-gradient(circle at 34% 92%, oklch(0.85 0.09 350 / 0.36) 0 1.2px, transparent 2px);
+      url("./assets/ornament-leaves-top.svg"),
+      url("./assets/ornament-leaves-bottom.svg");
+    background-repeat: no-repeat, no-repeat;
+    background-position:
+      right -40px top -30px,
+      left -50px bottom -30px;
+    background-size: 46vw auto, 52vw auto;
+  }
+
+  /* Brilhos finos rosa/dourado concentrados nas bordas. */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.65;
+    background-image:
+      radial-gradient(circle at 4% 9%, oklch(0.86 0.1 75 / 0.55) 0 1.5px, transparent 2px),
+      radial-gradient(circle at 9% 17%, oklch(0.85 0.09 350 / 0.5) 0 1.1px, transparent 2px),
+      radial-gradient(circle at 3% 34%, oklch(0.85 0.09 350 / 0.4) 0 1.3px, transparent 2px),
+      radial-gradient(circle at 7% 62%, oklch(0.86 0.1 75 / 0.45) 0 1.2px, transparent 2px),
+      radial-gradient(circle at 5% 84%, oklch(0.85 0.09 350 / 0.45) 0 1.5px, transparent 2px),
+      radial-gradient(circle at 12% 93%, oklch(0.86 0.1 75 / 0.4) 0 1.2px, transparent 2px),
+      radial-gradient(circle at 96% 11%, oklch(0.86 0.1 75 / 0.5) 0 1.4px, transparent 2px),
+      radial-gradient(circle at 91% 22%, oklch(0.85 0.09 350 / 0.45) 0 1.1px, transparent 2px),
+      radial-gradient(circle at 97% 41%, oklch(0.86 0.1 75 / 0.42) 0 1.3px, transparent 2px),
+      radial-gradient(circle at 93% 68%, oklch(0.85 0.09 350 / 0.4) 0 1.2px, transparent 2px),
+      radial-gradient(circle at 98% 88%, oklch(0.86 0.1 75 / 0.45) 0 1.5px, transparent 2px),
+      radial-gradient(circle at 86% 96%, oklch(0.85 0.09 350 / 0.36) 0 1.1px, transparent 2px),
+      radial-gradient(circle at 38% 4%, oklch(0.86 0.1 75 / 0.35) 0 1.2px, transparent 2px),
+      radial-gradient(circle at 62% 97%, oklch(0.85 0.09 350 / 0.32) 0 1.2px, transparent 2px);
+  }
+
+  @media (max-width: 640px) {
+    &::before {
+      opacity: 0.4;
+      background-size: 72vw auto, 84vw auto;
+    }
+
+    &::after {
+      opacity: 0.5;
+    }
   }
 }
