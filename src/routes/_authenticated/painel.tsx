@@ -100,6 +100,7 @@ function ClientPanel() {
 
   return (
     <div className="bg-petal min-h-screen pb-16">
+      <div className="bg-petal-veil" aria-hidden="true" />
       <AppHeader
         title={firstName ? `Olá, ${firstName}!` : "Meu painel"}
         subtitle={data?.login_id ? `ID de login: ${data.login_id}` : undefined}

@@ -60,6 +60,7 @@ function AdminPanel() {
   if (!isAdmin) {
     return (
       <div className="bg-petal min-h-screen">
+        <div className="bg-petal-veil" aria-hidden="true" />
         <AppHeader title="Painel administrativo" />
         <p className="mx-auto max-w-4xl px-4 py-10 text-sm text-muted-foreground">Carregando...</p>
       </div>
@@ -68,6 +69,7 @@ function AdminPanel() {
 
   return (
     <div className="bg-petal min-h-screen pb-16">
+      <div className="bg-petal-veil" aria-hidden="true" />
       <AppHeader title="Painel administrativo" subtitle="Janaina Silva" />
       <main className="mx-auto w-full max-w-5xl px-4 py-6">
         <Tabs defaultValue="agenda">
