@@ -651,28 +651,36 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
 
 function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
   const services = useServices();
+  const settings = useAppSettings();
+  const expiryDays = settings.data?.benefit_expiry_days ?? 90;
   const done = useQuery({
-    queryKey: ["loyalty", clientId],
+    queryKey: ["loyalty", clientId, expiryDays],
     enabled: Boolean(clientId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
         .select("service_id")
         .eq("client_id", clientId!)
-        .eq("status", "concluido");
+        .eq("status", "concluido")
+        .gte("day", isoDaysAgo(expiryDays));
       if (error) throw error;
       return data;
     },
   });
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {(services.data ?? [])
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Os atendimentos contam por {expiryDays} dias. Ao completar {LOYALTY_CYCLE} procedimentos do
+        mesmo tipo, o próximo sai com {Math.round(LOYALTY_DISCOUNT * 100)}% de desconto.
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {(services.data ?? [])
         .filter((s) => s.loyalty_eligible)
         .map((s) => {
           const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
-          const inCycle = count % 6;
-          const eligible = count > 0 && inCycle === 5;
+          const inCycle = count % LOYALTY_CYCLE;
+          const eligible = count > 0 && inCycle === 0;
           return (
             <article key={s.id} className="surface-card p-5">
               <p className="font-display text-lg">{s.name}</p>
@@ -680,24 +688,187 @@ function LoyaltyCards({ clientId }: { clientId?: string | undefined }) {
                 {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
               </p>
               <div className="mt-3 flex gap-1.5">
-                {Array.from({ length: 6 }).map((_, index) => (
+                {Array.from({ length: LOYALTY_CYCLE }).map((_, index) => (
                   <span
                     key={index}
                     className={`h-6 flex-1 rounded-full ${
-                      index < inCycle ? "bg-primary" : "bg-secondary"
-                    } ${index === 5 ? "border-2 border-gold" : ""}`}
+                      eligible || index < inCycle ? "bg-primary" : "bg-secondary"
+                    } ${index === LOYALTY_CYCLE - 1 ? "border-2 border-gold" : ""}`}
                   />
                 ))}
               </div>
-              <Progress className="mt-3" value={(inCycle / 6) * 100} />
+              <Progress
+                className="mt-3"
+                value={eligible ? 100 : (inCycle / LOYALTY_CYCLE) * 100}
+              />
               <p className="mt-3 text-sm">
                 {eligible
-                  ? "🎉 Seu próximo atendimento tem 20% de desconto!"
-                  : `Faltam ${5 - inCycle} para ganhar 20% no 6º atendimento.`}
+                  ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
+                  : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
               </p>
             </article>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function MyBenefits({ clientId }: { clientId?: string | undefined }) {
+  const { profile } = useCurrentProfile();
+  const settings = useAppSettings();
+  const referralEnabled = settings.data?.referral_enabled ?? true;
+  const services = useServices();
+
+  const referrals = useQuery({
+    queryKey: ["my-referrals", clientId],
+    enabled: Boolean(clientId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("referrals")
+        .select("id, status, earned_at, expires_at, used_at, referrer_id")
+        .eq("referrer_id", clientId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const used = useQuery({
+    queryKey: ["benefit-history", clientId],
+    enabled: Boolean(clientId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("id, day, service_id, benefit_type, discount_percent, price_cents, status")
+        .eq("client_id", clientId!)
+        .gt("discount_percent", 0)
+        .order("day", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const serviceName = (id: string) =>
+    (services.data ?? []).find((s) => s.id === id)?.name ?? "Procedimento";
+  const now = Date.now();
+
+  return (
+    <div className="space-y-6">
+      {referralEnabled ? (
+        <article className="surface-card p-5">
+          <p className="font-display text-lg">Indique e ganhe</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sua amiga informa o seu telefone <strong>{profile.data?.phone ?? ""}</strong> no primeiro
+            acesso. Quando ela concluir o primeiro atendimento, você ganha{" "}
+            {Math.round(REFERRAL_DISCOUNT * 100)}% de desconto.
+          </p>
+          <div className="mt-4 space-y-2">
+            {(referrals.data ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma indicação registrada ainda.</p>
+            ) : null}
+            {(referrals.data ?? []).map((r) => {
+              const expired = r.expires_at ? new Date(r.expires_at).getTime() < now : false;
+              const label = r.used_at
+                ? `Usado em ${formatDateTime(r.used_at)}`
+                : r.status === "pendente"
+                  ? "Aguardando o primeiro atendimento da amiga"
+                  : expired
+                    ? `Expirou em ${formatDateTime(r.expires_at)}`
+                    : `Disponível até ${formatDateTime(r.expires_at)}`;
+              return (
+                <div
+                  key={r.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/60 px-4 py-3 text-sm"
+                >
+                  <span>Amiga indicada</span>
+                  <Badge variant={r.used_at || expired || r.status === "pendente" ? "secondary" : "default"}>
+                    {label}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+      ) : null}
+
+      <article className="surface-card p-5">
+        <p className="font-display text-lg">Histórico de benefícios usados</p>
+        <div className="mt-3 space-y-2">
+          {(used.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Você ainda não usou nenhum desconto. Continue acumulando!
+            </p>
+          ) : null}
+          {(used.data ?? []).map((a) => (
+            <div
+              key={a.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/60 px-4 py-3 text-sm"
+            >
+              <span className="capitalize">
+                {formatDayLabel(a.day)} · {serviceName(a.service_id)}
+              </span>
+              <span>
+                <Badge className="mr-2">-{a.discount_percent}%</Badge>
+                {formatPrice(a.price_cents)} · {APPOINTMENT_STATUS[a.status] ?? a.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function EventsList() {
+  const events = useQuery({
+    queryKey: ["events"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("active", true)
+        .order("starts_on", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if ((events.data ?? []).length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Nenhum evento ativo agora. Fique de olho: sorteios e promoções aparecem por aqui.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {(events.data ?? []).map((e) => (
+        <article key={e.id} className="surface-card overflow-hidden">
+          <StorageImage url={e.image_url} alt={e.title} className="h-40 w-full object-cover" />
+          <div className="p-5">
+            <p className="font-display text-lg">{e.title}</p>
+            <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
+              {formatDayLabel(e.starts_on)} até {formatDayLabel(e.ends_on)}
+            </p>
+            {e.description ? <p className="mt-2 text-sm">{e.description}</p> : null}
+            {e.prize ? (
+              <p className="mt-2 text-sm">
+                Prêmio: <strong>{e.prize}</strong>
+              </p>
+            ) : null}
+            {e.rules ? (
+              <p className="mt-2 text-xs text-muted-foreground">Como participar: {e.rules}</p>
+            ) : null}
+            {e.winner_name ? (
+              <p className="mt-3 text-sm">
+                🎉 Ganhadora: <strong>{e.winner_name}</strong> ({formatDateTime(e.drawn_at)})
+              </p>
+            ) : null}
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
