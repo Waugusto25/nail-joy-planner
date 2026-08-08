@@ -1,7 +1,14 @@
 import { buildPushPayload, type PushSubscription } from "@block65/webcrypto-web-push";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { addMinutes, formatDayLabel, formatPrice, shortTime } from "./salon";
+import {
+  addMinutes,
+  cancellationMessage,
+  confirmationMessage,
+  formatDayLabel,
+  formatPrice,
+  shortTime,
+} from "./salon";
 
 export function admin(): SupabaseClient {
   return createClient(process.env["SUPABASE_URL"]!, process.env["SUPABASE_SERVICE_ROLE_KEY"]!, {
@@ -110,6 +117,45 @@ export async function notifyAdminsNewAppointment(appointmentId: string) {
 }
 
 /** Envia lembretes para atendimentos confirmados que começam em ~24h. */
+export async function notifyClientStatusChange(
+  appointmentId: string,
+  kind: "confirmado" | "cancelado",
+) {
+  const db = admin();
+  const { data: appt } = await db
+    .from("appointments")
+    .select("id, client_id, day, start_time, services(name, duration_minutes)")
+    .eq("id", appointmentId)
+    .maybeSingle();
+  if (!appt) return { sent: 0 };
+
+  const joined = (appt as { services: unknown }).services;
+  const service = (Array.isArray(joined) ? joined[0] : joined) as
+    | { name: string; duration_minutes: number }
+    | null;
+  const { data: client } = await db
+    .from("profiles")
+    .select("full_name")
+    .eq("id", appt.client_id)
+    .maybeSingle();
+
+  const notice = {
+    name: String(client?.full_name ?? "linda"),
+    day: String(appt.day),
+    start: String(appt.start_time),
+    durationMinutes: Number(service?.duration_minutes ?? 60),
+    serviceName: service?.name ?? "Procedimento",
+  };
+  const rows = await subscriptionsFor(db, [String(appt.client_id)]);
+
+  return sendToSubscriptions(db, rows, {
+    title: kind === "confirmado" ? "Horário confirmado 💖" : "Horário cancelado 💗",
+    body: kind === "confirmado" ? confirmationMessage(notice) : cancellationMessage(notice),
+    url: "/painel",
+    tag: `${kind}-${appointmentId}`,
+  });
+}
+
 export async function sendDueReminders() {
   const db = admin();
   const { data } = await db

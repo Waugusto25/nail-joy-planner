@@ -36,6 +36,8 @@ import {
   PAYMENT_METHOD_LABELS,
   REFERRAL_DISCOUNT,
   WEEKDAYS,
+  cancellationMessage,
+  confirmationMessage,
   formatDateTime,
   formatDayLabel,
   formatPhone,
@@ -141,7 +143,7 @@ function AgendaTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("*, services(name)")
+        .select("*, services(name, duration_minutes)")
         .order("day", { ascending: true })
         .order("start_time", { ascending: true });
       if (error) throw error;
@@ -179,7 +181,17 @@ function AgendaTab() {
     }
   }
 
-  async function setStatus(id: string, status: string) {
+  function openClientWhatsapp(notice?: { phone: string; message: string }) {
+    if (!notice) return;
+    const link = whatsappLinkTo(notice.phone, notice.message);
+    if (link) window.open(link, "_blank", "noopener");
+  }
+
+  async function setStatus(
+    id: string,
+    status: string,
+    notice?: { phone: string; message: string },
+  ) {
     if (status === "concluido") {
       setPayingId(id);
       return;
@@ -192,9 +204,11 @@ function AgendaTab() {
             ? "Confirmado e adicionado à Google Agenda."
             : "Confirmado. Não foi possível criar o evento na Google Agenda.",
         );
+        openClientWhatsapp(notice);
       } else if (status === "cancelado") {
         await cancelAppointmentFn({ data: { appointmentId: id } });
         toast.success("Atendimento cancelado.");
+        openClientWhatsapp(notice);
       } else {
         const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
         if (error) throw new Error("Não foi possível atualizar.");
@@ -214,6 +228,20 @@ function AgendaTab() {
     <div className="space-y-3">
       {rows.map((a) => {
         const client = (clients.data ?? []).find((c) => c.id === a.client_id) ?? null;
+        const service = a.services as { name: string; duration_minutes?: number } | null;
+        const noticeBase = {
+          name: client?.full_name ?? "linda",
+          day: a.day,
+          start: a.start_time,
+          durationMinutes: Number(service?.duration_minutes ?? 60),
+          serviceName: service?.name ?? "Procedimento",
+        };
+        const confirmNotice = client
+          ? { phone: client.phone, message: confirmationMessage(noticeBase) }
+          : undefined;
+        const cancelNotice = client
+          ? { phone: client.phone, message: cancellationMessage(noticeBase) }
+          : undefined;
         return (
           <article key={a.id} className="surface-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -251,13 +279,17 @@ function AgendaTab() {
               >
                 Pendente
               </Button>
-              <Button size="sm" onClick={() => void setStatus(a.id, "confirmado")}>
+              <Button size="sm" onClick={() => void setStatus(a.id, "confirmado", confirmNotice)}>
                 Confirmar
               </Button>
               <Button size="sm" variant="outline" onClick={() => void setStatus(a.id, "concluido")}>
                 Concluir
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => void setStatus(a.id, "cancelado")}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void setStatus(a.id, "cancelado", cancelNotice)}
+              >
                 Cancelar
               </Button>
               {client && whatsappLinkTo(client.phone, "") ? (
@@ -266,10 +298,7 @@ function AgendaTab() {
                   variant="outline"
                   onClick={() =>
                     window.open(
-                      whatsappLinkTo(
-                        client.phone,
-                        `Olá, ${client.full_name}! Seu horário de ${(a.services as { name: string } | null)?.name} em ${formatDayLabel(a.day)} às ${shortTime(a.start_time)} está confirmado. — Jannah Nails`,
-                      )!,
+                      whatsappLinkTo(client.phone, confirmationMessage(noticeBase))!,
                       "_blank",
                       "noopener",
                     )

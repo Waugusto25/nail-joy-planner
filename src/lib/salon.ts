@@ -151,3 +151,40 @@ export function whatsappLinkTo(phone: string, message: string) {
   if (!number) return null;
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
+
+export type AppointmentNotice = {
+  name: string;
+  day: string;
+  start: string;
+  durationMinutes: number;
+  serviceName: string;
+};
+
+/** Mensagem carismática de confirmação enviada à cliente. */
+export function confirmationMessage(n: AppointmentNotice) {
+  const start = shortTime(n.start);
+  const end = addMinutes(start, n.durationMinutes);
+  return [
+    `Oba, ${n.name}! 💖 Seu horário está oficialmente CONFIRMADO por mim! ✨`,
+    "",
+    `Estou muito feliz em ter você aqui no ${SALON_NAME}! Mal posso esperar para cuidar das suas unhas com todo o carinho e dedicação que você merece.`,
+    "",
+    `📅 Data: ${formatDayLabel(n.day)}`,
+    `⏰ Horário: ${start} às ${end}`,
+    `💅 Serviço: ${n.serviceName}`,
+    "",
+    "Muito obrigada pela confiança! Nos vemos em breve! 🥰",
+  ].join("\n");
+}
+
+/** Mensagem carismática de cancelamento, convidando a cliente a reagendar. */
+export function cancellationMessage(n: AppointmentNotice) {
+  const start = shortTime(n.start);
+  return [
+    `Oi, ${n.name}! 💗 Seu horário de ${n.serviceName} em ${formatDayLabel(n.day)} às ${start} foi cancelado.`,
+    "",
+    "Fica tudo bem! Sempre que quiser, é só abrir o aplicativo e escolher um novo dia e horário — sua vaga estará esperando por você. 💅✨",
+    "",
+    `Qualquer dúvida, me chame. Um beijo! 🥰 — ${SALON_NAME}`,
+  ].join("\n");
+}
