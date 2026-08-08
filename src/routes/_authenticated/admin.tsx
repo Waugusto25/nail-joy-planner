@@ -19,7 +19,7 @@ import { completeAppointmentFn, drawEventWinnerFn } from "@/lib/loyalty.function
 import { cancelAppointmentFn, confirmAppointmentFn } from "@/lib/calendar.functions";
 import { FinanceTab } from "@/components/app/finance-tab";
 import { StoreOrdersTab } from "@/components/app/store-orders-tab";
-import { PushToggle } from "@/components/app/push-toggle";
+
 import {
   Dialog,
   DialogContent,

@@ -16,7 +16,7 @@ import { useAppSettings } from "@/hooks/useSettings";
 import { busyTimesFn } from "@/lib/booking.functions";
 import { consumeReferralFn } from "@/lib/loyalty.functions";
 import { notifyNewAppointmentFn } from "@/lib/push.functions";
-import { PushToggle } from "@/components/app/push-toggle";
+
 import {
   APPOINTMENT_STATUS,
   LOYALTY_CYCLE,
