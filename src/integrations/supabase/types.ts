@@ -423,6 +423,51 @@ export type Database = {
         }
         Relationships: []
       }
+      store_orders: {
+        Row: {
+          amount_cents: number
+          client_name: string
+          client_phone: string
+          created_at: string
+          delivery_date: string | null
+          id: string
+          installments: number
+          item_name: string
+          notes: string | null
+          payment_method: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents?: number
+          client_name: string
+          client_phone?: string
+          created_at?: string
+          delivery_date?: string | null
+          id?: string
+          installments?: number
+          item_name: string
+          notes?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          client_name?: string
+          client_phone?: string
+          created_at?: string
+          delivery_date?: string | null
+          id?: string
+          installments?: number
+          item_name?: string
+          notes?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
