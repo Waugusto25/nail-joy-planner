@@ -14,10 +14,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
+import { completeAppointmentFn, drawEventWinnerFn } from "@/lib/loyalty.functions";
 import { SERVICE_IMAGE_BUCKET, StorageImage } from "@/components/app/storage-image";
 import {
   APPOINTMENT_STATUS,
+  BENEFIT_LABELS,
+  LOYALTY_CYCLE,
+  LOYALTY_DISCOUNT,
+  REFERRAL_DISCOUNT,
   WEEKDAYS,
+  formatDateTime,
   formatDayLabel,
   formatPhone,
   formatPrice,
@@ -70,6 +76,8 @@ function AdminPanel() {
             <TabsTrigger value="clientes">Clientes</TabsTrigger>
             <TabsTrigger value="servicos">Serviços</TabsTrigger>
             <TabsTrigger value="horarios">Horários</TabsTrigger>
+            <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger>
+            <TabsTrigger value="eventos">Eventos</TabsTrigger>
             <TabsTrigger value="loja">Loja</TabsTrigger>
             <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
           </TabsList>
@@ -84,6 +92,12 @@ function AdminPanel() {
           </TabsContent>
           <TabsContent value="horarios" className="pt-6">
             <SlotsTab />
+          </TabsContent>
+          <TabsContent value="fidelidade" className="pt-6">
+            <LoyaltyTab />
+          </TabsContent>
+          <TabsContent value="eventos" className="pt-6">
+            <EventsTab />
           </TabsContent>
           <TabsContent value="loja" className="pt-6">
             <ProductsTab />
@@ -122,6 +136,24 @@ function AgendaTab() {
   });
 
   async function setStatus(id: string, status: string) {
+    if (status === "concluido") {
+      try {
+        const { notifications } = await completeAppointmentFn({ data: { appointmentId: id } });
+        await queryClient.invalidateQueries();
+        toast.success("Atendimento concluído.");
+        for (const n of notifications) {
+          const message =
+            n.kind === "indicacao"
+              ? `Olá, ${n.name}! ${n.detail} concluiu o primeiro atendimento e você ganhou ${Math.round(REFERRAL_DISCOUNT * 100)}% de desconto no seu próximo procedimento. — Jannah Nails`
+              : `Olá, ${n.name}! Você completou o cartão de fidelidade de ${n.detail} e ganhou ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto no próximo atendimento. — Jannah Nails`;
+          const link = whatsappLinkTo(n.phone, message);
+          if (link) window.open(link, "_blank", "noopener");
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Não foi possível concluir.");
+      }
+      return;
+    }
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) {
       toast.error("Não foi possível atualizar.");
@@ -149,7 +181,10 @@ function AgendaTab() {
                   {(a.services as { name: string } | null)?.name}
                 </p>
                 <p className="text-sm">
-                  {formatPrice(a.price_cents)} {a.discount_applied ? "· fidelidade -20%" : ""}
+                  {formatPrice(a.price_cents)}{" "}
+                  {a.discount_percent > 0
+                    ? `· ${BENEFIT_LABELS[a.benefit_type] ?? "Desconto"} (-${a.discount_percent}%)`
+                    : ""}
                 </p>
                 {client ? (
                   <p className="text-xs text-muted-foreground">
