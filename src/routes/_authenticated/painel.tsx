@@ -207,6 +207,13 @@ function BookingFlow({
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  // Relógio interno: revalida os horários do dia de hoje a cada minuto.
+  const [nowTick, setNowTick] = useState(() => ({ day: todayISO(), minutes: currentMinutes() }));
+  useEffect(() => {
+    const id = setInterval(() => setNowTick({ day: todayISO(), minutes: currentMinutes() }), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   const slots = useQuery({
     queryKey: ["slots"],
     queryFn: async () => {
