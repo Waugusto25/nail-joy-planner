@@ -141,7 +141,7 @@ function AgendaTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("*, services(name)")
+        .select("*, services(name, duration_minutes)")
         .order("day", { ascending: true })
         .order("start_time", { ascending: true });
       if (error) throw error;
