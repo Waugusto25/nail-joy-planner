@@ -227,6 +227,28 @@ function AgendaTab() {
 
   const rows = appointments.data ?? [];
 
+  async function hideCancelled(id: string) {
+    if (!window.confirm("Deseja remover este histórico de cancelamento?")) return;
+    try {
+      await hideCancelledForAdminFn({ data: { appointmentId: id } });
+      await queryClient.invalidateQueries();
+      toast.success("Cancelamento removido do painel.");
+    } catch {
+      toast.error("Não foi possível remover agora.");
+    }
+  }
+
+  async function clearCancelled() {
+    if (!window.confirm("Limpar todo o histórico de cancelamentos do painel?")) return;
+    try {
+      await clearCancelledForAdminFn();
+      await queryClient.invalidateQueries();
+      toast.success("Lista de cancelados limpa.");
+    } catch {
+      toast.error("Não foi possível limpar agora.");
+    }
+  }
+
   function renderCard(a: (typeof rows)[number]) {
     const client = (clients.data ?? []).find((c) => c.id === a.client_id) ?? null;
     const service = a.services as { name: string; duration_minutes?: number } | null;
@@ -293,6 +315,16 @@ function AgendaTab() {
           >
             Cancelar
           </Button>
+          {a.status === "cancelado" ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label="Remover este cancelamento do painel"
+              onClick={() => void hideCancelled(a.id)}
+            >
+              <Trash2 size={16} />
+            </Button>
+          ) : null}
           {client && whatsappLinkTo(client.phone, "") ? (
             <Button
               size="sm"
