@@ -519,6 +519,35 @@ function BookingFlow({
                 Procedimento: <strong>{service.name}</strong>
               </p>
             ) : null}
+            <div className="-mx-0.5 mb-3 flex gap-2 overflow-x-auto px-0.5 pb-1">
+              {monthOptions.map((m) => (
+                <Button
+                  key={m.key}
+                  size="sm"
+                  variant={m.key === selectedMonth?.key ? "default" : "outline"}
+                  className={`shrink-0 ${m.active ? "" : "opacity-50"}`}
+                  onClick={() => {
+                    setMonthKey(m.key);
+                    if (day && monthKeyOf(day) !== m.key) {
+                      setDay(null);
+                      setTime(null);
+                    }
+                  }}
+                >
+                  {monthShortLabel(m.key)}
+                </Button>
+              ))}
+            </div>
+            {selectedMonth && !selectedMonth.active ? (
+              <div className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm">
+                <p className="font-medium">
+                  Agendamentos para {monthLabel(selectedMonth.key)} ainda não estão abertos
+                </p>
+                {selectedMonth.message ? (
+                  <p className="mt-1 text-muted-foreground">{selectedMonth.message}</p>
+                ) : null}
+              </div>
+            ) : (
             <div className="flex flex-wrap gap-2">
               {availableDays.map((d) => (
                 <Button
@@ -536,10 +565,12 @@ function BookingFlow({
               ))}
               {availableDays.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma data disponível no momento. Fale com a Janaina pelo WhatsApp.
+                  Nenhuma data disponível em {selectedMonth ? monthLabel(selectedMonth.key) : "esse mês"}.
+                  Escolha outro mês ou fale com a Janaina pelo WhatsApp.
                 </p>
               ) : null}
             </div>
+            )}
           </section>
 
           {/* 3. horário */}
