@@ -38,6 +38,7 @@ import { SERVICE_IMAGE_BUCKET, StorageImage } from "@/components/app/storage-ima
 import {
   APPOINTMENT_STATUS,
   BENEFIT_LABELS,
+  claimTag,
   LOYALTY_CYCLE,
   LOYALTY_DISCOUNT,
   PAYMENT_METHODS,
