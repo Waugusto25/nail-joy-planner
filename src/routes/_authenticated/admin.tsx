@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Lock } from "lucide-react";
+import { Lock, Trash2 } from "lucide-react";
 
 import { AppHeader } from "@/components/app/app-header";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { useCurrentProfile } from "@/hooks/useSession";
 import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
 import { completeAppointmentFn, drawEventWinnerFn } from "@/lib/loyalty.functions";
 import { cancelAppointmentFn, confirmAppointmentFn } from "@/lib/calendar.functions";
+import { clearCancelledForAdminFn, hideCancelledForAdminFn } from "@/lib/cancel.functions";
 import { FinanceTab } from "@/components/app/finance-tab";
 import { StoreOrdersTab } from "@/components/app/store-orders-tab";
 
@@ -226,6 +227,28 @@ function AgendaTab() {
 
   const rows = appointments.data ?? [];
 
+  async function hideCancelled(id: string) {
+    if (!window.confirm("Deseja remover este histórico de cancelamento?")) return;
+    try {
+      await hideCancelledForAdminFn({ data: { appointmentId: id } });
+      await queryClient.invalidateQueries();
+      toast.success("Cancelamento removido do painel.");
+    } catch {
+      toast.error("Não foi possível remover agora.");
+    }
+  }
+
+  async function clearCancelled() {
+    if (!window.confirm("Limpar todo o histórico de cancelamentos do painel?")) return;
+    try {
+      await clearCancelledForAdminFn();
+      await queryClient.invalidateQueries();
+      toast.success("Lista de cancelados limpa.");
+    } catch {
+      toast.error("Não foi possível limpar agora.");
+    }
+  }
+
   function renderCard(a: (typeof rows)[number]) {
     const client = (clients.data ?? []).find((c) => c.id === a.client_id) ?? null;
     const service = a.services as { name: string; duration_minutes?: number } | null;
@@ -292,6 +315,16 @@ function AgendaTab() {
           >
             Cancelar
           </Button>
+          {a.status === "cancelado" ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label="Remover este cancelamento do painel"
+              onClick={() => void hideCancelled(a.id)}
+            >
+              <Trash2 size={16} />
+            </Button>
+          ) : null}
           {client && whatsappLinkTo(client.phone, "") ? (
             <Button
               size="sm"
@@ -329,7 +362,7 @@ function AgendaTab() {
     .slice()
     .sort((a, b) => b.day.localeCompare(a.day));
   const cancelados = rows
-    .filter((a) => a.status === "cancelado")
+    .filter((a) => a.status === "cancelado" && !a.admin_hidden_at)
     .slice()
     .sort((a, b) => b.day.localeCompare(a.day));
 
@@ -381,7 +414,14 @@ function AgendaTab() {
           {cancelados.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum agendamento cancelado.</p>
           ) : (
-            cancelados.map(renderCard)
+            <>
+              <div className="flex justify-end">
+                <Button size="sm" variant="outline" onClick={() => void clearCancelled()}>
+                  <Trash2 size={16} /> Limpar todos os cancelados
+                </Button>
+              </div>
+              {cancelados.map(renderCard)}
+            </>
           )}
         </TabsContent>
       </Tabs>
