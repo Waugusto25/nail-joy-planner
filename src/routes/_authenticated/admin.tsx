@@ -179,7 +179,17 @@ function AgendaTab() {
     }
   }
 
-  async function setStatus(id: string, status: string) {
+  function openClientWhatsapp(notice?: { phone: string; message: string }) {
+    if (!notice) return;
+    const link = whatsappLinkTo(notice.phone, notice.message);
+    if (link) window.open(link, "_blank", "noopener");
+  }
+
+  async function setStatus(
+    id: string,
+    status: string,
+    notice?: { phone: string; message: string },
+  ) {
     if (status === "concluido") {
       setPayingId(id);
       return;
@@ -192,9 +202,11 @@ function AgendaTab() {
             ? "Confirmado e adicionado à Google Agenda."
             : "Confirmado. Não foi possível criar o evento na Google Agenda.",
         );
+        openClientWhatsapp(notice);
       } else if (status === "cancelado") {
         await cancelAppointmentFn({ data: { appointmentId: id } });
         toast.success("Atendimento cancelado.");
+        openClientWhatsapp(notice);
       } else {
         const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
         if (error) throw new Error("Não foi possível atualizar.");
