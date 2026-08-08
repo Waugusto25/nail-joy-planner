@@ -337,7 +337,7 @@ function AgendaTab() {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="pendentes">
-        <TabsList className="flex w-full flex-wrap">
+        <TabsList className="mt-2 -mx-4 flex h-auto w-[calc(100%+2rem)] max-w-none flex-nowrap justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-4 py-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:w-full sm:rounded-lg sm:bg-muted sm:px-1 [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="pendentes">Pré-agendamentos ({pendentes.length})</TabsTrigger>
           <TabsTrigger value="confirmados">Confirmados ({confirmados.length})</TabsTrigger>
           <TabsTrigger value="concluidos">Concluídos ({concluidos.length})</TabsTrigger>
