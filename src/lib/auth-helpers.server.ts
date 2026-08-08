@@ -139,6 +139,44 @@ export async function adminUpdateClientAccess(clientId: string, phone: string) {
   return { ok: true, domain: AUTH_EMAIL_DOMAIN };
 }
 
+/**
+ * Garante uma conta de cliente para agendamentos manuais feitos pela administradora.
+ * Reaproveita a cliente pelo telefone quando informado; sem telefone, cria uma
+ * ficha offline (sem acesso ao app até cadastrar o WhatsApp).
+ */
+export async function ensureManualClient(fullName: string, phone: string) {
+  const db = admin();
+  if (phone) {
+    const { data: existing } = await db
+      .from("profiles")
+      .select("id")
+      .eq("phone", phone)
+      .maybeSingle();
+    if (existing) return String(existing.id);
+  }
+
+  const loginId = await uniqueLoginId(db, fullName);
+  const email = loginEmail(loginId);
+  const password = phone || `manual-${crypto.randomUUID()}`;
+  const { data: created, error } = await db.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName, login_id: loginId },
+  });
+  if (error || !created.user) throw new Error("Não foi possível criar a ficha da cliente.");
+
+  const { error: profileError } = await db
+    .from("profiles")
+    .insert({ id: created.user.id, full_name: fullName, login_id: loginId, phone });
+  if (profileError) {
+    await db.auth.admin.deleteUser(created.user.id);
+    throw new Error("Não foi possível salvar a ficha da cliente.");
+  }
+  await db.from("user_roles").insert({ user_id: created.user.id, role: "client" });
+  return String(created.user.id);
+}
+
 /** Removes a client completely: appointments, profile, role and auth account. */
 export async function adminDeleteClient(clientId: string) {
   const db = admin();
