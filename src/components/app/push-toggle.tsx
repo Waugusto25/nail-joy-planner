@@ -104,7 +104,6 @@ function usePush() {
     }
   }
 
-  if (!supported) return null;
   return { supported, enabled, busy, enable, disable };
 }
 
