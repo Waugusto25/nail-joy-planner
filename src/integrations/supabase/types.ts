@@ -42,12 +42,15 @@ export type Database = {
         Row: {
           benefit_type: string
           client_id: string
+          completed_at: string | null
           created_at: string
           day: string
           discount_applied: boolean
           discount_percent: number
+          google_event_id: string | null
           id: string
           notes: string | null
+          payment_method: string | null
           price_cents: number
           service_id: string
           start_time: string
@@ -56,12 +59,15 @@ export type Database = {
         Insert: {
           benefit_type?: string
           client_id: string
+          completed_at?: string | null
           created_at?: string
           day: string
           discount_applied?: boolean
           discount_percent?: number
+          google_event_id?: string | null
           id?: string
           notes?: string | null
+          payment_method?: string | null
           price_cents?: number
           service_id: string
           start_time: string
@@ -70,12 +76,15 @@ export type Database = {
         Update: {
           benefit_type?: string
           client_id?: string
+          completed_at?: string | null
           created_at?: string
           day?: string
           discount_applied?: boolean
           discount_percent?: number
+          google_event_id?: string | null
           id?: string
           notes?: string | null
+          payment_method?: string | null
           price_cents?: number
           service_id?: string
           start_time?: string
