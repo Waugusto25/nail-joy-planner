@@ -19,18 +19,21 @@ import { notifyNewAppointmentFn } from "@/lib/push.functions";
 
 import {
   APPOINTMENT_STATUS,
+  BOOKING_LEAD_MINUTES,
   LOYALTY_CYCLE,
   LOYALTY_DISCOUNT,
   LOYALTY_PARTIAL_STEP,
   REFERRAL_DISCOUNT,
   WEEKDAYS,
   addMinutes,
+  currentMinutes,
   formatDateTime,
   formatDayLabel,
   formatDuration,
   formatPrice,
   formatTimeRange,
   isoDaysAgo,
+  localTodayISO,
   overlaps,
   shortTime,
   timeToMinutes,
@@ -56,9 +59,7 @@ export const Route = createFileRoute("/_authenticated/painel")({
   component: ClientPanel,
 });
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+const todayISO = localTodayISO;
 
 function nextDays(count: number) {
   const list: string[] = [];
@@ -206,6 +207,13 @@ function BookingFlow({
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  // Relógio interno: revalida os horários do dia de hoje a cada minuto.
+  const [nowTick, setNowTick] = useState(() => ({ day: todayISO(), minutes: currentMinutes() }));
+  useEffect(() => {
+    const id = setInterval(() => setNowTick({ day: todayISO(), minutes: currentMinutes() }), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   const slots = useQuery({
     queryKey: ["slots"],
     queryFn: async () => {
@@ -280,9 +288,9 @@ function BookingFlow({
     const weekdaysWithSlots = new Set((slots.data ?? []).map((s) => s.weekday));
     const blockedSet = new Set(blocked.data ?? []);
     return nextDays(35).filter(
-      (d) => weekdaysWithSlots.has(weekdayOf(d)) && !blockedSet.has(d) && d >= todayISO(),
+      (d) => weekdaysWithSlots.has(weekdayOf(d)) && !blockedSet.has(d) && d >= nowTick.day,
     );
-  }, [slots.data, blocked.data]);
+  }, [slots.data, blocked.data, nowTick.day]);
 
   const service = (services.data ?? []).find((s) => s.id === serviceId);
 
@@ -298,12 +306,16 @@ function BookingFlow({
       .filter((b) => b.weekday === weekday)
       .map((b) => ({ start: timeToMinutes(b.start_time), end: timeToMinutes(b.end_time) }));
 
+    // No dia de hoje, só horários futuros (com antecedência mínima). Datas futuras ficam intactas.
+    const minStart = day === nowTick.day ? nowTick.minutes + BOOKING_LEAD_MINUTES : -1;
+
     return (slots.data ?? [])
       .filter((s) => s.weekday === weekday)
       .map((s) => shortTime(s.start_time))
       .filter((t) => {
         const start = timeToMinutes(t);
         const end = start + duration;
+        if (start < minStart) return false;
         if (end > 24 * 60) return false;
         if (busyRanges.some((r) => overlaps(start, end, r.start, r.end))) return false;
         // Bloqueia se o atendimento cair dentro do intervalo ou o invadir.
@@ -311,7 +323,7 @@ function BookingFlow({
         return true;
       })
       .sort();
-  }, [day, service, slots.data, busy.data, breaks.data]);
+  }, [day, service, slots.data, busy.data, breaks.data, nowTick]);
 
   const since = isoDaysAgo(expiryDays);
   const completedForService = (history.data ?? []).filter(

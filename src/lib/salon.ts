@@ -31,6 +31,21 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = Object.fromEntries(
 );
 
 /** ISO date (YYYY-MM-DD) de N dias atrás — janela de validade dos pontos. */
+/** Antecedência mínima (minutos) para agendar um horário no dia de hoje. */
+export const BOOKING_LEAD_MINUTES = 30;
+
+/** Data de hoje no fuso do dispositivo (YYYY-MM-DD) — nunca usar toISOString (UTC). */
+export function localTodayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Minutos desde a meia-noite do horário local atual. */
+export function currentMinutes() {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+}
+
 export function isoDaysAgo(days: number) {
   const d = new Date(Date.now() - days * 86400000);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
