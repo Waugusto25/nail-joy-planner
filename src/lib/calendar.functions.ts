@@ -45,6 +45,25 @@ export const confirmAppointmentFn = createServerFn({ method: "POST" })
   });
 
 /** Cancela o atendimento e apaga o compromisso da Google Agenda. */
+export const setAppointmentPendingFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => appointmentIdInput.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { error } = await context.supabase
+      .from("appointments")
+      .update({ status: "pendente" })
+      .eq("id", data.appointmentId);
+    if (error) throw new Error("Não foi possível atualizar o atendimento.");
+    try {
+      const { syncCalendarStatusColor } = await import("./calendar-helpers.server");
+      await syncCalendarStatusColor(data.appointmentId);
+    } catch (calendarError) {
+      console.error("Falha ao atualizar a cor do evento na Google Agenda", calendarError);
+    }
+    return { ok: true };
+  });
+
 export const cancelAppointmentFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => appointmentIdInput.parse(data))

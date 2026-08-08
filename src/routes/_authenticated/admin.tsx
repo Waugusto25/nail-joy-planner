@@ -16,8 +16,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
 import { completeAppointmentFn, drawEventWinnerFn } from "@/lib/loyalty.functions";
-import { cancelAppointmentFn, confirmAppointmentFn } from "@/lib/calendar.functions";
+import {
+  cancelAppointmentFn,
+  confirmAppointmentFn,
+  setAppointmentPendingFn,
+} from "@/lib/calendar.functions";
 import { clearCancelledForAdminFn, hideCancelledForAdminFn } from "@/lib/cancel.functions";
+import { ManualAppointmentDialog } from "@/components/app/manual-appointment-dialog";
 import { FinanceTab } from "@/components/app/finance-tab";
 import { StoreOrdersTab } from "@/components/app/store-orders-tab";
 
@@ -215,8 +220,7 @@ function AgendaTab() {
         toast.success("Atendimento cancelado.");
         openClientWhatsapp(notice);
       } else {
-        const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
-        if (error) throw new Error("Não foi possível atualizar.");
+        await setAppointmentPendingFn({ data: { appointmentId: id } });
         toast.success("Agendamento atualizado.");
       }
       await queryClient.invalidateQueries();
@@ -370,6 +374,9 @@ function AgendaTab() {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <ManualAppointmentDialog />
+      </div>
       <Tabs defaultValue="pendentes">
         <TabsList className="mt-2 -mx-4 flex h-auto w-[calc(100%+2rem)] max-w-none flex-nowrap justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-4 py-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:w-full sm:rounded-lg sm:bg-muted sm:px-1 [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="pendentes">Pré-agendamentos ({pendentes.length})</TabsTrigger>

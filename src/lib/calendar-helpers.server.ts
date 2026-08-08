@@ -7,6 +7,13 @@ const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_calendar/calen
 export const CALENDAR_ID = "jannahsilva.oliveira@gmail.com";
 const TIME_ZONE = "America/Sao_Paulo";
 
+/** Padrão visual por status na Google Agenda: azul, amarelo e verde. */
+export const STATUS_COLOR_ID: Record<string, string> = {
+  pendente: "9",
+  confirmado: "5",
+  concluido: "10",
+};
+
 function admin(): SupabaseClient {
   return createClient(process.env["SUPABASE_URL"]!, process.env["SUPABASE_SERVICE_ROLE_KEY"]!, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -45,6 +52,7 @@ type AppointmentRow = {
   client_id: string;
   day: string;
   start_time: string;
+  status: string;
   price_cents: number;
   benefit_type: string;
   discount_percent: number;
@@ -57,7 +65,7 @@ async function loadAppointment(db: SupabaseClient, appointmentId: string) {
   const { data } = await db
     .from("appointments")
     .select(
-      "id, client_id, day, start_time, price_cents, benefit_type, discount_percent, notes, google_event_id, services(name, duration_minutes)",
+      "id, client_id, day, start_time, status, price_cents, benefit_type, discount_percent, notes, google_event_id, services(name, duration_minutes)",
     )
     .eq("id", appointmentId)
     .maybeSingle();
@@ -100,6 +108,7 @@ export async function syncAppointmentToCalendar(appointmentId: string) {
     description: descriptionLines.join("\n"),
     start: { dateTime: `${appt.day}T${start}:00`, timeZone: TIME_ZONE },
     end: { dateTime: `${appt.day}T${end}:00`, timeZone: TIME_ZONE },
+    colorId: STATUS_COLOR_ID[appt.status] ?? STATUS_COLOR_ID["confirmado"]!,
   };
 
   const encodedCalendar = encodeURIComponent(CALENDAR_ID);
@@ -138,4 +147,29 @@ export async function removeAppointmentFromCalendar(appointmentId: string) {
   );
   await db.from("appointments").update({ google_event_id: null }).eq("id", appointmentId);
   return { removed: true };
+}
+
+/**
+ * Atualiza apenas a cor do compromisso conforme o status atual do atendimento.
+ * Se o evento ainda não existir na agenda, cria o compromisso completo.
+ */
+export async function syncCalendarStatusColor(appointmentId: string) {
+  const db = admin();
+  const { data } = await db
+    .from("appointments")
+    .select("status, google_event_id")
+    .eq("id", appointmentId)
+    .maybeSingle();
+  if (!data) throw new Error("Agendamento não encontrado.");
+  const colorId = STATUS_COLOR_ID[String(data.status)];
+  if (!colorId) return { updated: false };
+  if (!data.google_event_id) {
+    await syncAppointmentToCalendar(appointmentId);
+    return { updated: true };
+  }
+  await gateway(
+    `/calendars/${encodeURIComponent(CALENDAR_ID)}/events/${encodeURIComponent(String(data.google_event_id))}`,
+    { method: "PATCH", body: { colorId } },
+  );
+  return { updated: true };
 }
