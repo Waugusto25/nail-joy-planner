@@ -38,7 +38,11 @@ export function isoDaysAgo(days: number) {
 
 export function formatDateTime(value?: string | null) {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return new Date(value).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 export const WEEKDAYS = [
@@ -57,6 +61,35 @@ export const APPOINTMENT_STATUS: Record<string, string> = {
   concluido: "Concluído",
   cancelado: "Cancelado",
 };
+
+/** Status possíveis de um pedido da loja/catálogo. */
+export const ORDER_STATUSES = [
+  { value: "pendente", label: "Pendente" },
+  { value: "encomendado", label: "Encomendado" },
+  { value: "pronto", label: "Pronto para retirada" },
+  { value: "entregue", label: "Entregue" },
+] as const;
+
+export const ORDER_STATUS_LABELS: Record<string, string> = Object.fromEntries(
+  ORDER_STATUSES.map((s) => [s.value, s.label]),
+);
+
+/** "À vista" ou "3x de R$ 20,00" */
+export function formatInstallments(installments: number, amountCents: number) {
+  if (!installments || installments <= 1) return "À vista";
+  return `${installments}x de ${formatPrice(Math.round(amountCents / installments))}`;
+}
+
+/** Rótulo amigável de agrupamento por dia: Hoje, Amanhã ou a data completa. */
+export function dayGroupLabel(day: string) {
+  const today = new Date();
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const tomorrow = new Date(today.getTime() + 86400000);
+  if (day === iso(today)) return "Hoje";
+  if (day === iso(tomorrow)) return "Amanhã";
+  return formatDayLabel(day);
+}
 
 export function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
