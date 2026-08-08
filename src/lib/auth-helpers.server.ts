@@ -22,7 +22,7 @@ async function uniqueLoginId(db: Admin, fullName: string) {
   return `${base}${Date.now().toString().slice(-5)}`;
 }
 
-export async function phoneAccess(fullName: string, phone: string) {
+export async function phoneAccess(fullName: string, phone: string, referrerPhone?: string) {
   const db = admin();
   const { data: existing } = await db
     .from("profiles")
@@ -72,6 +72,29 @@ export async function phoneAccess(fullName: string, phone: string) {
     throw new Error("Não foi possível salvar seu cadastro. Tente novamente.");
   }
   await db.from("user_roles").insert({ user_id: created.user.id, role: "client" });
+
+  // Indicação: fica pendente até a nova cliente concluir o primeiro atendimento.
+  const referrer = (referrerPhone ?? "").replace(/\D/g, "");
+  if (referrer && referrer !== phone) {
+    const { data: settings } = await db
+      .from("app_settings")
+      .select("referral_enabled")
+      .eq("id", true)
+      .maybeSingle();
+    if (settings?.referral_enabled) {
+      const { data: friend } = await db
+        .from("profiles")
+        .select("id")
+        .eq("phone", referrer)
+        .maybeSingle();
+      if (friend) {
+        await db
+          .from("referrals")
+          .insert({ referrer_id: friend.id, referred_id: created.user.id, status: "pendente" });
+      }
+    }
+  }
+
   return { created: true, loginId, email };
 }
 

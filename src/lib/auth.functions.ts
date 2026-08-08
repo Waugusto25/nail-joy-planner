@@ -12,7 +12,7 @@ export const phoneAccessFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => phoneAccessInput.parse(data))
   .handler(async ({ data }) => {
     const { phoneAccess } = await import("./auth-helpers.server");
-    return phoneAccess(data.fullName, data.phone);
+    return phoneAccess(data.fullName, data.phone, data.referrerPhone);
   });
 
 export const resolveLoginFn = createServerFn({ method: "POST" })
