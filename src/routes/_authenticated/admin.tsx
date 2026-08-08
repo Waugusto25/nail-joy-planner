@@ -311,6 +311,14 @@ function ClientsTab() {
   });
   const [editing, setEditing] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
+  const adminIds = useQuery({
+    queryKey: ["admin-role-ids"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
+      if (error) throw error;
+      return (data ?? []).map((r) => r.user_id as string);
+    },
+  });
 
   async function save(clientId: string) {
     try {
@@ -342,11 +350,20 @@ function ClientsTab() {
 
   return (
     <div className="space-y-3">
-      {(clients.data ?? []).map((c) => (
+      {(clients.data ?? []).map((c) => {
+        const isMaster = (adminIds.data ?? []).includes(c.id);
+        return (
         <article key={c.id} className="surface-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="font-display text-lg">{c.full_name}</p>
+              <p className="font-display text-lg flex items-center gap-2">
+                {c.full_name}
+                {isMaster ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                    <Lock className="size-3" /> Administradora
+                  </span>
+                ) : null}
+              </p>
               <p className="text-sm text-muted-foreground">
                 ID {c.login_id} · {formatPhone(c.phone)}
               </p>
