@@ -32,7 +32,7 @@ function keyToBase64(buffer: ArrayBuffer | null) {
 type Props = { audience: "admin" | "cliente" };
 
 /** Estado e ações das notificações push neste dispositivo. */
-function usePush() {
+export function usePush() {
   const [supported, setSupported] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
