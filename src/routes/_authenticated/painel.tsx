@@ -294,6 +294,13 @@ function BookingFlow({
     queryFn: async () => (await busyTimesFn({ data: { day: day! } })).busy,
   });
 
+  // Dias especiais: valem apenas para a data exata, sem recorrência semanal.
+  const specialDays = useSpecialDays();
+  const specialByDay = useMemo(
+    () => new Map((specialDays.data ?? []).filter((s) => s.times.length > 0).map((s) => [s.day, s])),
+    [specialDays.data],
+  );
+
   // Carteira de pontos: só pontos ganhos com a fidelidade ativa, ainda não
   // queimados em outro pré-agendamento e dentro da validade.
   const wallet = useLoyaltyWallet(clientId);
@@ -366,7 +373,7 @@ function BookingFlow({
     const minStart = day === nowTick.day ? nowTick.minutes + BOOKING_LEAD_MINUTES : -1;
 
     // Dia especial: só os horários exclusivos cadastrados para essa data.
-    const baseTimes = special
+    const baseTimes: string[] = special
       ? special.times
       : (slots.data ?? []).filter((s) => s.weekday === weekday).map((s) => shortTime(s.start_time));
 
