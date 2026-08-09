@@ -26,9 +26,6 @@ async function assertFreeSlot(
   startTime: string,
   duration: number,
 ) {
-  const { data: blocked } = await db.from("blocked_dates").select("id").eq("day", day).maybeSingle();
-  if (blocked) throw new Error("Este dia está bloqueado na agenda.");
-
   const { data } = await db
     .from("appointments")
     .select("start_time, services(duration_minutes)")
@@ -48,6 +45,49 @@ async function assertFreeSlot(
   }
 }
 
+/**
+ * Alocação livre: quando a data/horário está fora do cronograma padrão
+ * (domingo, dia bloqueado ou fora do expediente), registramos a data como
+ * "Atendimento Especial" com aquele horário, sem mexer na regra semanal.
+ */
+async function ensureSpecialDay(db: SupabaseClient, day: string, startTime: string) {
+  const [y, m, d] = day.split("-").map(Number);
+  const weekday = new Date(y!, (m ?? 1) - 1, d ?? 1).getDay();
+
+  const { data: blocked } = await db.from("blocked_dates").select("id").eq("day", day).maybeSingle();
+  const { data: slot } = await db
+    .from("schedule_slots")
+    .select("id")
+    .eq("weekday", weekday)
+    .eq("active", true)
+    .eq("start_time", `${startTime}:00`)
+    .maybeSingle();
+
+  const { data: special } = await db
+    .from("special_days")
+    .select("id, times")
+    .eq("day", day)
+    .maybeSingle();
+
+  if (slot && !blocked && !special) return false;
+
+  const times = new Set<string>(
+    ((special?.times as string[] | null) ?? []).map((t) => String(t).slice(0, 5)),
+  );
+  times.add(startTime);
+  const payload = {
+    day,
+    times: Array.from(times)
+      .sort()
+      .map((t) => `${t}:00`),
+    reason: special?.["reason"] ?? "Atendimento especial",
+    active: true,
+  };
+  if (special) await db.from("special_days").update(payload).eq("id", special.id);
+  else await db.from("special_days").insert(payload);
+  return true;
+}
+
 /** Cria um atendimento já confirmado a partir do painel administrativo. */
 export async function createManualAppointment(input: ManualAppointmentData) {
   const db = admin();
@@ -62,10 +102,15 @@ export async function createManualAppointment(input: ManualAppointmentData) {
   await assertFreeSlot(db, input.day, input.startTime, Number(service.duration_minutes ?? 60));
 
   let clientId = input.clientId ?? null;
+  let createdClient = false;
   if (!clientId) {
     const { ensureManualClient } = await import("./auth-helpers.server");
-    clientId = await ensureManualClient(String(input.clientName), input.clientPhone ?? "");
+    const result = await ensureManualClient(String(input.clientName), input.clientPhone ?? "");
+    clientId = result.clientId;
+    createdClient = result.created;
   }
+
+  const special = await ensureSpecialDay(db, input.day, input.startTime);
 
   const { data: created, error } = await db
     .from("appointments")
@@ -94,5 +139,24 @@ export async function createManualAppointment(input: ManualAppointmentData) {
     calendar = "falhou";
   }
 
-  return { appointmentId: String(created.id), calendar };
+  const { data: profile } = await db
+    .from("profiles")
+    .select("full_name, phone")
+    .eq("id", clientId)
+    .maybeSingle();
+
+  return {
+    appointmentId: String(created.id),
+    calendar,
+    special,
+    createdClient,
+    client: {
+      name: String(profile?.full_name ?? input.clientName ?? "Cliente"),
+      phone: String(profile?.phone ?? input.clientPhone ?? ""),
+    },
+    service: {
+      name: String(service.name),
+      durationMinutes: Number(service.duration_minutes ?? 60),
+    },
+  };
 }
