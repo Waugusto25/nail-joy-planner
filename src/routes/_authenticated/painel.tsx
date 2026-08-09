@@ -140,6 +140,7 @@ function ClientPanel() {
             <BookingFlow
               clientId={data?.id}
               clientName={data?.full_name ?? ""}
+              clientPhone={data?.phone ?? ""}
               claim={claim}
               onClaimUsed={() => setClaim(null)}
             />
@@ -205,11 +206,13 @@ function useServices() {
 function BookingFlow({
   clientId,
   clientName,
+  clientPhone,
   claim,
   onClaimUsed,
 }: {
   clientId?: string | undefined;
   clientName: string;
+  clientPhone?: string;
   claim?: Claim | null;
   onClaimUsed?: () => void;
 }) {
@@ -394,35 +397,38 @@ function BookingFlow({
   // Regra de cumulação: só um benefício por atendimento.
   const benefitOptions = useMemo(() => {
     const list: { value: string; label: string; percent: number }[] = [];
-    if (loyaltyReady)
+    if (loyaltyReady || claim?.benefit === "fidelidade")
       list.push({
         value: "fidelidade",
-        label: `Fidelidade -${Math.round(LOYALTY_DISCOUNT * 100)}%`,
+        label: `Resgate Fidelidade (-${Math.round(LOYALTY_DISCOUNT * 100)}%)`,
         percent: Math.round(LOYALTY_DISCOUNT * 100),
       });
-    if (couponCount > 0)
+    if (couponCount > 0 || claim?.benefit === "indicacao")
       list.push({
         value: "indicacao",
-        label: `Indicação -${Math.round(REFERRAL_DISCOUNT * 100)}% (${couponCount} disponível${couponCount === 1 ? "" : "eis"})`,
+        label: `Resgate Indicação (-${Math.round(REFERRAL_DISCOUNT * 100)}%)`,
         percent: Math.round(REFERRAL_DISCOUNT * 100),
       });
     if (partialPercent > 0)
       list.push({
         value: "parcial",
-        label: `Reembolso de pontos -${partialPercent}%`,
+        label: `Reembolso de pontos (-${partialPercent}%)`,
         percent: partialPercent,
       });
     if (claim?.benefit === "premio")
       list.push({
         value: "premio",
-        label: "🎁 Prêmio de sorteio",
+        label: "Prêmio de Sorteio / Evento",
         percent: 0,
       });
     list.push({ value: "nenhum", label: "Sem desconto", percent: 0 });
     return list;
   }, [loyaltyReady, couponCount, partialPercent, claim?.benefit]);
 
-  const activeBenefit = benefitOptions.find((o) => o.value === benefit) ?? benefitOptions[0]!;
+  const activeBenefit =
+    benefitOptions.find((o) => o.value === benefit) ??
+    benefitOptions.find((o) => o.value === claim?.benefit) ??
+    benefitOptions[0]!;
   const eligible = activeBenefit.percent > 0 || activeBenefit.value === "premio";
   const price = service ? Math.round(service.price_cents * (1 - activeBenefit.percent / 100)) : 0;
   const endTime = service && time ? addMinutes(time, service.duration_minutes) : null;
@@ -438,6 +444,7 @@ function BookingFlow({
           service_id: service.id,
           day,
           start_time: `${time}:00`,
+          status: "pendente",
           price_cents: price,
           discount_applied: eligible,
           benefit_type: activeBenefit.value,
@@ -445,9 +452,13 @@ function BookingFlow({
         })
         .select("id")
         .single();
-      if (error) throw error;
-      if (activeBenefit.value === "indicacao" && row?.id) {
-        await consumeReferralFn({ data: { appointmentId: row.id } });
+      if (error || !row?.id) throw error ?? new Error("insert");
+      if (activeBenefit.value === "indicacao") {
+        try {
+          await consumeReferralFn({ data: { appointmentId: row.id } });
+        } catch (couponError) {
+          console.error("Falha ao registrar o uso do cupom de indicação", couponError);
+        }
       }
       if (activeBenefit.value === "premio" && row?.id && claim?.eventId) {
         try {
@@ -464,9 +475,31 @@ function BookingFlow({
         }
       }
       await queryClient.invalidateQueries();
-      const benefitNote = eligible ? ` (com ${activeBenefit.label})` : "";
-      const text = `Olá, Janaina! Sou ${clientName} e fiz uma pré-reserva pelo app.%0A%0AServiço: ${service.name}%0AData: ${formatDayLabel(day)}%0AInício: ${time}%0ATérmino previsto: ${addMinutes(time, service.duration_minutes)}%0ADuração: ${formatDuration(service.duration_minutes)}%0AValor: ${formatPrice(price)}${benefitNote}%0A%0APode confirmar para mim?`;
-      window.open(whatsappLink(decodeURIComponent(text)), "_blank", "noopener");
+      const message = eligible
+        ? claimBookingMessage({
+            clientName,
+            clientPhone: clientPhone ?? "",
+            serviceName: service.name,
+            day,
+            start: time,
+            benefitType: activeBenefit.value,
+            percent: activeBenefit.percent,
+            originalCents: service.price_cents,
+            finalCents: price,
+          })
+        : [
+            `Olá, Janaina! Sou ${clientName} e fiz uma pré-reserva pelo app.`,
+            "",
+            `Serviço: ${service.name}`,
+            `Data: ${formatDayLabel(day)}`,
+            `Início: ${time}`,
+            `Término previsto: ${addMinutes(time, service.duration_minutes)}`,
+            `Duração: ${formatDuration(service.duration_minutes)}`,
+            `Valor: ${formatPrice(price)}`,
+            "",
+            "Pode confirmar para mim?",
+          ].join("\n");
+      window.open(whatsappLink(message), "_blank", "noopener");
       toast.success("Pré-reserva criada! Confirme pelo WhatsApp.");
       setServiceId(null);
       setDay(null);
