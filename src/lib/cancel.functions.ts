@@ -46,10 +46,10 @@ export const clientCancelAppointmentFn = createServerFn({ method: "POST" })
 
     let calendar: "ok" | "falhou" = "ok";
     try {
-      const { removeAppointmentFromCalendar } = await import("./calendar-helpers.server");
-      await removeAppointmentFromCalendar(data.appointmentId);
+      const { markAppointmentCancelledInCalendar } = await import("./calendar-helpers.server");
+      await markAppointmentCancelledInCalendar(data.appointmentId);
     } catch (calendarError) {
-      console.error("Falha ao remover da Google Agenda", calendarError);
+      console.error("Falha ao marcar o cancelamento na Google Agenda", calendarError);
       calendar = "falhou";
     }
 
