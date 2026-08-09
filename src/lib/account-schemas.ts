@@ -29,6 +29,8 @@ const emailSchema = z
 
 export const requestEmailChangeInput = z.object({ requestedEmail: emailSchema });
 
+export const calendarEmailInput = z.object({ email: emailSchema });
+
 export const decideEmailChangeInput = z.object({
   requestId: z.string().uuid(),
   approve: z.boolean(),

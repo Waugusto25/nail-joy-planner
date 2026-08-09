@@ -38,6 +38,37 @@ export async function updateMyAccount(userId: string, phone: string, email: stri
 }
 
 /** Registra o pedido de troca de e-mail para aprovação manual da administradora. */
+
+/** Salva o e-mail da Google Agenda pelo pop-up de acesso (só se ainda não houver). */
+export async function setMyCalendarEmail(userId: string, email: string) {
+  const db = admin();
+  const { data: current } = await db
+    .from("profiles")
+    .select("email")
+    .eq("id", userId)
+    .maybeSingle();
+  if (String(current?.email ?? "").trim()) {
+    throw new Error("Você já tem um e-mail cadastrado. Solicite a troca nas configurações.");
+  }
+  const { error } = await db
+    .from("profiles")
+    .update({ email, calendar_prompt_dismissed: true })
+    .eq("id", userId);
+  if (error) throw new Error("Não foi possível salvar seu e-mail.");
+  return { ok: true as const };
+}
+
+/** Marca que a cliente não quer mais ver o aviso da Google Agenda. */
+export async function dismissCalendarPrompt(userId: string) {
+  const db = admin();
+  const { error } = await db
+    .from("profiles")
+    .update({ calendar_prompt_dismissed: true })
+    .eq("id", userId);
+  if (error) throw new Error("Não foi possível salvar sua preferência.");
+  return { ok: true as const };
+}
+
 export async function requestEmailChange(userId: string, requestedEmail: string) {
   const db = admin();
   const { data: profile } = await db
