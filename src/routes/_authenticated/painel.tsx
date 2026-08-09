@@ -293,18 +293,9 @@ function BookingFlow({
     queryFn: async () => (await busyTimesFn({ data: { day: day! } })).busy,
   });
 
-  const history = useQuery({
-    queryKey: ["my-appointments", clientId],
-    enabled: Boolean(clientId),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("service_id, status, day")
-        .eq("client_id", clientId!);
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Carteira de pontos: só pontos ganhos com a fidelidade ativa, ainda não
+  // queimados em outro pré-agendamento e dentro da validade.
+  const wallet = useLoyaltyWallet(clientId);
 
   const coupons = useQuery({
     queryKey: ["referral-coupons", clientId],
@@ -383,21 +374,19 @@ function BookingFlow({
       .sort();
   }, [day, service, slots.data, busy.data, breaks.data, nowTick]);
 
-  const since = isoDaysAgo(expiryDays);
-  const completedForService = (history.data ?? []).filter(
-    (a) => a.service_id === serviceId && a.status === "concluido" && a.day >= since,
-  ).length;
+  const points = (wallet.data ?? []).filter((p) => p.service_id === serviceId).length;
   const loyaltyService = service?.loyalty_eligible ?? false;
-  const inCycle = completedForService % LOYALTY_CYCLE;
-  const loyaltyReady = loyaltyEnabled && loyaltyService && completedForService > 0 && inCycle === 0;
+  const loyaltyReady = loyaltyEnabled && loyaltyService && points >= LOYALTY_CYCLE;
   const partialPercent =
-    !loyaltyEnabled && loyaltyService ? Math.round(inCycle * LOYALTY_PARTIAL_STEP * 100) : 0;
+    !loyaltyEnabled && loyaltyService
+      ? Math.round(Math.min(points, LOYALTY_CYCLE) * LOYALTY_PARTIAL_STEP * 100)
+      : 0;
   const couponCount = coupons.data?.length ?? 0;
 
   // Regra de cumulação: só um benefício por atendimento.
   const benefitOptions = useMemo(() => {
     const list: { value: string; label: string; percent: number }[] = [];
-    if (loyaltyReady || claim?.benefit === "fidelidade")
+    if (loyaltyReady || (claim?.benefit === "fidelidade" && points >= LOYALTY_CYCLE))
       list.push({
         value: "fidelidade",
         label: `Resgate Fidelidade (-${Math.round(LOYALTY_DISCOUNT * 100)}%)`,
@@ -423,7 +412,7 @@ function BookingFlow({
       });
     list.push({ value: "nenhum", label: "Sem desconto", percent: 0 });
     return list;
-  }, [loyaltyReady, couponCount, partialPercent, claim?.benefit]);
+  }, [loyaltyReady, couponCount, partialPercent, claim?.benefit, points]);
 
   const activeBenefit =
     benefitOptions.find((o) => o.value === benefit) ??
@@ -453,6 +442,14 @@ function BookingFlow({
         .select("id")
         .single();
       if (error || !row?.id) throw error ?? new Error("insert");
+      if (activeBenefit.value === "fidelidade" || activeBenefit.value === "parcial") {
+        try {
+          // Queima os pontos usados para que o benefício não fique disponível de novo.
+          await spendLoyaltyPointsFn({ data: { appointmentId: row.id } });
+        } catch (walletError) {
+          console.error("Falha ao registrar o uso dos pontos de fidelidade", walletError);
+        }
+      }
       if (activeBenefit.value === "indicacao") {
         try {
           await consumeReferralFn({ data: { appointmentId: row.id } });
