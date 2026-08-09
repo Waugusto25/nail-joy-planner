@@ -4,6 +4,8 @@ export const WHATSAPP_NUMBER = "5535998844504";
 export const INSTAGRAM_HANDLE = "jannah_silvaah";
 export const INSTAGRAM_URL = "https://www.instagram.com/jannah_silvaah?igsh=OTRoZjFka2p0dDhn";
 export const AUTH_EMAIL_DOMAIN = "jannahnails.app";
+/** Local do atendimento enviado no convite da Google Agenda. */
+export const SALON_ADDRESS = "Studio Jannah Nails — Nails Design (confirme o endereço no WhatsApp)";
 export const LOYALTY_CYCLE = 5;
 export const LOYALTY_DISCOUNT = 0.2;
 /** Cada procedimento acumulado vale 4% quando o programa é desativado. */
