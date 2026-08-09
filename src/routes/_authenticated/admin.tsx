@@ -281,6 +281,9 @@ function AgendaTab() {
               <Badge className="mb-1.5">{claimTag(a.benefit_type)}</Badge>
             ) : null}
             <p className="font-display text-lg">{client?.full_name ?? "Cliente"}</p>
+            {client?.nickname ? (
+              <p className="text-xs font-medium text-primary">Apelido: {client.nickname}</p>
+            ) : null}
             <p className="text-sm capitalize text-muted-foreground">
               {formatDayLabel(a.day)} · {shortTime(a.start_time)} ·{" "}
               {(a.services as { name: string } | null)?.name}
