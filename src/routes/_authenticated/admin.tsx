@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
+import { decideEmailChangeFn } from "@/lib/account.functions";
 import { completeAppointmentFn, drawEventWinnerFn } from "@/lib/loyalty.functions";
 import {
   cancelAppointmentFn,
@@ -588,6 +589,8 @@ function ClientsTab() {
   }
 
   return (
+    <>
+      <EmailChangeRequests />
     <div className="space-y-3">
       {(clients.data ?? []).map((c) => {
         const isMaster = (adminIds.data ?? []).includes(c.id);
