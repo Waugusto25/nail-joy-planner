@@ -47,6 +47,13 @@ export const notifyNewAppointmentFn = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!appt) return { sent: 0 };
     const { notifyAdminsNewAppointment } = await import("./push-helpers.server");
+    // Pré-agendamento também vai para a Google Agenda, em azul (pendente).
+    try {
+      const { syncAppointmentToCalendar } = await import("./calendar-helpers.server");
+      await syncAppointmentToCalendar(data.appointmentId);
+    } catch (calendarError) {
+      console.error("Falha ao publicar o pré-agendamento na Google Agenda", calendarError);
+    }
     try {
       return await notifyAdminsNewAppointment(data.appointmentId);
     } catch (error) {
