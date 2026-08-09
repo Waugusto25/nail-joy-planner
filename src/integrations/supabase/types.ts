@@ -18,26 +18,32 @@ export type Database = {
         Row: {
           benefit_expiry_days: number
           id: boolean
+          instagram_url: string
           loyalty_enabled: boolean
           max_advance_months: number
           referral_enabled: boolean
           updated_at: string
+          whatsapp_number: string
         }
         Insert: {
           benefit_expiry_days?: number
           id?: boolean
+          instagram_url?: string
           loyalty_enabled?: boolean
           max_advance_months?: number
           referral_enabled?: boolean
           updated_at?: string
+          whatsapp_number?: string
         }
         Update: {
           benefit_expiry_days?: number
           id?: boolean
+          instagram_url?: string
           loyalty_enabled?: boolean
           max_advance_months?: number
           referral_enabled?: boolean
           updated_at?: string
+          whatsapp_number?: string
         }
         Relationships: []
       }
@@ -315,29 +321,35 @@ export type Database = {
       }
       profiles: {
         Row: {
+          calendar_prompt_dismissed: boolean
           created_at: string
           email: string | null
           full_name: string
           id: string
           login_id: string
+          nickname: string | null
           phone: string
           welcome_seen: boolean
         }
         Insert: {
+          calendar_prompt_dismissed?: boolean
           created_at?: string
           email?: string | null
           full_name: string
           id: string
           login_id: string
+          nickname?: string | null
           phone: string
           welcome_seen?: boolean
         }
         Update: {
+          calendar_prompt_dismissed?: boolean
           created_at?: string
           email?: string | null
           full_name?: string
           id?: string
           login_id?: string
+          nickname?: string | null
           phone?: string
           welcome_seen?: boolean
         }
