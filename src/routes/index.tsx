@@ -5,11 +5,12 @@ import { toast } from "sonner";
 import { BrandMark } from "@/components/app/brand";
 import { PasswordInput } from "@/components/app/password-input";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabaseSession } from "@/hooks/useSession";
-import { phoneAccessFn, resolveLoginFn } from "@/lib/auth.functions";
+import { phoneAccessFn, phoneStatusFn, resolveLoginFn } from "@/lib/auth.functions";
 import { INSTAGRAM_URL, OWNER_NAME, SALON_NAME, onlyDigits } from "@/lib/salon";
 
 export const Route = createFileRoute("/")({
@@ -104,12 +105,39 @@ function PhoneAccessForm() {
   const [phone, setPhone] = useState("");
   const [referrerPhone, setReferrerPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [registered, setRegistered] = useState(false);
+  const [referralNoticeOpen, setReferralNoticeOpen] = useState(false);
+
+  // Verifica (com debounce) se o telefone já tem cadastro para esconder a indicação.
+  useEffect(() => {
+    const digits = onlyDigits(phone);
+    if (digits.length < 10) {
+      setRegistered(false);
+      return;
+    }
+    let active = true;
+    const id = setTimeout(() => {
+      void phoneStatusFn({ data: { phone: digits } })
+        .then((status) => {
+          if (!active) return;
+          setRegistered(status.registered);
+          if (status.registered) setReferrerPhone("");
+        })
+        .catch(() => undefined);
+    }, 450);
+    return () => {
+      active = false;
+      clearTimeout(id);
+    };
+  }, [phone]);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
     try {
-      const result = await phoneAccessFn({ data: { fullName, phone, referrerPhone } });
+      const result = await phoneAccessFn({
+        data: { fullName, phone, referrerPhone: registered ? "" : referrerPhone },
+      });
       const { error } = await supabase.auth.signInWithPassword({
         email: result.email,
         password: onlyDigits(phone),
@@ -120,6 +148,12 @@ function PhoneAccessForm() {
       }
       toast.success(result.created ? "Cadastro criado. Bem-vinda!" : "Bem-vinda de volta!");
     } catch (error) {
+      if (error instanceof Error && error.message.includes("REFERRAL_ONLY_FIRST_ACCESS")) {
+        setRegistered(true);
+        setReferrerPhone("");
+        setReferralNoticeOpen(true);
+        return;
+      }
       toast.error(message(error, "Confira os dados informados."));
     } finally {
       setLoading(false);
@@ -127,6 +161,7 @@ function PhoneAccessForm() {
   }
 
   return (
+    <>
     <form className="space-y-4" onSubmit={onSubmit}>
       <div className="space-y-2">
         <Label htmlFor="access-name">Nome</Label>
@@ -154,25 +189,54 @@ function PhoneAccessForm() {
           Seu telefone é o seu acesso. Toque no olhinho para conferir os números.
         </p>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="access-referrer">Quem indicou você? (opcional)</Label>
-        <Input
-          id="access-referrer"
-          inputMode="numeric"
-          value={referrerPhone}
-          onChange={(e) => setReferrerPhone(onlyDigits(e.target.value))}
-          placeholder="(35) 99999-9999"
-          maxLength={13}
-        />
+      {registered ? (
         <p className="text-xs text-muted-foreground">
-          A amiga que te indicou ganha 10% de desconto depois do seu primeiro atendimento
-          concluído.
+          Você já tem cadastro no {SALON_NAME} — é só entrar. O campo de indicação aparece apenas no
+          primeiro acesso.
         </p>
-      </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="access-referrer">Quem indicou você? (opcional)</Label>
+          <Input
+            id="access-referrer"
+            inputMode="numeric"
+            value={referrerPhone}
+            onChange={(e) => setReferrerPhone(onlyDigits(e.target.value))}
+            placeholder="(35) 99999-9999"
+            maxLength={13}
+          />
+          <p className="text-xs text-muted-foreground">
+            A amiga que te indicou ganha 10% de desconto depois do seu primeiro atendimento
+            concluído.
+          </p>
+        </div>
+      )}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Entrando..." : "Entrar"}
       </Button>
     </form>
+    <Dialog open={referralNoticeOpen} onOpenChange={setReferralNoticeOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Obrigada pelo carinho! 💖</DialogTitle>
+          <DialogDescription className="space-y-3 text-left">
+            <span className="block">
+              Identificamos que você já possui cadastro no {SALON_NAME}! O desconto do programa
+              Indique e Ganhe é válido apenas para o seu primeiro acesso ao nosso aplicativo.
+            </span>
+            <span className="block">
+              Mas não se preocupe: agora é a sua vez! Compartilhe o aplicativo com suas amigas, peça
+              para elas digitarem o seu número no cadastro e ganhe 10% de desconto a cada nova amiga
+              que agendar! ✨
+            </span>
+          </DialogDescription>
+        </DialogHeader>
+        <Button className="w-full" onClick={() => setReferralNoticeOpen(false)}>
+          Entendi, quero entrar
+        </Button>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

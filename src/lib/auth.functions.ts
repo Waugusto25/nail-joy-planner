@@ -5,6 +5,7 @@ import {
   adminDeleteClientInput,
   adminUpdateClientInput,
   phoneAccessInput,
+  phoneStatusInput,
   resolveLoginInput,
 } from "./auth-schemas";
 
@@ -20,6 +21,13 @@ export const resolveLoginFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { resolveLogin } = await import("./auth-helpers.server");
     return resolveLogin(data.identifier);
+  });
+
+export const phoneStatusFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => phoneStatusInput.parse(data))
+  .handler(async ({ data }) => {
+    const { phoneStatus } = await import("./auth-helpers.server");
+    return phoneStatus(data.phone);
   });
 
 export const adminUpdateClientFn = createServerFn({ method: "POST" })

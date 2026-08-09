@@ -27,6 +27,7 @@ export const phoneAccessInput = z.object({
     .transform((v) => (v ? v.replace(/\D/g, "") : "")),
 });
 export const resolveLoginInput = z.object({ identifier: identifierSchema });
+export const phoneStatusInput = z.object({ phone: phoneSchema });
 export const adminUpdateClientInput = z.object({
   clientId: z.string().uuid(),
   phone: phoneSchema,

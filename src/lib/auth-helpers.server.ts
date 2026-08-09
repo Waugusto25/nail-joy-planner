@@ -22,6 +22,26 @@ async function uniqueLoginId(db: Admin, fullName: string) {
   return `${base}${Date.now().toString().slice(-5)}`;
 }
 
+/** Situação do telefone: já cadastrado? já possui indicação vinculada? */
+export async function phoneStatus(phone: string) {
+  const db = admin();
+  const { data: existing } = await db
+    .from("profiles")
+    .select("id")
+    .eq("phone", phone)
+    .maybeSingle();
+  if (!existing) return { registered: false, hasReferral: false };
+  const { data: referral } = await db
+    .from("referrals")
+    .select("id")
+    .eq("referred_id", existing.id)
+    .maybeSingle();
+  return { registered: true, hasReferral: Boolean(referral) };
+}
+
+/** Sinalizador usado pelo app para abrir o aviso acolhedor sobre indicação. */
+export const REFERRAL_ONLY_FIRST_ACCESS = "REFERRAL_ONLY_FIRST_ACCESS";
+
 export async function phoneAccess(fullName: string, phone: string, referrerPhone?: string) {
   const db = admin();
   const { data: existing } = await db
@@ -31,6 +51,10 @@ export async function phoneAccess(fullName: string, phone: string, referrerPhone
     .maybeSingle();
 
   if (existing) {
+    // Antifraude: indicação vale só no primeiro cadastro; nunca sobrescreve o vínculo.
+    if ((referrerPhone ?? "").replace(/\D/g, "")) {
+      throw new Error(REFERRAL_ONLY_FIRST_ACCESS);
+    }
     const { data: roles } = await db
       .from("user_roles")
       .select("role")
