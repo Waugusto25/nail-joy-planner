@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { useAppSettings } from "@/hooks/useSettings";
 import { useScheduleMonths } from "@/hooks/useScheduleMonths";
+import { useSpecialDays } from "@/hooks/useSpecialDays";
 import {
   currentMonthKey,
   daysUntilEndOfMonth,
@@ -663,6 +664,7 @@ function BookingFlow({
                     }}
                   >
                     {d.slice(8)}/{d.slice(5, 7)} · {WEEKDAYS[weekdayOf(d)]?.slice(0, 3)}
+                    {specialByDay.has(d) ? " ✨" : ""}
                   </Button>
                 ))}
                 {availableDays.length === 0 ? (
