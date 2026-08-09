@@ -552,6 +552,8 @@ function ClientsTab() {
   });
   const [editing, setEditing] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
+  const [nicknames, setNicknames] = useState<Record<string, string>>({});
+  const [savingNickname, setSavingNickname] = useState<string | null>(null);
   const adminIds = useQuery({
     queryKey: ["admin-role-ids"],
     queryFn: async () => {
@@ -592,6 +594,25 @@ function ClientsTab() {
     }
   }
 
+  /** Apelido interno da administradora (nunca aparece para a cliente). */
+  async function saveNickname(clientId: string, current: string) {
+    const value = (nicknames[clientId] ?? current).trim();
+    setSavingNickname(clientId);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ nickname: value || null })
+        .eq("id", clientId);
+      if (error) throw new Error(error.message);
+      toast.success("Apelido salvo.");
+      await queryClient.invalidateQueries({ queryKey: ["admin-clients"] });
+    } catch {
+      toast.error("Não foi possível salvar o apelido.");
+    } finally {
+      setSavingNickname(null);
+    }
+  }
+
   return (
     <>
       <EmailChangeRequests />
@@ -610,11 +631,18 @@ function ClientsTab() {
                     </span>
                   ) : null}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  ID {c.login_id} · {formatPhone(c.phone)}
-                </p>
+                {isMaster ? (
+                  <p className="text-sm text-muted-foreground">
+                    Dados de acesso protegidos — troque sua senha na engrenagem (⚙️) do topo.
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    ID {c.login_id} · {formatPhone(c.phone)}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
+                {isMaster ? null : (
                 <Button
                   size="sm"
                   variant="outline"
@@ -632,6 +660,7 @@ function ClientsTab() {
                 >
                   WhatsApp
                 </Button>
+                )}
                 {isMaster ? null : (
                   <>
                     <Button
@@ -669,6 +698,33 @@ function ClientsTab() {
                 <Button onClick={() => void save(c.id)}>Salvar</Button>
               </div>
             ) : null}
+            {isMaster ? null : (
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                <div className="min-w-[220px] flex-1 space-y-1">
+                  <Label htmlFor={`nickname-${c.id}`}>Apelido (uso interno)</Label>
+                  <Input
+                    id={`nickname-${c.id}`}
+                    maxLength={80}
+                    placeholder="Ex: Mãe da Julia"
+                    value={nicknames[c.id] ?? c.nickname ?? ""}
+                    onChange={(e) =>
+                      setNicknames((prev) => ({ ...prev, [c.id]: e.target.value }))
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Visível só para você — a cliente nunca vê esse apelido.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void saveNickname(c.id, c.nickname ?? "")}
+                  disabled={savingNickname === c.id}
+                >
+                  {savingNickname === c.id ? "Salvando..." : "Salvar apelido"}
+                </Button>
+              </div>
+            )}
           </article>
         );
       })}
