@@ -65,7 +65,7 @@ async function ensureSpecialDay(db: SupabaseClient, day: string, startTime: stri
 
   const { data: special } = await db
     .from("special_days")
-    .select("id, times")
+    .select("id, times, reason")
     .eq("day", day)
     .maybeSingle();
 
@@ -80,7 +80,7 @@ async function ensureSpecialDay(db: SupabaseClient, day: string, startTime: stri
     times: Array.from(times)
       .sort()
       .map((t) => `${t}:00`),
-    reason: special?.["reason"] ?? "Atendimento especial",
+    reason: special?.reason ?? "Atendimento especial",
     active: true,
   };
   if (special) await db.from("special_days").update(payload).eq("id", special.id);
