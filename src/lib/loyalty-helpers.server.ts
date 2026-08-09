@@ -38,17 +38,30 @@ export async function completeAppointment(appointmentId: string, paymentMethod: 
     .maybeSingle();
   if (!appt) throw new Error("Agendamento não encontrado.");
 
+  const config0 = await settings(db);
+  const { data: svc } = await db
+    .from("services")
+    .select("name, loyalty_eligible")
+    .eq("id", appt.service_id)
+    .maybeSingle();
+  // Só gera ponto de fidelidade quando o programa está ATIVO no momento da conclusão.
+  const earnsPoint = Boolean(config0.loyaltyEnabled && svc?.loyalty_eligible);
+
   const { error } = await db
     .from("appointments")
     .update({
       status: "concluido",
       payment_method: paymentMethod,
       completed_at: new Date().toISOString(),
+      loyalty_earned: earnsPoint,
+      loyalty_expires_at: earnsPoint
+        ? new Date(Date.now() + config0.expiryDays * 86400000).toISOString()
+        : null,
     })
     .eq("id", appointmentId);
   if (error) throw new Error("Não foi possível concluir o atendimento.");
 
-  const config = await settings(db);
+  const config = config0;
   const notifications: BenefitNotification[] = [];
 
   const { data: referral } = await db
@@ -85,11 +98,7 @@ export async function completeAppointment(appointmentId: string, paymentMethod: 
   }
 
   if (config.loyaltyEnabled) {
-    const { data: service } = await db
-      .from("services")
-      .select("name, loyalty_eligible")
-      .eq("id", appt.service_id)
-      .maybeSingle();
+    const service = svc;
     if (service?.loyalty_eligible) {
       const since = new Date(Date.now() - config.expiryDays * 86400000)
         .toISOString()
