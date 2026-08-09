@@ -10,7 +10,10 @@ export const INSTAGRAM_URL = "https://www.instagram.com/jannah_silvaah?igsh=OTRo
  */
 const salonContact = { whatsapp: WHATSAPP_NUMBER, instagram: INSTAGRAM_URL };
 
-export function setSalonContact(contact: { whatsapp?: string | null; instagram?: string | null }) {
+export function setSalonContact(contact: {
+  whatsapp?: string | null | undefined;
+  instagram?: string | null | undefined;
+}) {
   const digits = onlyDigits(String(contact.whatsapp ?? ""));
   if (digits.length >= 10) salonContact.whatsapp = toWhatsappNumber(digits) ?? digits;
   const instagram = String(contact.instagram ?? "").trim();
