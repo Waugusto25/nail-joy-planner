@@ -818,7 +818,10 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
               {formatDayLabel(a.day)} · {shortTime(a.start_time)}
             </p>
             <p className="text-sm">
-              {formatPrice(a.price_cents)} {a.discount_applied ? "· fidelidade -20%" : ""}
+              {formatPrice(a.price_cents)}
+              {a.discount_applied
+                ? ` · ${benefitBadgeLabel(String(a.benefit_type ?? "nenhum"), Number(a.discount_percent ?? 0)) ?? "Benefício aplicado"}`
+                : ""}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
