@@ -92,11 +92,11 @@ export const cancelAppointmentFn = createServerFn({ method: "POST" })
       console.error("Falha ao notificar a cliente do cancelamento", pushError);
     }
     try {
-      const { removeAppointmentFromCalendar } = await import("./calendar-helpers.server");
-      await removeAppointmentFromCalendar(data.appointmentId);
+      const { markAppointmentCancelledInCalendar } = await import("./calendar-helpers.server");
+      await markAppointmentCancelledInCalendar(data.appointmentId);
       return { calendar: "ok" as const };
     } catch (calendarError) {
-      console.error("Falha ao remover da Google Agenda", calendarError);
+      console.error("Falha ao marcar o cancelamento na Google Agenda", calendarError);
       return { calendar: "falhou" as const };
     }
   });

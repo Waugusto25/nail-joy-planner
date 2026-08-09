@@ -1,7 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { claimEventPrizeInput, updateMyAccountInput } from "./account-schemas";
+import {
+  claimEventPrizeInput,
+  decideEmailChangeInput,
+  requestEmailChangeInput,
+  updateMyAccountInput,
+} from "./account-schemas";
 
 export const updateMyAccountFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -17,4 +22,27 @@ export const claimEventPrizeFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { claimEventPrize } = await import("./account-helpers.server");
     return claimEventPrize(context.userId, data.eventId, data.appointmentId);
+  });
+
+/** Cliente pede a troca do e-mail fixo; a administradora aprova depois. */
+export const requestEmailChangeFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => requestEmailChangeInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { requestEmailChange } = await import("./account-helpers.server");
+    return requestEmailChange(context.userId, data.requestedEmail);
+  });
+
+/** Administradora aprova ou recusa um pedido de troca de e-mail. */
+export const decideEmailChangeFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => decideEmailChangeInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Acesso restrito à administradora.");
+    const { decideEmailChange } = await import("./account-helpers.server");
+    return decideEmailChange(data.requestId, data.approve);
   });
