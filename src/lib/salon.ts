@@ -28,6 +28,51 @@ export function claimTag(benefitType: string) {
   return null;
 }
 
+/** Rótulo dinâmico do resgate exibido para a cliente (com o percentual real). */
+export function benefitBadgeLabel(benefitType: string, percent: number) {
+  if (benefitType === "premio") return "Prêmio de Sorteio / Evento";
+  if (benefitType === "fidelidade") return `Resgate Fidelidade (-${percent || Math.round(LOYALTY_DISCOUNT * 100)}%)`;
+  if (benefitType === "indicacao")
+    return `Resgate Indicação (-${percent || Math.round(REFERRAL_DISCOUNT * 100)}%)`;
+  if (benefitType === "parcial") return `Reembolso de pontos (-${percent}%)`;
+  return null;
+}
+
+/** Desconto exibido no WhatsApp: "Grátis" para prêmios, percentual nos demais. */
+export function discountDisplay(benefitType: string, percent: number) {
+  if (benefitType === "premio") return percent > 0 ? `${percent}%` : "Prêmio (a combinar)";
+  return `${percent}%`;
+}
+
+/** Mensagem detalhada enviada à administradora quando o pré-agendamento usa um resgate. */
+export function claimBookingMessage(args: {
+  clientName: string;
+  clientPhone: string;
+  serviceName: string;
+  day: string;
+  start: string;
+  benefitType: string;
+  percent: number;
+  originalCents: number;
+  finalCents: number;
+}) {
+  return [
+    "🌸 Novo Pré-Agendamento com Resgate de Benefício! 🌸",
+    "",
+    `Cliente: ${args.clientName}`,
+    `Telefone: ${formatPhone(args.clientPhone)}`,
+    `Procedimento: ${args.serviceName}`,
+    `Data/Horário: ${formatDayLabel(args.day)} às ${shortTime(args.start)}`,
+    "",
+    `🎁 Tipo de Resgate: ${benefitBadgeLabel(args.benefitType, args.percent) ?? "Benefício"}`,
+    `💰 Valor Original: ${formatPrice(args.originalCents)}`,
+    `🏷️ Desconto Aplicado: ${discountDisplay(args.benefitType, args.percent)}`,
+    `💵 Valor Final a Pagar: ${formatPrice(args.finalCents)}`,
+    "",
+    "Aguardando sua confirmação no Painel Admin!",
+  ].join("\n");
+}
+
 /** Formas de pagamento aceitas no fechamento de caixa. */
 export const PAYMENT_METHODS = [
   { value: "pix", label: "PIX" },
