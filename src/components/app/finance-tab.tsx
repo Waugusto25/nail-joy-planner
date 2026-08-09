@@ -1,11 +1,24 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { clearFinanceHistoryFn } from "@/lib/finance.functions";
 import { PAYMENT_METHODS, formatPrice } from "@/lib/salon";
 
 function isoDay(date: Date) {
@@ -26,10 +39,29 @@ function monthLabel(offset: number) {
 }
 
 export function FinanceTab() {
+  const queryClient = useQueryClient();
   const [mode, setMode] = useState<"mes" | "personalizado">("mes");
   const [monthOffset, setMonthOffset] = useState(0);
   const [customFrom, setCustomFrom] = useState(monthRange(0).from);
   const [customTo, setCustomTo] = useState(monthRange(0).to);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  async function clearHistory() {
+    setClearing(true);
+    try {
+      const result = await clearFinanceHistoryFn();
+      await queryClient.invalidateQueries();
+      toast.success(
+        `Faturamento limpo: ${result.appointments} atendimento(s) e ${result.orders} pedido(s) apagados.`,
+      );
+      setConfirmOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível limpar agora.");
+    } finally {
+      setClearing(false);
+    }
+  }
 
   const range = useMemo(
     () => (mode === "mes" ? monthRange(monthOffset) : { from: customFrom, to: customTo }),
@@ -218,6 +250,42 @@ export function FinanceTab() {
           ) : null}
         </ul>
       </section>
+
+      <div className="flex justify-end pb-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2 text-muted-foreground hover:text-destructive"
+          onClick={() => setConfirmOpen(true)}
+        >
+          <Trash2 size={16} /> Limpar Histórico de Faturamento
+        </Button>
+      </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Limpar Faturamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem certeza de que deseja apagar todo o seu histórico de faturamento mensal e
+              registros de receitas? Esta ação não poderá ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={clearing}
+              onClick={(event) => {
+                event.preventDefault();
+                void clearHistory();
+              }}
+            >
+              {clearing ? "Apagando..." : "Sim, apagar tudo"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
