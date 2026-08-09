@@ -39,6 +39,8 @@ import {
   REFERRAL_DISCOUNT,
   WEEKDAYS,
   addMinutes,
+  benefitBadgeLabel,
+  claimBookingMessage,
   clientCancelConfirmation,
   currentMinutes,
   formatDateTime,
