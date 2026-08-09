@@ -56,6 +56,10 @@ export type Database = {
           discount_percent: number
           google_event_id: string | null
           id: string
+          loyalty_earned: boolean
+          loyalty_expires_at: string | null
+          loyalty_spent_at: string | null
+          loyalty_spent_on: string | null
           notes: string | null
           payment_method: string | null
           price_cents: number
@@ -78,6 +82,10 @@ export type Database = {
           discount_percent?: number
           google_event_id?: string | null
           id?: string
+          loyalty_earned?: boolean
+          loyalty_expires_at?: string | null
+          loyalty_spent_at?: string | null
+          loyalty_spent_on?: string | null
           notes?: string | null
           payment_method?: string | null
           price_cents?: number
@@ -100,6 +108,10 @@ export type Database = {
           discount_percent?: number
           google_event_id?: string | null
           id?: string
+          loyalty_earned?: boolean
+          loyalty_expires_at?: string | null
+          loyalty_spent_at?: string | null
+          loyalty_spent_on?: string | null
           notes?: string | null
           payment_method?: string | null
           price_cents?: number
@@ -109,6 +121,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_loyalty_spent_on_fkey"
+            columns: ["loyalty_spent_on"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_service_id_fkey"
             columns: ["service_id"]
