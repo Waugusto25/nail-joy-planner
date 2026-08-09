@@ -78,6 +78,13 @@ export const cancelAppointmentFn = createServerFn({ method: "POST" })
       })
       .eq("id", data.appointmentId);
     if (error) throw new Error("Não foi possível cancelar o atendimento.");
+    // Cancelamento/recusa pela administradora devolve os pontos de fidelidade.
+    try {
+      const { returnLoyaltyPoints } = await import("./loyalty-wallet.server");
+      await returnLoyaltyPoints(data.appointmentId);
+    } catch (walletError) {
+      console.error("Falha ao devolver os pontos de fidelidade", walletError);
+    }
     try {
       const { notifyClientStatusChange } = await import("./push-helpers.server");
       await notifyClientStatusChange(data.appointmentId, "cancelado");

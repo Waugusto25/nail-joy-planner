@@ -5,6 +5,7 @@ import {
   completeAppointmentInput,
   consumeReferralInput,
   drawWinnerInput,
+  loyaltySpendInput,
 } from "./loyalty-schemas";
 
 export const completeAppointmentFn = createServerFn({ method: "POST" })
@@ -46,4 +47,12 @@ export const consumeReferralFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { consumeReferralCoupon } = await import("./loyalty-helpers.server");
     return consumeReferralCoupon(context.userId, data.appointmentId);
+  });
+/** Queima os pontos de fidelidade usados no pré-agendamento da própria cliente. */
+export const spendLoyaltyPointsFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => loyaltySpendInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { spendLoyaltyPoints } = await import("./loyalty-wallet.server");
+    return spendLoyaltyPoints(context.userId, data.appointmentId);
   });

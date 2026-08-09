@@ -8,3 +8,5 @@ export const completeAppointmentInput = z.object({
 });
 export const consumeReferralInput = z.object({ appointmentId: z.string().uuid() });
 export const drawWinnerInput = z.object({ eventId: z.string().uuid() });
+
+export const loyaltySpendInput = z.object({ appointmentId: z.string().uuid() });
