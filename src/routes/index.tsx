@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { BrandMark } from "@/components/app/brand";
+import { CalendarSyncDialog } from "@/components/app/calendar-sync-dialog";
 import { PasswordInput } from "@/components/app/password-input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabaseSession } from "@/hooks/useSession";
 import { phoneAccessFn, phoneStatusFn, resolveLoginFn } from "@/lib/auth.functions";
-import { INSTAGRAM_URL, OWNER_NAME, SALON_NAME, onlyDigits } from "@/lib/salon";
+import { useAppSettings } from "@/hooks/useSettings";
+import { OWNER_NAME, SALON_NAME, onlyDigits, salonInstagram } from "@/lib/salon";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,10 +46,28 @@ function AuthPage() {
   const navigate = useNavigate();
   const { session, ready } = useSupabaseSession();
   const [adminOpen, setAdminOpen] = useState(false);
+  const settings = useAppSettings();
+  // "idle" navega direto; "checking"/"prompt" seguram o redirecionamento até
+  // a cliente responder ao aviso da Google Agenda.
+  const [gate, setGate] = useState<"idle" | "checking" | "prompt">("idle");
 
   useEffect(() => {
-    if (ready && session) void navigate({ to: "/painel", replace: true });
-  }, [ready, session, navigate]);
+    if (ready && session && gate === "idle") void navigate({ to: "/painel", replace: true });
+  }, [ready, session, navigate, gate]);
+
+  async function afterClientSignIn(userId: string) {
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("email, calendar_prompt_dismissed")
+        .eq("id", userId)
+        .maybeSingle();
+      const hasEmail = Boolean(String(data?.email ?? "").trim());
+      setGate(!hasEmail && !data?.calendar_prompt_dismissed ? "prompt" : "idle");
+    } catch {
+      setGate("idle");
+    }
+  }
 
   return (
     <main className="bg-petal min-h-screen px-4 py-10">
@@ -65,7 +85,11 @@ function AuthPage() {
             vez, criamos seu cadastro na hora.
           </p>
           <div className="pt-5">
-            <PhoneAccessForm />
+            <PhoneAccessForm
+              onBeforeSignIn={() => setGate("checking")}
+              onSignedIn={afterClientSignIn}
+              onSignInFailed={() => setGate("idle")}
+            />
           </div>
         </div>
 
@@ -88,7 +112,7 @@ function AuthPage() {
           Siga o trabalho da Janaina no{" "}
           <a
             className="font-semibold text-primary underline"
-            href={INSTAGRAM_URL}
+            href={settings.data?.instagram_url ?? salonInstagram()}
             target="_blank"
             rel="noreferrer"
           >
@@ -96,11 +120,20 @@ function AuthPage() {
           </a>
         </p>
       </div>
+      <CalendarSyncDialog open={gate === "prompt"} onDone={() => setGate("idle")} />
     </main>
   );
 }
 
-function PhoneAccessForm() {
+function PhoneAccessForm({
+  onBeforeSignIn,
+  onSignedIn,
+  onSignInFailed,
+}: {
+  onBeforeSignIn: () => void;
+  onSignedIn: (userId: string) => Promise<void>;
+  onSignInFailed: () => void;
+}) {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [referrerPhone, setReferrerPhone] = useState("");
@@ -138,16 +171,21 @@ function PhoneAccessForm() {
       const result = await phoneAccessFn({
         data: { fullName, phone, referrerPhone: registered ? "" : referrerPhone },
       });
-      const { error } = await supabase.auth.signInWithPassword({
+      onBeforeSignIn();
+      const { data: signIn, error } = await supabase.auth.signInWithPassword({
         email: result.email,
         password: onlyDigits(phone),
       });
       if (error) {
+        onSignInFailed();
         toast.error("Não foi possível entrar agora. Tente novamente.");
         return;
       }
       toast.success(result.created ? "Cadastro criado. Bem-vinda!" : "Bem-vinda de volta!");
+      if (signIn.user) await onSignedIn(signIn.user.id);
+      else onSignInFailed();
     } catch (error) {
+      onSignInFailed();
       if (error instanceof Error && error.message.includes("REFERRAL_ONLY_FIRST_ACCESS")) {
         setRegistered(true);
         setReferrerPhone("");
