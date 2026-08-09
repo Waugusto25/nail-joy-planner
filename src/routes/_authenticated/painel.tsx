@@ -858,16 +858,17 @@ function LoyaltyCards({
   const services = useServices();
   const settings = useAppSettings();
   const expiryDays = settings.data?.benefit_expiry_days ?? 90;
-  const done = useQuery({
-    queryKey: ["loyalty", clientId, expiryDays],
+  const wallet = useLoyaltyWallet(clientId);
+  const pending = useQuery({
+    queryKey: ["loyalty-pending", clientId],
     enabled: Boolean(clientId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("service_id")
+        .select("service_id, benefit_type, status")
         .eq("client_id", clientId!)
-        .eq("status", "concluido")
-        .gte("day", isoDaysAgo(expiryDays));
+        .in("benefit_type", ["fidelidade", "parcial"])
+        .in("status", ["pendente", "confirmado"]);
       if (error) throw error;
       return data;
     },
@@ -883,14 +884,15 @@ function LoyaltyCards({
         {(services.data ?? [])
           .filter((s) => s.loyalty_eligible)
           .map((s) => {
-            const count = (done.data ?? []).filter((d) => d.service_id === s.id).length;
-            const inCycle = count % LOYALTY_CYCLE;
-            const eligible = count > 0 && inCycle === 0;
+            const count = (wallet.data ?? []).filter((d) => d.service_id === s.id).length;
+            const inCycle = Math.min(count, LOYALTY_CYCLE);
+            const inUse = (pending.data ?? []).some((p) => p.service_id === s.id);
+            const eligible = count >= LOYALTY_CYCLE && !inUse;
             return (
               <article key={s.id} className="surface-card p-5">
                 <p className="font-display text-lg">{s.name}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {count} atendimento{count === 1 ? "" : "s"} concluído{count === 1 ? "" : "s"}
+                  {count} ponto{count === 1 ? "" : "s"} disponíve{count === 1 ? "l" : "is"}
                 </p>
                 <div className="mt-3 flex gap-1.5">
                   {Array.from({ length: LOYALTY_CYCLE }).map((_, index) => (
@@ -907,7 +909,9 @@ function LoyaltyCards({
                   value={eligible ? 100 : (inCycle / LOYALTY_CYCLE) * 100}
                 />
                 <p className="mt-3 text-sm">
-                  {eligible
+                  {inUse
+                    ? "⏳ Seus pontos estão reservados em um pré-agendamento. Se ele for cancelado ou recusado, eles voltam com validade renovada."
+                    : count >= LOYALTY_CYCLE
                     ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
                     : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
                 </p>
