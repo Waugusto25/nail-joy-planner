@@ -591,7 +591,7 @@ function ClientsTab() {
   return (
     <>
       <EmailChangeRequests />
-    <div className="space-y-3">
+      <div className="space-y-3">
       {(clients.data ?? []).map((c) => {
         const isMaster = (adminIds.data ?? []).includes(c.id);
         return (
@@ -668,7 +668,76 @@ function ClientsTab() {
           </article>
         );
       })}
-    </div>
+      </div>
+    </>
+  );
+}
+
+/** Pendências de troca de e-mail solicitadas pelas clientes. */
+function EmailChangeRequests() {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState<string | null>(null);
+  const requests = useQuery({
+    queryKey: ["admin-email-change-requests"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("email_change_requests")
+        .select("id, user_id, current_email, requested_email, created_at")
+        .eq("status", "pendente")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const clientNames = useQuery({
+    queryKey: ["admin-clients-names"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name");
+      if (error) throw error;
+      return Object.fromEntries((data ?? []).map((p) => [p.id as string, String(p.full_name)]));
+    },
+  });
+
+  async function decide(requestId: string, approve: boolean) {
+    setBusy(requestId);
+    try {
+      await decideEmailChangeFn({ data: { requestId, approve } });
+      await queryClient.invalidateQueries();
+      toast.success(approve ? "E-mail atualizado no cadastro." : "Pedido recusado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível decidir o pedido.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (!(requests.data ?? []).length) return null;
+
+  return (
+    <section className="mb-5 space-y-3">
+      <h2 className="font-display text-lg">Pedidos de troca de e-mail</h2>
+      {(requests.data ?? []).map((r) => (
+        <article key={r.id} className="surface-card space-y-2 p-4">
+          <p className="font-medium">{clientNames.data?.[r.user_id as string] ?? "Cliente"}</p>
+          <p className="text-sm text-muted-foreground">
+            Atual: {r.current_email || "sem e-mail"} → Novo: {r.requested_email}
+          </p>
+          <div className="flex gap-2">
+            <Button size="sm" disabled={busy === r.id} onClick={() => void decide(r.id, true)}>
+              Aprovar
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy === r.id}
+              onClick={() => void decide(r.id, false)}
+            >
+              Recusar
+            </Button>
+          </div>
+        </article>
+      ))}
+    </section>
   );
 }
 
