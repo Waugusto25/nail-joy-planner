@@ -12,7 +12,7 @@ export async function clearFinanceHistory() {
     .eq("status", "concluido")
     .select("id");
   if (error) throw new Error("Não foi possível limpar o faturamento dos atendimentos.");
-  const { data: orders } = await db.from("store_orders").delete().neq("id", "").select("id");
+  const { data: orders } = await db.from("store_orders").delete().not("id", "is", null).select("id");
   return {
     appointments: (appts ?? []).length,
     orders: (orders ?? []).length,
