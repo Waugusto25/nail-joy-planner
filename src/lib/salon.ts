@@ -260,7 +260,7 @@ export function overlaps(startA: number, endA: number, startB: number, endB: num
 }
 
 export function whatsappLink(message: string) {
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/${salonContact.whatsapp}?text=${encodeURIComponent(message)}`;
 }
 
 /** Normalizes a Brazilian phone to wa.me format (adds country code 55 when missing). */
