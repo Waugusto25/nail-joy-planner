@@ -25,7 +25,8 @@ import {
 } from "@/lib/months";
 import { busyTimesFn } from "@/lib/booking.functions";
 import { clientCancelAppointmentFn, hideCancelledForClientFn } from "@/lib/cancel.functions";
-import { consumeReferralFn } from "@/lib/loyalty.functions";
+import { consumeReferralFn, spendLoyaltyPointsFn } from "@/lib/loyalty.functions";
+import { useLoyaltyWallet } from "@/hooks/useLoyaltyWallet";
 import { claimEventPrizeFn } from "@/lib/account.functions";
 import { notifyNewAppointmentFn } from "@/lib/push.functions";
 
