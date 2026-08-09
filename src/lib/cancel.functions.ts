@@ -27,6 +27,14 @@ export const clientCancelAppointmentFn = createServerFn({ method: "POST" })
       .eq("id", data.appointmentId);
     if (error) throw new Error("Não foi possível cancelar agora.");
 
+    // Cancelamento devolve os pontos de fidelidade queimados neste agendamento.
+    try {
+      const { returnLoyaltyPoints } = await import("./loyalty-wallet.server");
+      await returnLoyaltyPoints(data.appointmentId);
+    } catch (walletError) {
+      console.error("Falha ao devolver os pontos de fidelidade", walletError);
+    }
+
     let adminAlert: { phone: string; message: string } | null = null;
     try {
       const { notifyAdminsClientCancellation } = await import("./cancel-helpers.server");
