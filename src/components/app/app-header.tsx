@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { PushBell } from "@/components/app/push-toggle";
 import { AccountSettingsDialog } from "@/components/app/account-settings-dialog";
+import { AdminSettingsDialog } from "@/components/app/admin-settings-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { SALON_NAME } from "@/lib/salon";
 
@@ -37,6 +38,7 @@ export function AppHeader({
         <div className="flex shrink-0 items-center gap-1">
           {audience ? <PushBell audience={audience} /> : null}
           {audience === "cliente" ? <AccountSettingsDialog /> : null}
+          {audience === "admin" ? <AdminSettingsDialog /> : null}
           <Button variant="outline" size="sm" onClick={signOut}>
             Sair
           </Button>

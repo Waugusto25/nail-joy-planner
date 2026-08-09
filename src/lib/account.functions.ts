@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  calendarEmailInput,
   claimEventPrizeInput,
   decideEmailChangeInput,
   requestEmailChangeInput,
@@ -25,6 +26,24 @@ export const claimEventPrizeFn = createServerFn({ method: "POST" })
   });
 
 /** Cliente pede a troca do e-mail fixo; a administradora aprova depois. */
+
+/** Salva o e-mail informado no pop-up de sincronização com a Google Agenda. */
+export const setMyCalendarEmailFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => calendarEmailInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { setMyCalendarEmail } = await import("./account-helpers.server");
+    return setMyCalendarEmail(context.userId, data.email);
+  });
+
+/** Cliente escolheu não ver mais o aviso da Google Agenda. */
+export const dismissCalendarPromptFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { dismissCalendarPrompt } = await import("./account-helpers.server");
+    return dismissCalendarPrompt(context.userId);
+  });
+
 export const requestEmailChangeFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => requestEmailChangeInput.parse(data))
