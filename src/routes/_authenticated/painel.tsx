@@ -683,6 +683,12 @@ function BookingFlow({
             {day ? (
               <p className="mb-3 text-sm capitalize text-muted-foreground">{formatDayLabel(day)}</p>
             ) : null}
+            {day && specialByDay.has(day) ? (
+              <p className="mb-3 rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
+                Atendimento Especial ✨
+                {specialByDay.get(day)?.reason ? ` — ${specialByDay.get(day)?.reason}` : ""}
+              </p>
+            ) : null}
             {service ? (
               <p className="mb-3 text-sm text-muted-foreground">
                 Duração do procedimento: {formatDuration(service.duration_minutes)} — mostramos só
