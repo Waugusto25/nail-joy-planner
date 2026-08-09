@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabaseSession } from "@/hooks/useSession";
-import { phoneAccessFn, resolveLoginFn } from "@/lib/auth.functions";
+import { phoneAccessFn, phoneStatusFn, resolveLoginFn } from "@/lib/auth.functions";
 import { INSTAGRAM_URL, OWNER_NAME, SALON_NAME, onlyDigits } from "@/lib/salon";
 
 export const Route = createFileRoute("/")({
