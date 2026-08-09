@@ -309,6 +309,32 @@ export function confirmationMessage(n: AppointmentNotice) {
 }
 
 /** Mensagem carismática de cancelamento, convidando a cliente a reagendar. */
+/** Boas-vindas para clientes cadastradas manualmente pela administradora. */
+export function adminWelcomeMessage(n: {
+  phoneDigits: string;
+  serviceName: string;
+  day: string;
+  start: string;
+}) {
+  return [
+    `Seja muito bem-vinda ao ${SALON_NAME}! 💖`,
+    "",
+    "Seu cadastro no nosso aplicativo foi criado por mim com todo carinho! A partir de agora você pode gerenciar seus horários, acumular pontos no clube de fidelidade e ver nossas novidades.",
+    "",
+    "📱 Acesse o aplicativo pelo link:",
+    "https://nail-joy-planner.lovable.app",
+    "",
+    `👤 Seu Usuário: ${formatPhone(n.phoneDigits)}`,
+    `🔑 Sua Senha Inicial: ${n.phoneDigits}`,
+    "",
+    "📅 Seu Agendamento:",
+    `Procedimento: ${n.serviceName}`,
+    `Data/Horário: ${formatDayLabel(n.day)} às ${shortTime(n.start)}`,
+    "",
+    "Muito obrigada e nos vemos em breve! ✨",
+  ].join("\n");
+}
+
 export function cancellationMessage(n: AppointmentNotice) {
   const start = shortTime(n.start);
   return [
