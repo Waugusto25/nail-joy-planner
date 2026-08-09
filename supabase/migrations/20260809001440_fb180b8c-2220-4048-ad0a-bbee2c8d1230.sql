@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS referrals_referred_id_unique ON public.referrals (referred_id);
