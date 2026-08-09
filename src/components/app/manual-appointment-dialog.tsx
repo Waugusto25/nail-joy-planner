@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { createManualAppointmentFn } from "@/lib/manual-booking.functions";
 import {
   PAYMENT_METHODS,
+  adminWelcomeMessage,
+  confirmationMessage,
   formatPhone,
   formatPrice,
   formatTimeRange,
@@ -26,6 +28,7 @@ import {
   overlaps,
   shortTime,
   timeToMinutes,
+  whatsappLinkTo,
 } from "@/lib/salon";
 
 export function ManualAppointmentDialog() {
@@ -121,6 +124,8 @@ export function ManualAppointmentDialog() {
     );
   });
 
+  const offSchedule = Boolean(startTime) && !(slots.data ?? []).includes(startTime);
+
   function reset() {
     setMode("cadastrada");
     setSearch("");
@@ -161,10 +166,35 @@ export function ManualAppointmentDialog() {
       });
       await queryClient.invalidateQueries();
       toast.success(
-        result.calendar === "ok"
-          ? "Agendamento confirmado e publicado na Google Agenda."
-          : "Agendamento confirmado. Não foi possível criar o evento na Google Agenda.",
+        [
+          result.calendar === "ok"
+            ? "Agendamento confirmado e publicado na Google Agenda."
+            : "Agendamento confirmado. Não foi possível criar o evento na Google Agenda.",
+          result.special ? "Registrado como Atendimento Especial ✨" : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
       );
+
+      const digits = String(result.client.phone).replace(/\D/g, "");
+      const message = result.createdClient
+        ? adminWelcomeMessage({
+            phoneDigits: digits,
+            serviceName: result.service.name,
+            day,
+            start: startTime,
+          })
+        : confirmationMessage({
+            name: result.client.name,
+            day,
+            start: startTime,
+            durationMinutes: result.service.durationMinutes,
+            serviceName: result.service.name,
+          });
+      const link = whatsappLinkTo(digits, message);
+      if (link) window.open(link, "_blank", "noopener,noreferrer");
+      else toast.info("Cliente sem WhatsApp cadastrado — mensagem não enviada.");
+
       reset();
       setOpen(false);
     } catch (error) {
@@ -289,13 +319,14 @@ export function ManualAppointmentDialog() {
               <Input
                 id="manual-dia"
                 type="date"
-                min={localTodayISO()}
                 value={day}
                 onChange={(e) => {
                   setDay(e.target.value);
-                  setStartTime("");
                 }}
               />
+              <p className="text-xs text-muted-foreground">
+                Qualquer data — passada, hoje ou futura.
+              </p>
             </div>
             <div className="space-y-1">
               <Label>Forma de pagamento (opcional)</Label>
@@ -316,11 +347,13 @@ export function ManualAppointmentDialog() {
 
           <div className="space-y-2">
             <Label>Horário</Label>
-            {availableTimes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhum horário livre nesta data para o procedimento escolhido.
-              </p>
-            ) : (
+            <Input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              aria-label="Horário livre"
+            />
+            {availableTimes.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {availableTimes.map((time) => (
                   <Button
@@ -333,7 +366,12 @@ export function ManualAppointmentDialog() {
                   </Button>
                 ))}
               </div>
-            )}
+            ) : null}
+            {offSchedule ? (
+              <p className="text-xs text-primary">
+                Fora do expediente padrão — será salvo como Atendimento Especial ✨
+              </p>
+            ) : null}
             {startTime && service ? (
               <p className="text-xs text-muted-foreground">
                 {formatTimeRange(startTime, duration)} · {service.name}
