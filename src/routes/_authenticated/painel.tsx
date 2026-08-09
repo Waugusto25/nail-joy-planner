@@ -338,9 +338,12 @@ function BookingFlow({
     const blockedSet = new Set(blocked.data ?? []);
     const from = nowTick.day > `${selectedMonth.key}-01` ? nowTick.day : `${selectedMonth.key}-01`;
     return daysUntilEndOfMonth(from, selectedMonth.key).filter(
-      (d) => weekdaysWithSlots.has(weekdayOf(d)) && !blockedSet.has(d) && d >= nowTick.day,
+      (d) =>
+        d >= nowTick.day &&
+        // Dia especial tem prioridade: libera a data mesmo em folga ou bloqueio.
+        (specialByDay.has(d) || (weekdaysWithSlots.has(weekdayOf(d)) && !blockedSet.has(d))),
     );
-  }, [slots.data, blocked.data, nowTick.day, selectedMonth]);
+  }, [slots.data, blocked.data, nowTick.day, selectedMonth, specialByDay]);
 
   const service = (services.data ?? []).find((s) => s.id === serviceId);
 
@@ -352,16 +355,22 @@ function BookingFlow({
       start: timeToMinutes(b.start),
       end: timeToMinutes(b.start) + b.duration,
     }));
-    const breakRanges = (breaks.data ?? [])
+    const special = specialByDay.get(day);
+    const breakRanges = special
+      ? []
+      : (breaks.data ?? [])
       .filter((b) => b.weekday === weekday)
       .map((b) => ({ start: timeToMinutes(b.start_time), end: timeToMinutes(b.end_time) }));
 
     // No dia de hoje, só horários futuros (com antecedência mínima). Datas futuras ficam intactas.
     const minStart = day === nowTick.day ? nowTick.minutes + BOOKING_LEAD_MINUTES : -1;
 
-    return (slots.data ?? [])
-      .filter((s) => s.weekday === weekday)
-      .map((s) => shortTime(s.start_time))
+    // Dia especial: só os horários exclusivos cadastrados para essa data.
+    const baseTimes = special
+      ? special.times
+      : (slots.data ?? []).filter((s) => s.weekday === weekday).map((s) => shortTime(s.start_time));
+
+    return baseTimes
       .filter((t) => {
         const start = timeToMinutes(t);
         const end = start + duration;
@@ -373,7 +382,7 @@ function BookingFlow({
         return true;
       })
       .sort();
-  }, [day, service, slots.data, busy.data, breaks.data, nowTick]);
+  }, [day, service, slots.data, busy.data, breaks.data, nowTick, specialByDay]);
 
   const points = (wallet.data ?? []).filter((p) => p.service_id === serviceId).length;
   const loyaltyService = service?.loyalty_eligible ?? false;
