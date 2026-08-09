@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useSpecialDays } from "@/hooks/useSpecialDays";
-import { formatDayLabel, todayISO } from "@/lib/salon";
+import { formatDayLabel, localTodayISO } from "@/lib/salon";
 
 /** Cadastro de dias especiais: data única, horários exclusivos e motivo. */
 export function SpecialDaysManager() {
@@ -110,7 +110,7 @@ export function SpecialDaysManager() {
               <Input
                 id="special-day"
                 type="date"
-                min={todayISO()}
+                min={localTodayISO()}
                 className="w-44"
                 value={day}
                 onChange={(e) => setDay(e.target.value)}
