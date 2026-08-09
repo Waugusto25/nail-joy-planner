@@ -531,6 +531,36 @@ export type Database = {
         }
         Relationships: []
       }
+      special_days: {
+        Row: {
+          active: boolean
+          created_at: string
+          day: string
+          id: string
+          reason: string | null
+          times: string[]
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          day: string
+          id?: string
+          reason?: string | null
+          times?: string[]
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          day?: string
+          id?: string
+          reason?: string | null
+          times?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_orders: {
         Row: {
           amount_cents: number
