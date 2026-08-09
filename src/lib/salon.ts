@@ -3,6 +3,29 @@ export const OWNER_NAME = "Janaina Silva";
 export const WHATSAPP_NUMBER = "5535998844504";
 export const INSTAGRAM_HANDLE = "jannah_silvaah";
 export const INSTAGRAM_URL = "https://www.instagram.com/jannah_silvaah?igsh=OTRoZjFka2p0dDhn";
+
+/**
+ * Contato oficial do salão em tempo de execução. A administradora edita esses
+ * valores na engrenagem do painel e todos os links/disparos passam a usá-los.
+ */
+const salonContact = { whatsapp: WHATSAPP_NUMBER, instagram: INSTAGRAM_URL };
+
+export function setSalonContact(contact: { whatsapp?: string | null; instagram?: string | null }) {
+  const digits = onlyDigits(String(contact.whatsapp ?? ""));
+  if (digits.length >= 10) salonContact.whatsapp = toWhatsappNumber(digits) ?? digits;
+  const instagram = String(contact.instagram ?? "").trim();
+  if (instagram) salonContact.instagram = instagram;
+}
+
+/** Número atual do WhatsApp oficial (formato wa.me). */
+export function salonWhatsapp() {
+  return salonContact.whatsapp;
+}
+
+/** Link atual do Instagram do salão. */
+export function salonInstagram() {
+  return salonContact.instagram;
+}
 export const AUTH_EMAIL_DOMAIN = "jannahnails.app";
 /** Local do atendimento enviado no convite da Google Agenda. */
 export const SALON_ADDRESS = "Studio Jannah Nails — Nails Design (confirme o endereço no WhatsApp)";
