@@ -20,15 +20,76 @@ export async function updateMyAccount(userId: string, phone: string, email: stri
     .maybeSingle();
   if (taken) throw new Error("Esse telefone já está cadastrado em outra conta.");
 
-  const { error } = await db
+  // O e-mail fica fixo depois de cadastrado: só muda com aprovação da administradora.
+  const { data: current } = await db
     .from("profiles")
-    .update({ phone, email: email || null })
-    .eq("id", userId);
+    .select("email")
+    .eq("id", userId)
+    .maybeSingle();
+  const lockedEmail = String(current?.email ?? "").trim();
+  const nextEmail = lockedEmail ? lockedEmail : email || null;
+
+  const { error } = await db.from("profiles").update({ phone, email: nextEmail }).eq("id", userId);
   if (error) throw new Error("Não foi possível salvar seus dados.");
 
   const { error: authError } = await db.auth.admin.updateUserById(userId, { password: phone });
   if (authError) throw new Error("Não foi possível atualizar seu acesso.");
   return { ok: true as const };
+}
+
+/** Registra o pedido de troca de e-mail para aprovação manual da administradora. */
+export async function requestEmailChange(userId: string, requestedEmail: string) {
+  const db = admin();
+  const { data: profile } = await db
+    .from("profiles")
+    .select("email")
+    .eq("id", userId)
+    .maybeSingle();
+  const currentEmail = String(profile?.email ?? "").trim();
+  if (currentEmail === requestedEmail) {
+    throw new Error("Esse já é o e-mail cadastrado.");
+  }
+  const { data: pending } = await db
+    .from("email_change_requests")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "pendente")
+    .maybeSingle();
+  if (pending) throw new Error("Você já tem um pedido de troca aguardando aprovação.");
+
+  const { error } = await db.from("email_change_requests").insert({
+    user_id: userId,
+    current_email: currentEmail || null,
+    requested_email: requestedEmail,
+  });
+  if (error) throw new Error("Não foi possível registrar o pedido.");
+  return { ok: true as const };
+}
+
+/** Aprova (aplicando o novo e-mail) ou recusa um pedido de troca de e-mail. */
+export async function decideEmailChange(requestId: string, approve: boolean) {
+  const db = admin();
+  const { data: request } = await db
+    .from("email_change_requests")
+    .select("id, user_id, requested_email, status")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (!request) throw new Error("Pedido não encontrado.");
+  if (request.status !== "pendente") throw new Error("Esse pedido já foi decidido.");
+
+  if (approve) {
+    const { error } = await db
+      .from("profiles")
+      .update({ email: request.requested_email })
+      .eq("id", request.user_id);
+    if (error) throw new Error("Não foi possível atualizar o e-mail da cliente.");
+  }
+
+  await db
+    .from("email_change_requests")
+    .update({ status: approve ? "aprovado" : "recusado", decided_at: new Date().toISOString() })
+    .eq("id", requestId);
+  return { ok: true as const, approved: approve };
 }
 
 /** Marca o prêmio do sorteio como reivindicado no pré-agendamento informado. */
