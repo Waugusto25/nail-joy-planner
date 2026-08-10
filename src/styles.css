@@ -103,8 +103,8 @@
   --card-border-accent: oklch(0.83 0.075 350);
   --shadow-soft: 0 2px 14px oklch(0.53 0.125 12 / 0.08);
   --shadow-lift: 0 12px 34px oklch(0.53 0.125 12 / 0.16);
-  /* 0 8px 24px rgba(214, 51, 132, 0.12) */
-  --shadow-card: 0 8px 24px oklch(0.6 0.21 355 / 0.12);
+  /* Sombra suave padrão dos cards: 0 4px 12px rgba(0,0,0,0.05). */
+  --shadow-card: 0 4px 12px oklch(0 0 0 / 0.05);
   --chart-1: oklch(0.62 0.14 12);
   --chart-2: oklch(0.72 0.09 72);
   --chart-3: oklch(0.66 0.1 340);
@@ -158,7 +158,7 @@
   --input-foreground: oklch(0.984 0.003 247.858);
   --input-placeholder: oklch(0.704 0.04 256.788);
   --card-border-accent: oklch(1 0 0 / 14%);
-  --shadow-card: 0 8px 24px oklch(0 0 0 / 0.4);
+  --shadow-card: 0 4px 14px oklch(0 0 0 / 0.35);
 }
 
 @layer base {
@@ -188,8 +188,55 @@
 @utility surface-card {
   background-color: var(--color-card);
   border: 1px solid var(--color-card-accent);
-  border-radius: var(--radius-2xl);
+  border-radius: 16px;
   box-shadow: var(--shadow-card);
+}
+
+/* Espaçamento interno padrão dos cards (16px). */
+@utility card-pad {
+  padding: 16px;
+}
+
+/* Cabeçalho fixo translúcido (glassmorphism). */
+@utility glass-header {
+  background-color: color-mix(in oklab, var(--color-card) 72%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-card-accent) 70%, transparent);
+  backdrop-filter: blur(8px) saturate(140%);
+}
+
+/* Pílula clicável usada nos seletores de mês, data e horário. */
+@utility chip {
+  border-radius: 20px;
+  border: 1px solid var(--color-card-accent);
+  background-color: color-mix(in oklab, var(--color-card) 85%, transparent);
+  color: var(--color-foreground);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+
+  &:hover:not(:disabled) {
+    background-color: color-mix(in oklab, var(--color-primary) 10%, var(--color-card));
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+/* Estado selecionado do chip: preenchimento na cor principal. */
+@utility chip-active {
+  border-radius: 20px;
+  border: 1px solid var(--color-primary);
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  box-shadow: var(--shadow-soft);
 }
 
 @utility bg-petal {
