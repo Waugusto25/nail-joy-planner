@@ -627,11 +627,12 @@ function BookingFlow({
             ) : null}
             <div className="-mx-0.5 mb-3 flex gap-2 overflow-x-auto px-0.5 pb-1">
               {monthOptions.map((m) => (
-                <Button
+                <button
                   key={m.key}
-                  size="sm"
-                  variant={m.key === selectedMonth?.key ? "default" : "outline"}
-                  className={`shrink-0 ${m.active ? "" : "opacity-50"}`}
+                  type="button"
+                  className={`shrink-0 ${m.key === selectedMonth?.key ? "chip-active" : "chip"} ${
+                    m.active ? "" : "opacity-50"
+                  }`}
                   onClick={() => {
                     setMonthKey(m.key);
                     if (day && monthKeyOf(day) !== m.key) {
@@ -641,7 +642,7 @@ function BookingFlow({
                   }}
                 >
                   {monthShortLabel(m.key)}
-                </Button>
+                </button>
               ))}
             </div>
             {selectedMonth && !selectedMonth.active ? (
@@ -656,10 +657,10 @@ function BookingFlow({
             ) : (
               <div className="flex flex-wrap gap-2">
                 {availableDays.map((d) => (
-                  <Button
+                  <button
                     key={d}
-                    variant={d === day ? "default" : "outline"}
-                    size="sm"
+                    type="button"
+                    className={d === day ? "chip-active" : "chip"}
                     onClick={() => {
                       setDay(d);
                       setTime(null);
@@ -668,7 +669,7 @@ function BookingFlow({
                   >
                     {d.slice(8)}/{d.slice(5, 7)} · {WEEKDAYS[weekdayOf(d)]?.slice(0, 3)}
                     {specialByDay.has(d) ? " ✨" : ""}
-                  </Button>
+                  </button>
                 ))}
                 {availableDays.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
@@ -700,17 +701,17 @@ function BookingFlow({
             ) : null}
             <div className="flex flex-wrap gap-2">
               {dayTimes.map((t) => (
-                <Button
+                <button
                   key={t}
-                  variant={t === time ? "default" : "outline"}
-                  size="sm"
+                  type="button"
+                  className={t === time ? "chip-active" : "chip"}
                   onClick={() => {
                     setTime(t);
                     goTo(3);
                   }}
                 >
                   {t} – {service ? addMinutes(t, service.duration_minutes) : ""}
-                </Button>
+                </button>
               ))}
               {dayTimes.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -743,15 +744,14 @@ function BookingFlow({
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {benefitOptions.map((o) => (
-                        <Button
+                        <button
                           key={o.value}
                           type="button"
-                          size="sm"
-                          variant={o.value === activeBenefit.value ? "default" : "outline"}
+                          className={o.value === activeBenefit.value ? "chip-active" : "chip"}
                           onClick={() => setBenefit(o.value)}
                         >
                           {o.label}
-                        </Button>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -762,7 +762,7 @@ function BookingFlow({
                 <Button className="mt-4 w-full" onClick={() => void confirm()} disabled={saving}>
                   {saving ? "Enviando..." : "Confirmar e falar no WhatsApp"}
                 </Button>
-                <Button variant="ghost" className="mt-2 w-full" onClick={() => goTo(0)}>
+                <Button variant="outline" className="mt-2 w-full" onClick={() => goTo(0)}>
                   Começar de novo
                 </Button>
               </div>
