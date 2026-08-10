@@ -547,7 +547,7 @@ function BlockedDates() {
             <span className="capitalize">
               {formatDayLabel(b.day)} {b.reason ? `· ${b.reason}` : ""}
             </span>
-            <Button variant="ghost" size="sm" onClick={() => void remove(b.id)}>
+            <Button variant="outline" size="sm" onClick={() => void remove(b.id)}>
               Remover
             </Button>
           </li>
@@ -1034,7 +1034,7 @@ function ServicesTab() {
               {s.loyalty_eligible ? "Fidelidade" : "Avulso"}
             </Badge>
             {!s.loyalty_eligible ? (
-              <Button variant="ghost" size="sm" onClick={() => void removeService(s.id, s.name)}>
+              <Button variant="outline" size="sm" onClick={() => void removeService(s.id, s.name)}>
                 Excluir
               </Button>
             ) : null}
@@ -1212,7 +1212,7 @@ function SlotsTab() {
                   {WEEKDAYS[b.weekday]} · {shortTime(b.start_time)} às {shortTime(b.end_time)}
                   {b.label ? ` · ${b.label}` : ""}
                 </span>
-                <Button variant="ghost" size="sm" onClick={() => void removeBreak(b.id)}>
+                <Button variant="outline" size="sm" onClick={() => void removeBreak(b.id)}>
                   Remover
                 </Button>
               </li>
@@ -1234,7 +1234,7 @@ function SlotsTab() {
                   {rows.map((s) => (
                     <li key={s.id} className="flex items-center justify-between">
                       <span>{shortTime(s.start_time)}</span>
-                      <Button variant="ghost" size="sm" onClick={() => void remove(s.id)}>
+                      <Button variant="outline" size="sm" onClick={() => void remove(s.id)}>
                         Remover
                       </Button>
                     </li>
@@ -1395,7 +1395,7 @@ function ProductsTab() {
               </p>
               <div className="flex flex-wrap gap-2">
                 <ProductEditDialog product={p} />
-                <Button variant="ghost" size="sm" onClick={() => void remove(p.id)}>
+                <Button variant="outline" size="sm" onClick={() => void remove(p.id)}>
                   Remover
                 </Button>
               </div>
@@ -1503,7 +1503,7 @@ function CatalogsTab() {
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <CatalogEditDialog catalog={c} />
-              <Button variant="ghost" size="sm" onClick={() => void remove(c.id)}>
+              <Button variant="outline" size="sm" onClick={() => void remove(c.id)}>
                 Remover
               </Button>
             </div>
