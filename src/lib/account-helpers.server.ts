@@ -31,6 +31,7 @@ export async function updateMyAccount(userId: string, phone: string, email: stri
 
   const { error } = await db.from("profiles").update({ phone, email: nextEmail }).eq("id", userId);
   if (error) throw new Error("Não foi possível salvar seus dados.");
+  if (!lockedEmail && nextEmail) await syncClientCalendar(userId);
 
   const { error: authError } = await db.auth.admin.updateUserById(userId, { password: phone });
   if (authError) throw new Error("Não foi possível atualizar seu acesso.");
@@ -38,6 +39,16 @@ export async function updateMyAccount(userId: string, phone: string, email: stri
 }
 
 /** Registra o pedido de troca de e-mail para aprovação manual da administradora. */
+
+/** Varre e reenvia os convites dos atendimentos futuros para o e-mail salvo. */
+async function syncClientCalendar(userId: string) {
+  try {
+    const { syncFutureAppointmentsForClient } = await import("./calendar-helpers.server");
+    await syncFutureAppointmentsForClient(userId);
+  } catch (error) {
+    console.error("Falha na sincronização retroativa da Google Agenda", error);
+  }
+}
 
 /** Salva o e-mail da Google Agenda pelo pop-up de acesso (só se ainda não houver). */
 export async function setMyCalendarEmail(userId: string, email: string) {
@@ -55,6 +66,8 @@ export async function setMyCalendarEmail(userId: string, email: string) {
     .update({ email, calendar_prompt_dismissed: true })
     .eq("id", userId);
   if (error) throw new Error("Não foi possível salvar seu e-mail.");
+  // Retroativo: os agendamentos já marcados passam a aparecer na agenda dela.
+  await syncClientCalendar(userId);
   return { ok: true as const };
 }
 
@@ -114,6 +127,7 @@ export async function decideEmailChange(requestId: string, approve: boolean) {
       .update({ email: request.requested_email })
       .eq("id", request.user_id);
     if (error) throw new Error("Não foi possível atualizar o e-mail da cliente.");
+    await syncClientCalendar(String(request.user_id));
   }
 
   await db
