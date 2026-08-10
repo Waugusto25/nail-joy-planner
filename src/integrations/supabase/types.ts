@@ -294,8 +294,10 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          link: string | null
           name: string
           price_cents: number
+          stock_quantity: number
         }
         Insert: {
           active?: boolean
@@ -304,8 +306,10 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          link?: string | null
           name: string
           price_cents?: number
+          stock_quantity?: number
         }
         Update: {
           active?: boolean
@@ -314,8 +318,10 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          link?: string | null
           name?: string
           price_cents?: number
+          stock_quantity?: number
         }
         Relationships: []
       }

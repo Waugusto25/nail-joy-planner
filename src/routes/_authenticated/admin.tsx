@@ -27,6 +27,8 @@ import { ManualAppointmentDialog } from "@/components/app/manual-appointment-dia
 import { AdminRescheduleDialog } from "@/components/app/admin-reschedule-dialog";
 import { RescheduleRequests } from "@/components/app/reschedule-requests";
 import { CatalogEditDialog } from "@/components/app/catalog-edit-dialog";
+import { ProductCategoryPicker } from "@/components/app/product-category-picker";
+import { ProductEditDialog } from "@/components/app/product-edit-dialog";
 import { MonthsManager } from "@/components/app/months-manager";
 import { SpecialDaysManager } from "@/components/app/special-days-manager";
 import { FinanceTab } from "@/components/app/finance-tab";
@@ -1251,10 +1253,12 @@ function ProductsTab() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
     name: "",
-    category: "esmalte",
+    category: "Loja",
     price: "",
+    stock: "0",
     description: "",
     image_url: "",
+    link: "",
   });
   const products = useQuery({
     queryKey: ["admin-products"],
@@ -1273,18 +1277,32 @@ function ProductsTab() {
       toast.error("Informe o nome do produto.");
       return;
     }
+    if (!form.category.trim()) {
+      toast.error("Informe a marca/categoria do produto.");
+      return;
+    }
     const { error } = await supabase.from("products").insert({
       name: form.name.trim(),
-      category: form.category,
+      category: form.category.trim(),
       description: form.description.trim() || null,
       image_url: form.image_url.trim() || null,
+      link: form.link.trim() || null,
+      stock_quantity: Math.max(0, Number(form.stock) || 0),
       price_cents: Math.round(Number(form.price.replace(",", ".")) * 100) || 0,
     });
     if (error) {
       toast.error("Não foi possível cadastrar.");
       return;
     }
-    setForm({ name: "", category: "esmalte", price: "", description: "", image_url: "" });
+    setForm({
+      name: "",
+      category: "Loja",
+      price: "",
+      stock: "0",
+      description: "",
+      image_url: "",
+      link: "",
+    });
     await queryClient.invalidateQueries();
   }
 
@@ -1305,20 +1323,11 @@ function ProductsTab() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="p-category">Categoria</Label>
-          <select
-            id="p-category"
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-          >
-            <option value="esmalte">Esmalte</option>
-            <option value="perfume">Perfume</option>
-            <option value="bijuteria">Bijuteria</option>
-            <option value="outro">Outro</option>
-          </select>
-        </div>
+        <ProductCategoryPicker
+          id="p-category"
+          value={form.category}
+          onChange={(category) => setForm({ ...form, category })}
+        />
         <div className="space-y-1">
           <Label htmlFor="p-price">Preço (R$)</Label>
           <Input
@@ -1329,12 +1338,31 @@ function ProductsTab() {
           />
         </div>
         <div className="space-y-1">
+          <Label htmlFor="p-stock">Quantidade em estoque</Label>
+          <Input
+            id="p-stock"
+            inputMode="numeric"
+            value={form.stock}
+            onChange={(e) => setForm({ ...form, stock: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1">
           <Label htmlFor="p-image">Link da foto</Label>
           <Input
             id="p-image"
             value={form.image_url}
             maxLength={500}
             onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+            placeholder="https://..."
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="p-link">Link do produto</Label>
+          <Input
+            id="p-link"
+            value={form.link}
+            maxLength={500}
+            onChange={(e) => setForm({ ...form, link: e.target.value })}
             placeholder="https://..."
           />
         </div>
@@ -1362,9 +1390,15 @@ function ProductsTab() {
               <Badge variant="secondary">{p.category}</Badge>
               <p className="font-display text-lg">{p.name}</p>
               <p className="text-sm">{formatPrice(p.price_cents)}</p>
-              <Button variant="ghost" size="sm" onClick={() => void remove(p.id)}>
-                Remover
-              </Button>
+              <p className="text-xs text-muted-foreground">
+                Estoque: {p.stock_quantity ?? 0} {p.active ? "" : "· Inativo"}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <ProductEditDialog product={p} />
+                <Button variant="ghost" size="sm" onClick={() => void remove(p.id)}>
+                  Remover
+                </Button>
+              </div>
             </div>
           </article>
         ))}
