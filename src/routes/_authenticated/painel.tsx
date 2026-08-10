@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { storeTabs } from "@/lib/store-categories";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { useAppSettings } from "@/hooks/useSettings";
 import { useScheduleMonths } from "@/hooks/useScheduleMonths";
