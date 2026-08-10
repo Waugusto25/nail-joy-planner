@@ -150,6 +150,32 @@ export async function syncAppointmentToCalendar(appointmentId: string) {
 }
 
 /** Remove o compromisso da Google Agenda (usado ao cancelar o atendimento). */
+/**
+ * Sincronização retroativa: republica na Google Agenda todos os atendimentos
+ * futuros e ativos da cliente, para que o e-mail recém-cadastrado entre como
+ * convidado e os horários já marcados apareçam na agenda dela.
+ */
+export async function syncFutureAppointmentsForClient(clientId: string) {
+  const db = admin();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await db
+    .from("appointments")
+    .select("id")
+    .eq("client_id", clientId)
+    .gte("day", today)
+    .in("status", ["pendente", "confirmado"]);
+  let synced = 0;
+  for (const row of data ?? []) {
+    try {
+      await syncAppointmentToCalendar(String(row.id));
+      synced += 1;
+    } catch (error) {
+      console.error("Falha na sincronização retroativa da Google Agenda", error);
+    }
+  }
+  return { synced };
+}
+
 export async function removeAppointmentFromCalendar(appointmentId: string) {
   const db = admin();
   const { data } = await db
