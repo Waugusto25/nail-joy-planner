@@ -432,6 +432,59 @@ export type Database = {
           },
         ]
       }
+      reschedule_requests: {
+        Row: {
+          appointment_id: string
+          client_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          old_day: string
+          old_start_time: string
+          reason: string
+          requested_day: string
+          requested_start_time: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          client_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          old_day: string
+          old_start_time: string
+          reason: string
+          requested_day: string
+          requested_start_time: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          client_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          old_day?: string
+          old_start_time?: string
+          reason?: string
+          requested_day?: string
+          requested_start_time?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reschedule_requests_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_breaks: {
         Row: {
           active: boolean

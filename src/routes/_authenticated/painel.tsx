@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AppHeader } from "@/components/app/app-header";
 import { NotificationPrompt } from "@/components/app/notification-prompt";
+import { RescheduleRequestDialog } from "@/components/app/reschedule-request-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -42,6 +43,7 @@ import {
   WEEKDAYS,
   addMinutes,
   benefitBadgeLabel,
+  canClientReschedule,
   claimBookingMessage,
   clientCancelConfirmation,
   currentMinutes,
@@ -777,13 +779,20 @@ function BookingFlow({
 
 function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   const queryClient = useQueryClient();
+  const [rescheduling, setRescheduling] = useState<{
+    id: string;
+    day: string;
+    start_time: string;
+    serviceName: string;
+    durationMinutes: number;
+  } | null>(null);
   const appointments = useQuery({
     queryKey: ["my-appointments-full", clientId],
     enabled: Boolean(clientId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("*, services(name)")
+        .select("*, services(name, duration_minutes)")
         .eq("client_id", clientId!)
         .order("day", { ascending: false });
       if (error) throw error;
@@ -855,6 +864,39 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
                 Cancelar
               </Button>
             ) : null}
+            {a.status === "confirmado" ? (
+              canClientReschedule(a.day, a.start_time) ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setRescheduling({
+                      id: a.id,
+                      day: a.day,
+                      start_time: a.start_time,
+                      serviceName:
+                        (a.services as { name: string } | null)?.name ?? "Procedimento",
+                      durationMinutes: Number(
+                        (a.services as { duration_minutes?: number } | null)?.duration_minutes ??
+                          60,
+                      ),
+                    })
+                  }
+                >
+                  Solicitar Alteração de Data/Horário
+                </Button>
+              ) : (
+                <div className="max-w-[15rem] text-right">
+                  <Button variant="outline" size="sm" disabled>
+                    Solicitar Alteração de Data/Horário
+                  </Button>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Alterações pelo app são permitidas apenas com até 72h de antecedência. Entre em
+                    contato direto pelo WhatsApp.
+                  </p>
+                </div>
+              )
+            ) : null}
             {a.status === "cancelado" ? (
               <Button
                 variant="ghost"
@@ -868,6 +910,13 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
           </div>
         </article>
       ))}
+      {rescheduling ? (
+        <RescheduleRequestDialog
+          appointment={rescheduling}
+          open={rescheduling !== null}
+          onOpenChange={(open: boolean) => (open ? undefined : setRescheduling(null))}
+        />
+      ) : null}
     </div>
   );
 }
