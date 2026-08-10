@@ -841,8 +841,11 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   return (
     <div className="space-y-3">
       {rows.map((a) => (
-        <article key={a.id} className="surface-card flex items-center justify-between gap-4 p-4">
-          <div>
+        <article
+          key={a.id}
+          className="surface-card card-pad grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4"
+        >
+          <div className="min-w-0">
             <p className="font-display text-lg">
               {(a.services as { name: string } | null)?.name ?? "Serviço"}
             </p>
@@ -856,12 +859,12 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
                 : ""}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex shrink-0 flex-col items-end gap-2">
             <Badge variant={a.status === "cancelado" ? "outline" : "secondary"}>
               {APPOINTMENT_STATUS[a.status] ?? a.status}
             </Badge>
             {a.status === "pendente" || a.status === "confirmado" ? (
-              <Button variant="ghost" size="sm" onClick={() => void cancel(a.id)}>
+              <Button variant="outline" size="sm" onClick={() => void cancel(a.id)}>
                 Cancelar
               </Button>
             ) : null}
@@ -900,7 +903,7 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
             ) : null}
             {a.status === "cancelado" ? (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 aria-label="Remover este histórico"
                 onClick={() => void hideHistory(a.id)}
