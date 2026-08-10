@@ -627,11 +627,12 @@ function BookingFlow({
             ) : null}
             <div className="-mx-0.5 mb-3 flex gap-2 overflow-x-auto px-0.5 pb-1">
               {monthOptions.map((m) => (
-                <Button
+                <button
                   key={m.key}
-                  size="sm"
-                  variant={m.key === selectedMonth?.key ? "default" : "outline"}
-                  className={`shrink-0 ${m.active ? "" : "opacity-50"}`}
+                  type="button"
+                  className={`shrink-0 ${m.key === selectedMonth?.key ? "chip-active" : "chip"} ${
+                    m.active ? "" : "opacity-50"
+                  }`}
                   onClick={() => {
                     setMonthKey(m.key);
                     if (day && monthKeyOf(day) !== m.key) {
@@ -641,7 +642,7 @@ function BookingFlow({
                   }}
                 >
                   {monthShortLabel(m.key)}
-                </Button>
+                </button>
               ))}
             </div>
             {selectedMonth && !selectedMonth.active ? (
@@ -656,10 +657,10 @@ function BookingFlow({
             ) : (
               <div className="flex flex-wrap gap-2">
                 {availableDays.map((d) => (
-                  <Button
+                  <button
                     key={d}
-                    variant={d === day ? "default" : "outline"}
-                    size="sm"
+                    type="button"
+                    className={d === day ? "chip-active" : "chip"}
                     onClick={() => {
                       setDay(d);
                       setTime(null);
@@ -668,7 +669,7 @@ function BookingFlow({
                   >
                     {d.slice(8)}/{d.slice(5, 7)} · {WEEKDAYS[weekdayOf(d)]?.slice(0, 3)}
                     {specialByDay.has(d) ? " ✨" : ""}
-                  </Button>
+                  </button>
                 ))}
                 {availableDays.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
@@ -700,17 +701,17 @@ function BookingFlow({
             ) : null}
             <div className="flex flex-wrap gap-2">
               {dayTimes.map((t) => (
-                <Button
+                <button
                   key={t}
-                  variant={t === time ? "default" : "outline"}
-                  size="sm"
+                  type="button"
+                  className={t === time ? "chip-active" : "chip"}
                   onClick={() => {
                     setTime(t);
                     goTo(3);
                   }}
                 >
                   {t} – {service ? addMinutes(t, service.duration_minutes) : ""}
-                </Button>
+                </button>
               ))}
               {dayTimes.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -743,15 +744,14 @@ function BookingFlow({
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {benefitOptions.map((o) => (
-                        <Button
+                        <button
                           key={o.value}
                           type="button"
-                          size="sm"
-                          variant={o.value === activeBenefit.value ? "default" : "outline"}
+                          className={o.value === activeBenefit.value ? "chip-active" : "chip"}
                           onClick={() => setBenefit(o.value)}
                         >
                           {o.label}
-                        </Button>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -762,7 +762,7 @@ function BookingFlow({
                 <Button className="mt-4 w-full" onClick={() => void confirm()} disabled={saving}>
                   {saving ? "Enviando..." : "Confirmar e falar no WhatsApp"}
                 </Button>
-                <Button variant="ghost" className="mt-2 w-full" onClick={() => goTo(0)}>
+                <Button variant="outline" className="mt-2 w-full" onClick={() => goTo(0)}>
                   Começar de novo
                 </Button>
               </div>
@@ -841,8 +841,11 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   return (
     <div className="space-y-3">
       {rows.map((a) => (
-        <article key={a.id} className="surface-card flex items-center justify-between gap-4 p-4">
-          <div>
+        <article
+          key={a.id}
+          className="surface-card card-pad grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4"
+        >
+          <div className="min-w-0">
             <p className="font-display text-lg">
               {(a.services as { name: string } | null)?.name ?? "Serviço"}
             </p>
@@ -856,12 +859,12 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
                 : ""}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex shrink-0 flex-col items-end gap-2">
             <Badge variant={a.status === "cancelado" ? "outline" : "secondary"}>
               {APPOINTMENT_STATUS[a.status] ?? a.status}
             </Badge>
             {a.status === "pendente" || a.status === "confirmado" ? (
-              <Button variant="ghost" size="sm" onClick={() => void cancel(a.id)}>
+              <Button variant="outline" size="sm" onClick={() => void cancel(a.id)}>
                 Cancelar
               </Button>
             ) : null}
@@ -900,7 +903,7 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
             ) : null}
             {a.status === "cancelado" ? (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 aria-label="Remover este histórico"
                 onClick={() => void hideHistory(a.id)}
@@ -1263,51 +1266,53 @@ function Store({ clientName }: { clientName: string }) {
           Ainda não temos produtos de {activeCategory}. Volte logo! 💖
         </p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
           {visible.map((p) => (
-        <article key={p.id} className="surface-card overflow-hidden">
-          {p.image_url ? (
-            <img
-              src={p.image_url}
-              alt={p.name}
-              className="h-40 w-full object-cover"
-              loading="lazy"
-            />
-          ) : null}
-          <div className="space-y-2 p-4">
-            <Badge variant="secondary">{p.category}</Badge>
-            <p className="font-display text-lg">{p.name}</p>
-            {p.description ? (
-              <p className="text-sm text-muted-foreground">{p.description}</p>
-            ) : null}
-            <p className="font-semibold">{formatPrice(p.price_cents)}</p>
-            {p.link ? (
-              <a
-                href={p.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-xs underline"
-              >
-                Ver detalhes do produto
-              </a>
-            ) : null}
-            <Button
-              className="w-full"
-              size="sm"
-              onClick={() =>
-                window.open(
-                  whatsappLink(
-                    `Olá, Janaina! Sou ${clientName} e quero comprar: ${p.name} (${formatPrice(p.price_cents)}).`,
-                  ),
-                  "_blank",
-                  "noopener",
-                )
-              }
-            >
-              Quero este
-            </Button>
-          </div>
-        </article>
+            <article key={p.id} className="surface-card flex flex-col overflow-hidden">
+              {p.image_url ? (
+                <img
+                  src={p.image_url}
+                  alt={p.name}
+                  className="aspect-square w-full object-cover"
+                  loading="lazy"
+                />
+              ) : null}
+              <div className="card-pad flex min-w-0 flex-1 flex-col gap-2">
+                <Badge variant="secondary" className="w-fit max-w-full truncate">
+                  {p.category}
+                </Badge>
+                <p className="line-clamp-2 font-display text-base leading-tight">{p.name}</p>
+                {p.description ? (
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
+                ) : null}
+                <p className="font-semibold">{formatPrice(p.price_cents)}</p>
+                {p.link ? (
+                  <a
+                    href={p.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs underline"
+                  >
+                    Ver detalhes
+                  </a>
+                ) : null}
+                <Button
+                  className="mt-auto w-full"
+                  size="sm"
+                  onClick={() =>
+                    window.open(
+                      whatsappLink(
+                        `Olá, Janaina! Sou ${clientName} e quero comprar: ${p.name} (${formatPrice(p.price_cents)}).`,
+                      ),
+                      "_blank",
+                      "noopener",
+                    )
+                  }
+                >
+                  Quero este
+                </Button>
+              </div>
+            </article>
           ))}
         </div>
       )}
