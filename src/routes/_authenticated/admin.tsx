@@ -27,6 +27,8 @@ import { ManualAppointmentDialog } from "@/components/app/manual-appointment-dia
 import { AdminRescheduleDialog } from "@/components/app/admin-reschedule-dialog";
 import { RescheduleRequests } from "@/components/app/reschedule-requests";
 import { CatalogEditDialog } from "@/components/app/catalog-edit-dialog";
+import { ProductCategoryPicker } from "@/components/app/product-category-picker";
+import { ProductEditDialog } from "@/components/app/product-edit-dialog";
 import { MonthsManager } from "@/components/app/months-manager";
 import { SpecialDaysManager } from "@/components/app/special-days-manager";
 import { FinanceTab } from "@/components/app/finance-tab";
