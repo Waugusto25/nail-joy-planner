@@ -24,6 +24,9 @@ import {
 } from "@/lib/calendar.functions";
 import { clearCancelledForAdminFn, hideCancelledForAdminFn } from "@/lib/cancel.functions";
 import { ManualAppointmentDialog } from "@/components/app/manual-appointment-dialog";
+import { AdminRescheduleDialog } from "@/components/app/admin-reschedule-dialog";
+import { RescheduleRequests } from "@/components/app/reschedule-requests";
+import { CatalogEditDialog } from "@/components/app/catalog-edit-dialog";
 import { MonthsManager } from "@/components/app/months-manager";
 import { SpecialDaysManager } from "@/components/app/special-days-manager";
 import { FinanceTab } from "@/components/app/finance-tab";
@@ -354,6 +357,17 @@ function AgendaTab() {
               WhatsApp
             </Button>
           ) : null}
+          {a.status !== "cancelado" ? (
+            <AdminRescheduleDialog
+              appointment={{
+                id: a.id,
+                day: a.day,
+                start_time: a.start_time,
+                serviceName: service?.name ?? "Procedimento",
+                clientName: client?.full_name ?? "Cliente",
+              }}
+            />
+          ) : null}
         </div>
       </article>
     );
@@ -396,6 +410,7 @@ function AgendaTab() {
         </TabsList>
 
         <TabsContent value="pendentes" className="space-y-3 pt-4">
+          <RescheduleRequests />
           <p className="text-sm text-muted-foreground">
             Novos pedidos aguardando confirmação, do mais recente para o mais antigo.
           </p>
@@ -1448,9 +1463,16 @@ function CatalogsTab() {
           <article key={c.id} className="surface-card p-4">
             <p className="font-display text-lg">{c.title}</p>
             <p className="break-all text-xs text-muted-foreground">{c.url}</p>
-            <Button variant="ghost" size="sm" onClick={() => void remove(c.id)}>
-              Remover
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              {c.active ? "Ativo" : "Inativo"}
+              {c.description ? ` · ${c.description}` : ""}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <CatalogEditDialog catalog={c} />
+              <Button variant="ghost" size="sm" onClick={() => void remove(c.id)}>
+                Remover
+              </Button>
+            </div>
           </article>
         ))}
       </div>
