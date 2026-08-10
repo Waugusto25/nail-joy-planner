@@ -208,18 +208,17 @@ export function RescheduleRequestDialog({
               <Label>1. Escolha a nova data</Label>
               <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto">
                 {availableDays.map((d) => (
-                  <Button
+                  <button
                     key={d}
-                    size="sm"
-                    variant={day === d ? "default" : "outline"}
-                    className="capitalize"
+                    type="button"
+                    className={`capitalize ${day === d ? "chip-active" : "chip"}`}
                     onClick={() => {
                       setDay(d);
                       setTime(null);
                     }}
                   >
                     {formatDayLabel(d)}
-                  </Button>
+                  </button>
                 ))}
               </div>
             </section>
@@ -234,14 +233,14 @@ export function RescheduleRequestDialog({
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {dayTimes.map((t) => (
-                      <Button
+                      <button
                         key={t}
-                        size="sm"
-                        variant={time === t ? "default" : "outline"}
+                        type="button"
+                        className={time === t ? "chip-active" : "chip"}
                         onClick={() => setTime(t)}
                       >
                         {t}
-                      </Button>
+                      </button>
                     ))}
                   </div>
                 )}
