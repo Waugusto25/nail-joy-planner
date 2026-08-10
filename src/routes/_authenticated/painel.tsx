@@ -1207,6 +1207,7 @@ function EventsList({
 }
 
 function Store({ clientName }: { clientName: string }) {
+  const [activeCategory, setActiveCategory] = useState("Todas");
   const products = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -1227,9 +1228,42 @@ function Store({ clientName }: { clientName: string }) {
     );
   }
 
+  const tabs = storeTabs(rows.map((p) => p.category));
+  const visible =
+    activeCategory === "Todas" ? rows : rows.filter((p) => p.category === activeCategory);
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {rows.map((p) => (
+    <div className="space-y-4">
+      <div
+        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+        role="tablist"
+        aria-label="Marcas da loja"
+      >
+        {tabs.map((c) => (
+          <button
+            key={c}
+            type="button"
+            role="tab"
+            aria-selected={activeCategory === c}
+            onClick={() => setActiveCategory(c)}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-sm transition ${
+              activeCategory === c
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-foreground"
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Ainda não temos produtos de {activeCategory}. Volte logo! 💖
+        </p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {visible.map((p) => (
         <article key={p.id} className="surface-card overflow-hidden">
           {p.image_url ? (
             <img
@@ -1246,6 +1280,16 @@ function Store({ clientName }: { clientName: string }) {
               <p className="text-sm text-muted-foreground">{p.description}</p>
             ) : null}
             <p className="font-semibold">{formatPrice(p.price_cents)}</p>
+            {p.link ? (
+              <a
+                href={p.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-xs underline"
+              >
+                Ver detalhes do produto
+              </a>
+            ) : null}
             <Button
               className="w-full"
               size="sm"
@@ -1263,7 +1307,9 @@ function Store({ clientName }: { clientName: string }) {
             </Button>
           </div>
         </article>
-      ))}
+          ))}
+        </div>
+      )}
     </div>
   );
 }
