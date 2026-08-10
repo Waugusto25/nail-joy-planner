@@ -367,3 +367,66 @@ export function clientCancelConfirmation(day: string, start: string) {
 
 /** Dias que um cancelamento fica visível no histórico da cliente. */
 export const CANCELLED_HISTORY_DAYS = 3;
+
+/** Antecedência mínima (em horas) para a cliente pedir alteração pelo app. */
+export const RESCHEDULE_MIN_HOURS = 72;
+
+/** Horas restantes até o atendimento (fuso do salão, America/Sao_Paulo). */
+export function hoursUntilAppointment(day: string, start: string) {
+  const target = new Date(`${day}T${shortTime(start)}:00-03:00`).getTime();
+  return (target - Date.now()) / 3600000;
+}
+
+/** A cliente só pode pedir alteração com mais de 72h de antecedência. */
+export function canClientReschedule(day: string, start: string) {
+  return hoursUntilAppointment(day, start) > RESCHEDULE_MIN_HOURS;
+}
+
+/** Alerta enviado à administradora quando a cliente pede reagendamento. */
+export function adminRescheduleRequestAlert(n: {
+  name: string;
+  serviceName: string;
+  oldDay: string;
+  oldStart: string;
+  newDay: string;
+  newStart: string;
+  reason: string;
+}) {
+  return [
+    "🔄 Pedido de Reagendamento pela Cliente!",
+    "",
+    `Cliente: ${n.name}`,
+    `Serviço: ${n.serviceName}`,
+    `Horário atual: ${formatDayLabel(n.oldDay)} às ${shortTime(n.oldStart)}`,
+    `Nova opção escolhida: ${formatDayLabel(n.newDay)} às ${shortTime(n.newStart)}`,
+    "",
+    `Motivo informado: ${n.reason}`,
+    "",
+    "Aprove ou recuse no Painel Admin, na aba de pré-agendamentos.",
+  ].join("\n");
+}
+
+/** Aviso carinhoso de horário atualizado enviado para a cliente. */
+export function rescheduleMessage(n: {
+  name: string;
+  serviceName: string;
+  oldDay: string;
+  oldStart: string;
+  day: string;
+  start: string;
+  durationMinutes: number;
+}) {
+  const start = shortTime(n.start);
+  const end = addMinutes(start, n.durationMinutes);
+  return [
+    `Oi, ${n.name}! 💖 Seu horário foi atualizado e já está CONFIRMADO! ✨`,
+    "",
+    `Antes: ${formatDayLabel(n.oldDay)} às ${shortTime(n.oldStart)}`,
+    "",
+    `📅 Nova data: ${formatDayLabel(n.day)}`,
+    `⏰ Novo horário: ${start} às ${end}`,
+    `💅 Serviço: ${n.serviceName}`,
+    "",
+    `Sua Google Agenda já foi atualizada. Qualquer dúvida, me chame! 🥰 — ${SALON_NAME}`,
+  ].join("\n");
+}
