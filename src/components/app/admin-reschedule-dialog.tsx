@@ -141,14 +141,14 @@ export function AdminRescheduleDialog({
             {suggestions.length > 0 ? (
               <div className="flex flex-wrap gap-2 pt-1">
                 {suggestions.map((t) => (
-                  <Button
+                  <button
                     key={t}
-                    size="sm"
-                    variant={time === t ? "default" : "outline"}
+                    type="button"
+                    className={time === t ? "chip-active" : "chip"}
                     onClick={() => setTime(t)}
                   >
                     {t}
-                  </Button>
+                  </button>
                 ))}
               </div>
             ) : null}
