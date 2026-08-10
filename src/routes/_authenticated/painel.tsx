@@ -1266,51 +1266,53 @@ function Store({ clientName }: { clientName: string }) {
           Ainda não temos produtos de {activeCategory}. Volte logo! 💖
         </p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
           {visible.map((p) => (
-        <article key={p.id} className="surface-card overflow-hidden">
-          {p.image_url ? (
-            <img
-              src={p.image_url}
-              alt={p.name}
-              className="h-40 w-full object-cover"
-              loading="lazy"
-            />
-          ) : null}
-          <div className="space-y-2 p-4">
-            <Badge variant="secondary">{p.category}</Badge>
-            <p className="font-display text-lg">{p.name}</p>
-            {p.description ? (
-              <p className="text-sm text-muted-foreground">{p.description}</p>
-            ) : null}
-            <p className="font-semibold">{formatPrice(p.price_cents)}</p>
-            {p.link ? (
-              <a
-                href={p.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-xs underline"
-              >
-                Ver detalhes do produto
-              </a>
-            ) : null}
-            <Button
-              className="w-full"
-              size="sm"
-              onClick={() =>
-                window.open(
-                  whatsappLink(
-                    `Olá, Janaina! Sou ${clientName} e quero comprar: ${p.name} (${formatPrice(p.price_cents)}).`,
-                  ),
-                  "_blank",
-                  "noopener",
-                )
-              }
-            >
-              Quero este
-            </Button>
-          </div>
-        </article>
+            <article key={p.id} className="surface-card flex flex-col overflow-hidden">
+              {p.image_url ? (
+                <img
+                  src={p.image_url}
+                  alt={p.name}
+                  className="aspect-square w-full object-cover"
+                  loading="lazy"
+                />
+              ) : null}
+              <div className="card-pad flex min-w-0 flex-1 flex-col gap-2">
+                <Badge variant="secondary" className="w-fit max-w-full truncate">
+                  {p.category}
+                </Badge>
+                <p className="line-clamp-2 font-display text-base leading-tight">{p.name}</p>
+                {p.description ? (
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
+                ) : null}
+                <p className="font-semibold">{formatPrice(p.price_cents)}</p>
+                {p.link ? (
+                  <a
+                    href={p.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs underline"
+                  >
+                    Ver detalhes
+                  </a>
+                ) : null}
+                <Button
+                  className="mt-auto w-full"
+                  size="sm"
+                  onClick={() =>
+                    window.open(
+                      whatsappLink(
+                        `Olá, Janaina! Sou ${clientName} e quero comprar: ${p.name} (${formatPrice(p.price_cents)}).`,
+                      ),
+                      "_blank",
+                      "noopener",
+                    )
+                  }
+                >
+                  Quero este
+                </Button>
+              </div>
+            </article>
           ))}
         </div>
       )}
