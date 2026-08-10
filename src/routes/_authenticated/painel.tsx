@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AppHeader } from "@/components/app/app-header";
 import { NotificationPrompt } from "@/components/app/notification-prompt";
+import { RescheduleRequestDialog } from "@/components/app/reschedule-request-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -42,6 +43,7 @@ import {
   WEEKDAYS,
   addMinutes,
   benefitBadgeLabel,
+  canClientReschedule,
   claimBookingMessage,
   clientCancelConfirmation,
   currentMinutes,
@@ -912,7 +914,7 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
         <RescheduleRequestDialog
           appointment={rescheduling}
           open={rescheduling !== null}
-          onOpenChange={(open) => (open ? undefined : setRescheduling(null))}
+          onOpenChange={(open: boolean) => (open ? undefined : setRescheduling(null))}
         />
       ) : null}
     </div>
