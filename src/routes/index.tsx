@@ -109,27 +109,7 @@ function AuthPage() {
         ) : null}
 
         <div className="mt-8 space-y-6 border-t border-border/50 pt-6 text-left text-[13px] leading-relaxed text-muted-foreground whitespace-pre-wrap">
-          <p>
-            1. Diagnóstico do Problema
-            {"\n"}Ao enviar mensagens via Intent/Deep Link no Android (especialmente ao abrir o seletor nativo de aplicativos de mensagem), os emojis e caracteres especiais estão sendo corrompidos e convertidos no caractere substituto .
-          </p>
-          <p>
-            2. Correção de Codificação (UTF-8 / URL Encoding)
-            {"\n"}Encode da URL: Garanta que todo o texto enviado na URI do WhatsApp seja explicitamente convertido para UTF-8 utilizando a função nativa de encode (ex: encodeURIComponent(texto) em JavaScript/TypeScript ou Uri.encode(texto) / URLEncoder.encode(texto, "UTF-8") na camada nativa).
-          </p>
-          <p>
-            Formatação do Link de Disparo: O formato de montagem do link deve seguir estritamente o padrão seguro de UTF-8:
-          </p>
-          <div className="rounded-md bg-muted p-3 font-mono text-[12px]">
-            const mensagemEncoded = encodeURIComponent(mensagemComEmojis);
-            {"\n"}const urlWhatsApp = `https://api.whatsapp.com/send?phone=${"{telefone}"}&text=${"{mensagemEncoded}"}`;
-            {"\n"}// Ou para disparo aberto no sistema:
-            {"\n"}// `whatsapp://send?text=${"{mensagemEncoded}"}`
-          </div>
-          <p>
-            3. Compatibilidade com Seletor de Apps (Android Intents)
-            {"\n"}Certifique-se de que, ao disparar a intent genérica para escolha de aplicativo (quando não há app padrão selecionado no Android), os metadados do texto incluam o formato MIME text/plain acompanhado do charset UTF-8: text/plain; charset=utf-8.
-          </p>
+          remova texto diagnóstico solicitado na base da tela inicial para referência técnica.
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
