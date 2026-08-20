@@ -263,7 +263,8 @@ export function overlaps(startA: number, endA: number, startB: number, endB: num
 }
 
 export function whatsappLink(message: string) {
-  return `https://wa.me/${salonContact.whatsapp}?text=${encodeURIComponent(message)}`;
+  const encoded = encodeURIComponent(message);
+  return `https://api.whatsapp.com/send?phone=${salonContact.whatsapp}&text=${encoded}`;
 }
 
 /** Normalizes a Brazilian phone to wa.me format (adds country code 55 when missing). */
@@ -280,7 +281,8 @@ export function toWhatsappNumber(phone: string) {
 export function whatsappLinkTo(phone: string, message: string) {
   const number = toWhatsappNumber(phone);
   if (!number) return null;
-  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+  const encoded = encodeURIComponent(message);
+  return `https://api.whatsapp.com/send?phone=${number}&text=${encoded}`;
 }
 
 export type AppointmentNotice = {
