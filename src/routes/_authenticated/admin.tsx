@@ -263,7 +263,10 @@ function AgendaTab() {
     }
   }
 
-  function renderCard(a: (typeof rows)[number]) {
+  function renderCard(
+    a: (typeof rows)[number],
+    context: "pendente" | "confirmado" | "outro" = "outro",
+  ) {
     const client = (clients.data ?? []).find((c) => c.id === a.client_id) ?? null;
     const service = a.services as { name: string; duration_minutes?: number } | null;
     const noticeBase = {
@@ -275,6 +278,16 @@ function AgendaTab() {
     };
     const confirmNotice = client
       ? { phone: client.phone, message: confirmationMessage(noticeBase) }
+      : undefined;
+    const reconfirmNotice = client
+      ? {
+          phone: client.phone,
+          message: reconfirmMessage({
+            name: client.full_name,
+            day: a.day,
+            start: a.start_time,
+          }),
+        }
       : undefined;
     const cancelNotice = client
       ? { phone: client.phone, message: cancellationMessage(noticeBase) }
