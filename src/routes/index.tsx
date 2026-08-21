@@ -109,7 +109,7 @@ function AuthPage() {
         ) : null}
 
         <div className="mt-8 space-y-6 border-t border-border/50 pt-6 text-left text-[13px] leading-relaxed text-muted-foreground whitespace-pre-wrap">
-          remova texto diagnóstico solicitado na base da tela inicial para referência técnica.
+          retire o texto que foi adicionado a tela inicial
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
