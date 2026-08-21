@@ -60,8 +60,7 @@ export function claimTag(benefitType: string) {
 export function benefitBadgeLabel(benefitType: string, percent: number) {
   if (benefitType === "premio") return "Prêmio de Sorteio / Evento";
   if (benefitType === "fidelidade") return `Resgate Fidelidade (-${percent || Math.round(LOYALTY_DISCOUNT * 100)}%)`;
-  if (benefitType === "indicacao")
-    return `Resgate Indicação (-${percent || Math.round(REFERRAL_DISCOUNT * 100)}%)`;
+  if (benefitType === "indicacao") return `Resgate Indicação (-${percent || Math.round(REFERRAL_DISCOUNT * 100)}%)`;
   if (benefitType === "parcial") return `Reembolso de pontos (-${percent}%)`;
   return null;
 }
@@ -143,15 +142,7 @@ export function formatDateTime(value?: string | null) {
   });
 }
 
-export const WEEKDAYS = [
-  "Domingo",
-  "Segunda",
-  "Terça",
-  "Quarta",
-  "Quinta",
-  "Sexta",
-  "Sábado",
-] as const;
+export const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"] as const;
 
 export const APPOINTMENT_STATUS: Record<string, string> = {
   pendente: "Aguardando confirmação",
@@ -296,32 +287,27 @@ export type AppointmentNotice = {
 /** Mensagem carismática de confirmação enviada à cliente. */
 export function confirmationMessage(n: AppointmentNotice) {
   const start = shortTime(n.start);
-  const end = addMinutes(start, n.durationMinutes);
+  // O addMinutes deve receber o objeto de data/hora original n.start
+  const end = shortTime(addMinutes(n.start, n.durationMinutes));
+
   return [
-    `Oba, ${n.name}! 💖
-    Seu horário está oficialmente CONFIRMADO por mim! ✨`,
+    `Oba, ${n.name}! 💖`,
+    `Seu horário está oficialmente CONFIRMADO por mim! ✨`,
     "",
-    `Estou muito feliz em ter você aqui no ${SALON_NAME}!
-    Mal posso esperar para cuidar das suas unhas com todo o carinho e dedicação que você merece.`,
+    `Estou muito feliz em ter você aqui no ${SALON_NAME}!`,
+    `Mal posso esperar para cuidar das suas unhas com todo o carinho e dedicação que você merece.`,
     "",
     `📅 Data: ${formatDayLabel(n.day)}`,
     `⏰ Horário: ${start} às ${end}`,
     `💅 Serviço: ${n.serviceName}`,
     "",
-    "Muito obrigada pela confiança!,
-    "Nos vemos em breve! 🥰",
-    
+    "Muito obrigada pela confiança! Nos vemos em breve! 🥰",
   ].join("\n");
 }
 
 /** Mensagem carismática de cancelamento, convidando a cliente a reagendar. */
 /** Boas-vindas para clientes cadastradas manualmente pela administradora. */
-export function adminWelcomeMessage(n: {
-  phoneDigits: string;
-  serviceName: string;
-  day: string;
-  start: string;
-}) {
+export function adminWelcomeMessage(n: { phoneDigits: string; serviceName: string; day: string; start: string }) {
   return [
     `Seja muito bem-vinda ao ${SALON_NAME}! 💖`,
     "",
