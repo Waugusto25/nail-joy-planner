@@ -124,7 +124,10 @@ function ClientPanel() {
   return (
     <div className="bg-petal min-h-screen pb-16">
       <div className="bg-petal-veil" aria-hidden="true" />
-      <AppHeader title={firstName ? `Olá, ${firstName}!` : "Meu painel"} audience="cliente" />
+      <AppHeader
+        title={firstName ? `Olá, ${firstName}!` : "Meu painel"}
+        audience="cliente"
+      />
 
       <main className="mx-auto w-full max-w-4xl px-4 py-6">
         <Tabs value={tab} onValueChange={setTab}>
@@ -174,7 +177,11 @@ function ClientPanel() {
 
       <Dialog open={welcomeOpen} onOpenChange={(open) => (open ? null : void closeWelcome())}>
         <DialogContent className="max-w-md overflow-hidden p-0">
-          <img src={WELCOME_IMAGE} alt="Bem-vinda à Jannah Nails, por Janaina Silva" className="w-full" />
+          <img
+            src={WELCOME_IMAGE}
+            alt="Bem-vinda à Jannah Nails, por Janaina Silva"
+            className="w-full"
+          />
           <div className="p-4">
             <Button className="w-full" onClick={() => void closeWelcome()}>
               Começar
@@ -190,7 +197,11 @@ function useServices() {
   return useQuery({
     queryKey: ["services"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("services").select("*").eq("active", true).order("sort_order");
+      const { data, error } = await supabase
+        .from("services")
+        .select("*")
+        .eq("active", true)
+        .order("sort_order");
       if (error) throw error;
       return data;
     },
@@ -249,7 +260,11 @@ function BookingFlow({
   const slots = useQuery({
     queryKey: ["slots"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("schedule_slots").select("*").eq("active", true).order("start_time");
+      const { data, error } = await supabase
+        .from("schedule_slots")
+        .select("*")
+        .eq("active", true)
+        .order("start_time");
       if (error) throw error;
       return data;
     },
@@ -267,7 +282,11 @@ function BookingFlow({
   const breaks = useQuery({
     queryKey: ["breaks"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("schedule_breaks").select("*").eq("active", true).order("start_time");
+      const { data, error } = await supabase
+        .from("schedule_breaks")
+        .select("*")
+        .eq("active", true)
+        .order("start_time");
       if (error) throw error;
       return data;
     },
@@ -351,8 +370,8 @@ function BookingFlow({
     const breakRanges = special
       ? []
       : (breaks.data ?? [])
-          .filter((b) => b.weekday === weekday)
-          .map((b) => ({ start: timeToMinutes(b.start_time), end: timeToMinutes(b.end_time) }));
+      .filter((b) => b.weekday === weekday)
+      .map((b) => ({ start: timeToMinutes(b.start_time), end: timeToMinutes(b.end_time) }));
 
     // No dia de hoje, só horários futuros (com antecedência mínima). Datas futuras ficam intactas.
     const minStart = day === nowTick.day ? nowTick.minutes + BOOKING_LEAD_MINUTES : -1;
@@ -380,7 +399,9 @@ function BookingFlow({
   const loyaltyService = service?.loyalty_eligible ?? false;
   const loyaltyReady = loyaltyEnabled && loyaltyService && points >= LOYALTY_CYCLE;
   const partialPercent =
-    !loyaltyEnabled && loyaltyService ? Math.round(Math.min(points, LOYALTY_CYCLE) * LOYALTY_PARTIAL_STEP * 100) : 0;
+    !loyaltyEnabled && loyaltyService
+      ? Math.round(Math.min(points, LOYALTY_CYCLE) * LOYALTY_PARTIAL_STEP * 100)
+      : 0;
   const couponCount = coupons.data?.length ?? 0;
 
   // Regra de cumulação: só um benefício por atendimento.
@@ -485,8 +506,7 @@ function BookingFlow({
             finalCents: price,
           })
         : [
-            `Olá,Janaina!
-            Sou ${clientName} e fiz uma pré-reserva pelo app.`,
+            `Olá, Janaina! Sou ${clientName} e fiz uma pré-reserva pelo app.`,
             "",
             `Serviço: ${service.name}`,
             `Data: ${formatDayLabel(day)}`,
@@ -540,14 +560,19 @@ function BookingFlow({
           <span className="w-9" />
         )}
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Passo {step + 1} de 4</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Passo {step + 1} de 4
+          </p>
           <h2 className="font-display text-xl">{titles[step]}</h2>
         </div>
       </div>
 
       <div className="mt-3 flex gap-1.5">
         {titles.map((t, index) => (
-          <span key={t} className={`h-1.5 flex-1 rounded-full ${index <= step ? "bg-primary" : "bg-secondary"}`} />
+          <span
+            key={t}
+            className={`h-1.5 flex-1 rounded-full ${index <= step ? "bg-primary" : "bg-secondary"}`}
+          />
         ))}
       </div>
 
@@ -572,14 +597,20 @@ function BookingFlow({
                     s.id === serviceId ? "ring-2 ring-ring" : "hover:shadow-lg"
                   }`}
                 >
-                  <StorageImage url={s.image_url} alt={s.name} className="h-36 w-full object-cover" />
+                  <StorageImage
+                    url={s.image_url}
+                    alt={s.name}
+                    className="h-36 w-full object-cover"
+                  />
                   <div className="p-4">
                     <p className="font-display text-lg">{s.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {formatPrice(s.price_cents)} · {formatDuration(s.duration_minutes)}
                     </p>
                     {!s.loyalty_eligible ? (
-                      <p className="mt-1 text-xs text-muted-foreground">Avulso · não conta no cartão de fidelidade</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Avulso · não conta no cartão de fidelidade
+                      </p>
                     ) : null}
                   </div>
                 </button>
@@ -616,8 +647,12 @@ function BookingFlow({
             </div>
             {selectedMonth && !selectedMonth.active ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm">
-                <p className="font-medium">Agendamentos para {monthLabel(selectedMonth.key)} ainda não estão abertos</p>
-                {selectedMonth.message ? <p className="mt-1 text-muted-foreground">{selectedMonth.message}</p> : null}
+                <p className="font-medium">
+                  Agendamentos para {monthLabel(selectedMonth.key)} ainda não estão abertos
+                </p>
+                {selectedMonth.message ? (
+                  <p className="mt-1 text-muted-foreground">{selectedMonth.message}</p>
+                ) : null}
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -638,8 +673,9 @@ function BookingFlow({
                 ))}
                 {availableDays.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Nenhuma data disponível em {selectedMonth ? monthLabel(selectedMonth.key) : "esse mês"}. Escolha
-                    outro mês ou fale com a Janaina pelo WhatsApp.
+                    Nenhuma data disponível em{" "}
+                    {selectedMonth ? monthLabel(selectedMonth.key) : "esse mês"}. Escolha outro mês
+                    ou fale com a Janaina pelo WhatsApp.
                   </p>
                 ) : null}
               </div>
@@ -648,16 +684,19 @@ function BookingFlow({
 
           {/* 3. horário */}
           <section className="w-full shrink-0 px-0.5" aria-hidden={step !== 2}>
-            {day ? <p className="mb-3 text-sm capitalize text-muted-foreground">{formatDayLabel(day)}</p> : null}
+            {day ? (
+              <p className="mb-3 text-sm capitalize text-muted-foreground">{formatDayLabel(day)}</p>
+            ) : null}
             {day && specialByDay.has(day) ? (
               <p className="mb-3 rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
-                Atendimento Especial ✨{specialByDay.get(day)?.reason ? ` — ${specialByDay.get(day)?.reason}` : ""}
+                Atendimento Especial ✨
+                {specialByDay.get(day)?.reason ? ` — ${specialByDay.get(day)?.reason}` : ""}
               </p>
             ) : null}
             {service ? (
               <p className="mb-3 text-sm text-muted-foreground">
-                Duração do procedimento: {formatDuration(service.duration_minutes)} — mostramos só os horários que cabem
-                na agenda.
+                Duração do procedimento: {formatDuration(service.duration_minutes)} — mostramos só
+                os horários que cabem na agenda.
               </p>
             ) : null}
             <div className="flex flex-wrap gap-2">
@@ -675,7 +714,9 @@ function BookingFlow({
                 </button>
               ))}
               {dayTimes.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum horário livre neste dia para este procedimento.</p>
+                <p className="text-sm text-muted-foreground">
+                  Nenhum horário livre neste dia para este procedimento.
+                </p>
               ) : null}
             </div>
           </section>
@@ -698,7 +739,9 @@ function BookingFlow({
                 {benefitOptions.length > 1 ? (
                   <div className="mt-4">
                     <p className="text-sm font-medium">Benefício deste atendimento</p>
-                    <p className="text-xs text-muted-foreground">Apenas um benefício pode ser usado por atendimento.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Apenas um benefício pode ser usado por atendimento.
+                    </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {benefitOptions.map((o) => (
                         <button
@@ -724,7 +767,9 @@ function BookingFlow({
                 </Button>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Volte e escolha procedimento, data e horário.</p>
+              <p className="text-sm text-muted-foreground">
+                Volte e escolha procedimento, data e horário.
+              </p>
             )}
           </section>
         </div>
@@ -796,9 +841,14 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   return (
     <div className="space-y-3">
       {rows.map((a) => (
-        <article key={a.id} className="surface-card card-pad grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+        <article
+          key={a.id}
+          className="surface-card card-pad grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4"
+        >
           <div className="min-w-0">
-            <p className="font-display text-lg">{(a.services as { name: string } | null)?.name ?? "Serviço"}</p>
+            <p className="font-display text-lg">
+              {(a.services as { name: string } | null)?.name ?? "Serviço"}
+            </p>
             <p className="text-sm capitalize text-muted-foreground">
               {formatDayLabel(a.day)} · {shortTime(a.start_time)}
             </p>
@@ -828,9 +878,11 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
                       id: a.id,
                       day: a.day,
                       start_time: a.start_time,
-                      serviceName: (a.services as { name: string } | null)?.name ?? "Procedimento",
+                      serviceName:
+                        (a.services as { name: string } | null)?.name ?? "Procedimento",
                       durationMinutes: Number(
-                        (a.services as { duration_minutes?: number } | null)?.duration_minutes ?? 60,
+                        (a.services as { duration_minutes?: number } | null)?.duration_minutes ??
+                          60,
                       ),
                     })
                   }
@@ -843,8 +895,8 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
                     Solicitar Alteração de Data/Horário
                   </Button>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Alterações pelo app são permitidas apenas com até 72h de antecedência. Entre em contato direto pelo
-                    WhatsApp.
+                    Alterações pelo app são permitidas apenas com até 72h de antecedência. Entre em
+                    contato direto pelo WhatsApp.
                   </p>
                 </div>
               )
@@ -873,7 +925,13 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   );
 }
 
-function LoyaltyCards({ clientId, onClaim }: { clientId?: string | undefined; onClaim?: (claim: Claim) => void }) {
+function LoyaltyCards({
+  clientId,
+  onClaim,
+}: {
+  clientId?: string | undefined;
+  onClaim?: (claim: Claim) => void;
+}) {
   const services = useServices();
   const settings = useAppSettings();
   const expiryDays = settings.data?.benefit_expiry_days ?? 90;
@@ -896,8 +954,8 @@ function LoyaltyCards({ clientId, onClaim }: { clientId?: string | undefined; on
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Os atendimentos contam por {expiryDays} dias. Ao completar {LOYALTY_CYCLE} procedimentos do mesmo tipo, o
-        próximo sai com {Math.round(LOYALTY_DISCOUNT * 100)}% de desconto.
+        Os atendimentos contam por {expiryDays} dias. Ao completar {LOYALTY_CYCLE} procedimentos do
+        mesmo tipo, o próximo sai com {Math.round(LOYALTY_DISCOUNT * 100)}% de desconto.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         {(services.data ?? [])
@@ -923,16 +981,23 @@ function LoyaltyCards({ clientId, onClaim }: { clientId?: string | undefined; on
                     />
                   ))}
                 </div>
-                <Progress className="mt-3" value={eligible ? 100 : (inCycle / LOYALTY_CYCLE) * 100} />
+                <Progress
+                  className="mt-3"
+                  value={eligible ? 100 : (inCycle / LOYALTY_CYCLE) * 100}
+                />
                 <p className="mt-3 text-sm">
                   {inUse
                     ? "⏳ Seus pontos estão reservados em um pré-agendamento. Se ele for cancelado ou recusado, eles voltam com validade renovada."
                     : count >= LOYALTY_CYCLE
-                      ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
-                      : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
+                    ? `🎉 Seu próximo atendimento tem ${Math.round(LOYALTY_DISCOUNT * 100)}% de desconto!`
+                    : `Faltam ${LOYALTY_CYCLE - inCycle} para ganhar ${Math.round(LOYALTY_DISCOUNT * 100)}%.`}
                 </p>
                 {eligible ? (
-                  <Button className="mt-3 w-full" size="sm" onClick={() => onClaim?.({ benefit: "fidelidade" })}>
+                  <Button
+                    className="mt-3 w-full"
+                    size="sm"
+                    onClick={() => onClaim?.({ benefit: "fidelidade" })}
+                  >
                     Reivindicar desconto
                   </Button>
                 ) : null}
@@ -944,7 +1009,13 @@ function LoyaltyCards({ clientId, onClaim }: { clientId?: string | undefined; on
   );
 }
 
-function MyBenefits({ clientId, onClaim }: { clientId?: string | undefined; onClaim?: (claim: Claim) => void }) {
+function MyBenefits({
+  clientId,
+  onClaim,
+}: {
+  clientId?: string | undefined;
+  onClaim?: (claim: Claim) => void;
+}) {
   const { profile } = useCurrentProfile();
   const settings = useAppSettings();
   const referralEnabled = settings.data?.referral_enabled ?? true;
@@ -979,10 +1050,14 @@ function MyBenefits({ clientId, onClaim }: { clientId?: string | undefined; onCl
     },
   });
 
-  const serviceName = (id: string) => (services.data ?? []).find((s) => s.id === id)?.name ?? "Procedimento";
+  const serviceName = (id: string) =>
+    (services.data ?? []).find((s) => s.id === id)?.name ?? "Procedimento";
   const now = Date.now();
   const availableCoupons = (referrals.data ?? []).filter(
-    (r) => r.status === "concluido" && !r.used_at && (r.expires_at ? new Date(r.expires_at).getTime() > now : true),
+    (r) =>
+      r.status === "concluido" &&
+      !r.used_at &&
+      (r.expires_at ? new Date(r.expires_at).getTime() > now : true),
   ).length;
 
   return (
@@ -991,8 +1066,9 @@ function MyBenefits({ clientId, onClaim }: { clientId?: string | undefined; onCl
         <article className="surface-card p-5">
           <p className="font-display text-lg">Indique e ganhe</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sua amiga informa o seu telefone <strong>{profile.data?.phone ?? ""}</strong> no primeiro acesso. Quando ela
-            concluir o primeiro atendimento, você ganha {Math.round(REFERRAL_DISCOUNT * 100)}% de desconto.
+            Sua amiga informa o seu telefone <strong>{profile.data?.phone ?? ""}</strong> no
+            primeiro acesso. Quando ela concluir o primeiro atendimento, você ganha{" "}
+            {Math.round(REFERRAL_DISCOUNT * 100)}% de desconto.
           </p>
           <div className="mt-4 space-y-2">
             {(referrals.data ?? []).length === 0 ? (
@@ -1013,7 +1089,11 @@ function MyBenefits({ clientId, onClaim }: { clientId?: string | undefined; onCl
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/60 px-4 py-3 text-sm"
                 >
                   <span>Amiga indicada</span>
-                  <Badge variant={r.used_at || expired || r.status === "pendente" ? "secondary" : "default"}>
+                  <Badge
+                    variant={
+                      r.used_at || expired || r.status === "pendente" ? "secondary" : "default"
+                    }
+                  >
                     {label}
                   </Badge>
                 </div>
@@ -1022,8 +1102,8 @@ function MyBenefits({ clientId, onClaim }: { clientId?: string | undefined; onCl
           </div>
           {availableCoupons > 0 ? (
             <Button className="mt-4 w-full" onClick={() => onClaim?.({ benefit: "indicacao" })}>
-              Reivindicar cupom de {Math.round(REFERRAL_DISCOUNT * 100)}% ({availableCoupons} disponível
-              {availableCoupons === 1 ? "" : "eis"})
+              Reivindicar cupom de {Math.round(REFERRAL_DISCOUNT * 100)}% ({availableCoupons}{" "}
+              disponível{availableCoupons === 1 ? "" : "eis"})
             </Button>
           ) : null}
         </article>
@@ -1033,7 +1113,9 @@ function MyBenefits({ clientId, onClaim }: { clientId?: string | undefined; onCl
         <p className="font-display text-lg">Histórico de benefícios usados</p>
         <div className="mt-3 space-y-2">
           {(used.data ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Você ainda não usou nenhum desconto. Continue acumulando!</p>
+            <p className="text-sm text-muted-foreground">
+              Você ainda não usou nenhum desconto. Continue acumulando!
+            </p>
           ) : null}
           {(used.data ?? []).map((a) => (
             <div
@@ -1055,7 +1137,13 @@ function MyBenefits({ clientId, onClaim }: { clientId?: string | undefined; onCl
   );
 }
 
-function EventsList({ clientId, onClaim }: { clientId?: string | undefined; onClaim?: (claim: Claim) => void }) {
+function EventsList({
+  clientId,
+  onClaim,
+}: {
+  clientId?: string | undefined;
+  onClaim?: (claim: Claim) => void;
+}) {
   const events = useQuery({
     queryKey: ["events"],
     queryFn: async () => {
@@ -1093,7 +1181,9 @@ function EventsList({ clientId, onClaim }: { clientId?: string | undefined; onCl
                 Prêmio: <strong>{e.prize}</strong>
               </p>
             ) : null}
-            {e.rules ? <p className="mt-2 text-xs text-muted-foreground">Como participar: {e.rules}</p> : null}
+            {e.rules ? (
+              <p className="mt-2 text-xs text-muted-foreground">Como participar: {e.rules}</p>
+            ) : null}
             {e.winner_name ? (
               <p className="mt-3 text-sm">
                 🎉 Ganhadora: <strong>{e.winner_name}</strong> ({formatDateTime(e.drawn_at)})
@@ -1105,7 +1195,10 @@ function EventsList({ clientId, onClaim }: { clientId?: string | undefined; onCl
                   Prêmio reivindicado em {formatDateTime(e.prize_claimed_at)}.
                 </p>
               ) : (
-                <Button className="mt-3 w-full" onClick={() => onClaim?.({ benefit: "premio", eventId: e.id })}>
+                <Button
+                  className="mt-3 w-full"
+                  onClick={() => onClaim?.({ benefit: "premio", eventId: e.id })}
+                >
                   Reivindicar prêmio 🎁
                 </Button>
               )
@@ -1134,15 +1227,22 @@ function Store({ clientName }: { clientName: string }) {
 
   const rows = products.data ?? [];
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">A loja está sendo abastecida. Volte logo!</p>;
+    return (
+      <p className="text-sm text-muted-foreground">A loja está sendo abastecida. Volte logo!</p>
+    );
   }
 
   const tabs = storeTabs(rows.map((p) => p.category));
-  const visible = activeCategory === "Todas" ? rows : rows.filter((p) => p.category === activeCategory);
+  const visible =
+    activeCategory === "Todas" ? rows : rows.filter((p) => p.category === activeCategory);
 
   return (
     <div className="space-y-4">
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Marcas da loja">
+      <div
+        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+        role="tablist"
+        aria-label="Marcas da loja"
+      >
         {tabs.map((c) => (
           <button
             key={c}
@@ -1162,23 +1262,37 @@ function Store({ clientName }: { clientName: string }) {
       </div>
 
       {visible.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Ainda não temos produtos de {activeCategory}. Volte logo! 💖</p>
+        <p className="text-sm text-muted-foreground">
+          Ainda não temos produtos de {activeCategory}. Volte logo! 💖
+        </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
           {visible.map((p) => (
             <article key={p.id} className="surface-card flex flex-col overflow-hidden">
               {p.image_url ? (
-                <img src={p.image_url} alt={p.name} className="aspect-square w-full object-cover" loading="lazy" />
+                <img
+                  src={p.image_url}
+                  alt={p.name}
+                  className="aspect-square w-full object-cover"
+                  loading="lazy"
+                />
               ) : null}
               <div className="card-pad flex min-w-0 flex-1 flex-col gap-2">
                 <Badge variant="secondary" className="w-fit max-w-full truncate">
                   {p.category}
                 </Badge>
                 <p className="line-clamp-2 font-display text-base leading-tight">{p.name}</p>
-                {p.description ? <p className="line-clamp-2 text-xs text-muted-foreground">{p.description}</p> : null}
+                {p.description ? (
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
+                ) : null}
                 <p className="font-semibold">{formatPrice(p.price_cents)}</p>
                 {p.link ? (
-                  <a href={p.link} target="_blank" rel="noopener noreferrer" className="text-xs underline">
+                  <a
+                    href={p.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs underline"
+                  >
                     Ver detalhes
                   </a>
                 ) : null}
@@ -1236,11 +1350,18 @@ function Catalogs() {
           className="surface-card block overflow-hidden transition hover:shadow-lg"
         >
           {c.image_url ? (
-            <img src={c.image_url} alt={c.title} className="h-40 w-full object-cover" loading="lazy" />
+            <img
+              src={c.image_url}
+              alt={c.title}
+              className="h-40 w-full object-cover"
+              loading="lazy"
+            />
           ) : null}
           <div className="p-4">
             <p className="font-display text-lg">{c.title}</p>
-            {c.description ? <p className="text-sm text-muted-foreground">{c.description}</p> : null}
+            {c.description ? (
+              <p className="text-sm text-muted-foreground">{c.description}</p>
+            ) : null}
             <p className="mt-2 text-sm font-semibold text-primary">Abrir catálogo →</p>
           </div>
         </a>
