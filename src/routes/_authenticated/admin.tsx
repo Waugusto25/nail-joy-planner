@@ -448,7 +448,7 @@ function AgendaTab() {
           {pendentes.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum pré-agendamento pendente.</p>
           ) : (
-            pendentes.map(renderCard)
+            pendentes.map((a) => renderCard(a, "pendente"))
           )}
         </TabsContent>
 
@@ -459,7 +459,9 @@ function AgendaTab() {
             confirmedDays.map((day) => (
               <section key={day} className="space-y-3">
                 <h3 className="font-display text-base capitalize">{dayGroupLabel(day)}</h3>
-                {confirmados.filter((a) => a.day === day).map(renderCard)}
+                {confirmados
+                  .filter((a) => a.day === day)
+                  .map((a) => renderCard(a, "confirmado"))}
               </section>
             ))
           )}
@@ -469,7 +471,7 @@ function AgendaTab() {
           {concluidos.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum atendimento concluído.</p>
           ) : (
-            concluidos.map(renderCard)
+            concluidos.map((a) => renderCard(a, "outro"))
           )}
         </TabsContent>
 
@@ -483,7 +485,7 @@ function AgendaTab() {
                   <Trash2 size={16} /> Limpar todos os cancelados
                 </Button>
               </div>
-              {cancelados.map(renderCard)}
+              {cancelados.map((a) => renderCard(a, "outro"))}
             </>
           )}
         </TabsContent>
