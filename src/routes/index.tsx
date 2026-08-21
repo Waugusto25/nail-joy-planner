@@ -108,10 +108,6 @@ function AuthPage() {
           </div>
         ) : null}
 
-        <div className="mt-8 space-y-6 border-t border-border/50 pt-6 text-left text-[13px] leading-relaxed text-muted-foreground whitespace-pre-wrap">
-          Remova a mensagem da tela inicial e deixe apenas a página em branco, como antes.
-        </div>
-
         <p className="mt-6 text-center text-xs text-muted-foreground">
           Siga o trabalho da Janaina no{" "}
           <a
