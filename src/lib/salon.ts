@@ -298,15 +298,19 @@ export function confirmationMessage(n: AppointmentNotice) {
   const start = shortTime(n.start);
   const end = addMinutes(start, n.durationMinutes);
   return [
-    `Oba, ${n.name}! 💖 Seu horário está oficialmente CONFIRMADO por mim! ✨`,
+    `Oba, ${n.name}! 💖
+    Seu horário está oficialmente CONFIRMADO por mim! ✨`,
     "",
-    `Estou muito feliz em ter você aqui no ${SALON_NAME}! Mal posso esperar para cuidar das suas unhas com todo o carinho e dedicação que você merece.`,
+    `Estou muito feliz em ter você aqui no ${SALON_NAME}!
+    Mal posso esperar para cuidar das suas unhas com todo o carinho e dedicação que você merece.`,
     "",
     `📅 Data: ${formatDayLabel(n.day)}`,
     `⏰ Horário: ${start} às ${end}`,
     `💅 Serviço: ${n.serviceName}`,
     "",
-    "Muito obrigada pela confiança! Nos vemos em breve! 🥰",
+    "Muito obrigada pela confiança!,
+    "Nos vemos em breve! 🥰",
+    
   ].join("\n");
 }
 
