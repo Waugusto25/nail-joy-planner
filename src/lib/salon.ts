@@ -284,6 +284,11 @@ export type AppointmentNotice = {
   serviceName: string;
 };
 
+/** Data/horário legível para reconfirmação: "Amanhã às 09:00" ou "Sábado, 22 de Agosto às 09:00". */
+export function formatConfirmDateTime(day: string, start: string) {
+  return `${dayGroupLabel(day)} às ${shortTime(start)}`;
+}
+
 /** Mensagem carismática de confirmação enviada à cliente. */
 export function confirmationMessage(n: AppointmentNotice) {
   const start = shortTime(n.start);
@@ -302,6 +307,19 @@ export function confirmationMessage(n: AppointmentNotice) {
     `💅 Serviço: ${n.serviceName}`,
     "",
     "Muito obrigada pela confiança! Nos vemos em breve! 🥰",
+  ].join("\n");
+}
+
+/** Mensagem de reconfirmação de presença enviada a clientes já confirmadas. */
+export function reconfirmMessage(n: { name: string; day: string; start: string }) {
+  return [
+    `Olá! Como você está? ✨`,
+    "",
+    `Passando para confirmar o seu horário de atendimento agendado para ${formatConfirmDateTime(n.day, n.start)}. 🌸`,
+    "",
+    "Você confirma a sua presença?",
+    "",
+    "Fico no aguardo da sua resposta! 🥰",
   ].join("\n");
 }
 
