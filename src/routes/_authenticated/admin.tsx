@@ -335,9 +335,15 @@ function AgendaTab() {
           >
             Pendente
           </Button>
-          <Button size="sm" onClick={() => void setStatus(a.id, "confirmado", confirmNotice)}>
-            Confirmar
-          </Button>
+          {context === "confirmado" ? (
+            <Button size="sm" onClick={() => openClientWhatsapp(reconfirmNotice)}>
+              Confirmar?
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => void setStatus(a.id, "confirmado", confirmNotice)}>
+              Confirmar
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={() => void setStatus(a.id, "concluido")}>
             Concluir
           </Button>
@@ -364,7 +370,16 @@ function AgendaTab() {
               variant="outline"
               onClick={() =>
                 window.open(
-                  whatsappLinkTo(client.phone, confirmationMessage(noticeBase))!,
+                  whatsappLinkTo(
+                    client.phone,
+                    context === "confirmado"
+                      ? reconfirmMessage({
+                          name: client.full_name,
+                          day: a.day,
+                          start: a.start_time,
+                        })
+                      : confirmationMessage(noticeBase),
+                  )!,
                   "_blank",
                   "noopener",
                 )
