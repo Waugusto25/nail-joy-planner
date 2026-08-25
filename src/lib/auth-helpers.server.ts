@@ -173,10 +173,16 @@ export async function ensureManualClient(fullName: string, phone: string) {
   if (phone) {
     const { data: existing } = await db
       .from("profiles")
-      .select("id")
+      .select("id, login_id, phone")
       .eq("phone", phone)
       .maybeSingle();
-    if (existing) return { clientId: String(existing.id), created: false };
+    if (existing)
+      return {
+        clientId: String(existing.id),
+        created: false,
+        loginId: String(existing.login_id),
+        phone: String(existing.phone ?? phone),
+      };
   }
 
   const loginId = await uniqueLoginId(db, fullName);
