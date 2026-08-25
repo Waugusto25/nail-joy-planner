@@ -290,8 +290,6 @@ export function openWhatsappUrl(url: string) {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  const popup = window.open(url, "_blank", "noopener,noreferrer");
-  if (popup) return true;
   return true;
 }
 
