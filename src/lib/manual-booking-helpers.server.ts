@@ -143,7 +143,7 @@ export async function createManualAppointment(input: ManualAppointmentData) {
 
   const { data: profile } = await db
     .from("profiles")
-    .select("full_name, phone")
+    .select("full_name, phone, login_id")
     .eq("id", clientId)
     .maybeSingle();
 
@@ -155,6 +155,7 @@ export async function createManualAppointment(input: ManualAppointmentData) {
     client: {
       name: String(profile?.full_name ?? input.clientName ?? "Cliente"),
       phone: String(profile?.phone ?? input.clientPhone ?? ""),
+      loginId: String(profile?.login_id ?? clientLoginId ?? ""),
     },
     service: {
       name: String(service.name),
