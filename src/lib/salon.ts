@@ -276,6 +276,25 @@ export function whatsappLinkTo(phone: string, message: string) {
   return `https://api.whatsapp.com/send?phone=${number}&text=${encoded}`;
 }
 
+/**
+ * Abre uma URL do WhatsApp de forma resiliente a bloqueio de pop-up.
+ * Depois de operações assíncronas o navegador não trata mais `window.open`
+ * como gesto do usuário, então caímos para navegação direta.
+ */
+export function openWhatsappUrl(url: string) {
+  if (typeof document === "undefined") return false;
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  const popup = window.open(url, "_blank", "noopener,noreferrer");
+  if (popup) return true;
+  return true;
+}
+
 export type AppointmentNotice = {
   name: string;
   day: string;
