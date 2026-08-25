@@ -204,7 +204,7 @@ export async function ensureManualClient(fullName: string, phone: string) {
     throw new Error("Não foi possível salvar a ficha da cliente.");
   }
   await db.from("user_roles").insert({ user_id: created.user.id, role: "client" });
-  return { clientId: String(created.user.id), created: true };
+  return { clientId: String(created.user.id), created: true, loginId, phone };
 }
 
 /** Removes a client completely: appointments, profile, role and auth account. */
