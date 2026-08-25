@@ -25,6 +25,7 @@ import {
   formatPrice,
   formatTimeRange,
   localTodayISO,
+  openWhatsappUrl,
   overlaps,
   shortTime,
   timeToMinutes,
