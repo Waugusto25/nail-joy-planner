@@ -276,6 +276,23 @@ export function whatsappLinkTo(phone: string, message: string) {
   return `https://api.whatsapp.com/send?phone=${number}&text=${encoded}`;
 }
 
+/**
+ * Abre uma URL do WhatsApp de forma resiliente a bloqueio de pop-up.
+ * Depois de operações assíncronas o navegador não trata mais `window.open`
+ * como gesto do usuário, então caímos para navegação direta.
+ */
+export function openWhatsappUrl(url: string) {
+  if (typeof document === "undefined") return false;
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  return true;
+}
+
 export type AppointmentNotice = {
   name: string;
   day: string;
@@ -325,7 +342,13 @@ export function reconfirmMessage(n: { name: string; day: string; start: string }
 
 /** Mensagem carismática de cancelamento, convidando a cliente a reagendar. */
 /** Boas-vindas para clientes cadastradas manualmente pela administradora. */
-export function adminWelcomeMessage(n: { phoneDigits: string; serviceName: string; day: string; start: string }) {
+export function adminWelcomeMessage(n: {
+  loginId: string;
+  phoneDigits: string;
+  serviceName: string;
+  day: string;
+  start: string;
+}) {
   return [
     `Seja muito bem-vinda ao ${SALON_NAME}! 💖`,
     "",
@@ -334,7 +357,7 @@ export function adminWelcomeMessage(n: { phoneDigits: string; serviceName: strin
     "📱 Acesse o aplicativo pelo link:",
     "https://nail-joy-planner.lovable.app",
     "",
-    `👤 Seu Usuário: ${formatPhone(n.phoneDigits)}`,
+    `👤 Seu Usuário: ${n.loginId}`,
     `🔑 Sua Senha Inicial: ${n.phoneDigits}`,
     "",
     "📅 Seu Agendamento:",

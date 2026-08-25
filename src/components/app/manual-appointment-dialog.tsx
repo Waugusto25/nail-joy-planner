@@ -25,6 +25,7 @@ import {
   formatPrice,
   formatTimeRange,
   localTodayISO,
+  openWhatsappUrl,
   overlaps,
   shortTime,
   timeToMinutes,
@@ -176,9 +177,11 @@ export function ManualAppointmentDialog() {
           .join(" "),
       );
 
-      const digits = String(result.client.phone).replace(/\D/g, "");
+      const clientPhone = String(result.client.phone ?? "");
+      const digits = clientPhone.replace(/\D/g, "");
       const message = result.createdClient
         ? adminWelcomeMessage({
+            loginId: result.client.loginId || result.client.name,
             phoneDigits: digits,
             serviceName: result.service.name,
             day,
@@ -191,9 +194,16 @@ export function ManualAppointmentDialog() {
             durationMinutes: result.service.durationMinutes,
             serviceName: result.service.name,
           });
-      const link = whatsappLinkTo(digits, message);
-      if (link) window.open(link, "_blank", "noopener,noreferrer");
-      else toast.info("Cliente sem WhatsApp cadastrado — mensagem não enviada.");
+      // Telefone bruto: whatsappLinkTo normaliza o DDI e codifica o texto em UTF-8.
+      const link = whatsappLinkTo(clientPhone, message);
+      if (link) {
+        openWhatsappUrl(link);
+        toast.info("Mensagem preparada no WhatsApp da cliente.", {
+          action: { label: "Abrir WhatsApp", onClick: () => openWhatsappUrl(link) },
+        });
+      } else {
+        toast.info("Cliente sem WhatsApp válido — mensagem não enviada.");
+      }
 
       reset();
       setOpen(false);
