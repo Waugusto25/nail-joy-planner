@@ -103,11 +103,13 @@ export async function createManualAppointment(input: ManualAppointmentData) {
 
   let clientId = input.clientId ?? null;
   let createdClient = false;
+  let clientLoginId: string | null = null;
   if (!clientId) {
     const { ensureManualClient } = await import("./auth-helpers.server");
     const result = await ensureManualClient(String(input.clientName), input.clientPhone ?? "");
     clientId = result.clientId;
     createdClient = result.created;
+    clientLoginId = result.loginId;
   }
 
   const special = await ensureSpecialDay(db, input.day, input.startTime);
