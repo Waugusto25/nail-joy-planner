@@ -325,7 +325,13 @@ export function reconfirmMessage(n: { name: string; day: string; start: string }
 
 /** Mensagem carismática de cancelamento, convidando a cliente a reagendar. */
 /** Boas-vindas para clientes cadastradas manualmente pela administradora. */
-export function adminWelcomeMessage(n: { phoneDigits: string; serviceName: string; day: string; start: string }) {
+export function adminWelcomeMessage(n: {
+  loginId: string;
+  phoneDigits: string;
+  serviceName: string;
+  day: string;
+  start: string;
+}) {
   return [
     `Seja muito bem-vinda ao ${SALON_NAME}! 💖`,
     "",
