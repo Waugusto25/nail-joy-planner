@@ -51,4 +51,4 @@ O **Jannah Nails** foi desenvolvido para resolver a complexidade do agendamento 
 
 1. Clone o repositório:
    ```bash
-   git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
+   git clone https://github.com/Wellington-Oliveira/nail-joy-planner.git
