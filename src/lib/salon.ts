@@ -340,7 +340,7 @@ export function adminWelcomeMessage(n: {
     "📱 Acesse o aplicativo pelo link:",
     "https://nail-joy-planner.lovable.app",
     "",
-    `👤 Seu Usuário: ${formatPhone(n.phoneDigits)}`,
+    `👤 Seu Usuário: ${n.loginId}`,
     `🔑 Sua Senha Inicial: ${n.phoneDigits}`,
     "",
     "📅 Seu Agendamento:",
