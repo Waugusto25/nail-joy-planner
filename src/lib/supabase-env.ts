@@ -32,26 +32,14 @@ function normalizedUrl(value: string): string {
   return value.replace(/\/+$/, "");
 }
 
-/** Mantém navegador e funções de servidor apontando para o mesmo backend. */
+/** Usa a configuração injetada no runtime, com fallback apenas quando ausente. */
 export function resolveSupabaseServerUrl(environment: SupabaseServerEnvironment): string {
-  const viteUrl = firstNonEmptyString(environment.viteUrl);
-  const serverUrl = firstNonEmptyString(environment.serverUrl);
-  const expectedUrl = normalizedUrl(DEFAULT_SUPABASE_URL);
-
-  if (viteUrl && serverUrl && normalizedUrl(viteUrl) !== normalizedUrl(serverUrl)) {
-    throw new Error(
-      "Configuração do deploy inconsistente: VITE_SUPABASE_URL e SUPABASE_URL apontam para bancos diferentes.",
-    );
-  }
-
-  const configuredUrl = viteUrl ?? serverUrl;
-  if (configuredUrl && normalizedUrl(configuredUrl) !== expectedUrl) {
-    throw new Error(
-      "Configuração do deploy inconsistente: a URL configurada não pertence ao backend deste aplicativo.",
-    );
-  }
-
-  return expectedUrl;
+  const configuredUrl = firstNonEmptyString(
+    environment.serverUrl,
+    environment.viteUrl,
+    DEFAULT_SUPABASE_URL,
+  );
+  return normalizedUrl(configuredUrl ?? DEFAULT_SUPABASE_URL);
 }
 
 export function resolveSupabasePublicConfig(environment: SupabaseEnvironment): SupabasePublicConfig {
