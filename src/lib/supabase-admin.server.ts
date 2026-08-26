@@ -9,11 +9,13 @@ function normalized(value: string | undefined): string | undefined {
 
 export function createAdminClient(): SupabaseClient {
   const url = normalized(process.env["SUPABASE_URL"]) ?? DEFAULT_SUPABASE_URL;
-  const serviceRoleKey = normalized(process.env["SUPABASE_SERVICE_ROLE_KEY"]);
+  const serviceRoleKey =
+    normalized(process.env["SUPABASE_SERVICE_ROLE_KEY"]) ??
+    normalized(process.env["SUPABASE_SECRET_KEY"]);
 
   if (!serviceRoleKey) {
     throw new Error(
-      "Configuração do servidor ausente: SUPABASE_SERVICE_ROLE_KEY é obrigatória para operações administrativas.",
+      "Configuração do servidor ausente: SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_SECRET_KEY é obrigatória para operações administrativas.",
     );
   }
 
