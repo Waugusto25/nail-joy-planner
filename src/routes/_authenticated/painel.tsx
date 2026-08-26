@@ -60,8 +60,7 @@ import {
   timeToMinutes,
   whatsappLink,
 } from "@/lib/salon";
-import { StorageImage } from "@/components/app/storage-image";
-import { resolveDirectImageUrl } from "@/components/app/storage-image";
+import { StorageImage, resolveDirectImageUrl } from "@/components/app/storage-image";
 
 const WELCOME_IMAGE = "/__l5e/assets-v1/5a73338f-8d2f-459f-8bb6-0dc055ee5917/boas-vindas.png";
 
