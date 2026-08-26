@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   BENEFIT_LABELS,
@@ -9,6 +9,7 @@ import {
   formatPrice,
   shortTime,
 } from "./salon";
+import { createAdminClient } from "./supabase-admin.server";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_calendar/calendar/v3";
 /** Agenda da administradora onde os atendimentos são publicados. */
@@ -24,9 +25,7 @@ export const STATUS_COLOR_ID: Record<string, string> = {
 };
 
 function admin(): SupabaseClient {
-  return createClient(process.env["SUPABASE_URL"]!, process.env["SUPABASE_SERVICE_ROLE_KEY"]!, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  return createAdminClient();
 }
 
 function gatewayHeaders() {
