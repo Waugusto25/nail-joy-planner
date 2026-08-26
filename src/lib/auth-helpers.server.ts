@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { AUTH_EMAIL_DOMAIN, clientAccessPassword, loginEmail, onlyDigits } from "./salon";
+import { getRequest } from "@tanstack/react-start/server";
+
+import { resolveSupabasePublicConfig } from "./supabase-env";
 import { createAdminClient } from "./supabase-admin.server";
 import { createPublicClient, createTokenClient } from "./supabase-public.server";
 
@@ -175,7 +178,45 @@ export async function resolveLogin(identifier: string) {
  * Fecha o primeiro acesso já com a sessão da cliente: acerta o nome quando ela
  * escreve diferente e migra contas antigas para a chave de acesso própria.
  */
-export async function finishAccess(userId: string, fullName: string, accessKey?: string) {
+/**
+ * Troca a senha da conta usando o token da própria cliente na API de auth.
+ * É o caminho possível sem credencial privada: o servidor não guarda sessão,
+ * então falamos direto com o endpoint de usuário autenticado.
+ */
+async function rotatePassword(password: string): Promise<boolean> {
+  let token: string | undefined;
+  try {
+    const header = getRequest()?.headers.get("authorization") ?? undefined;
+    if (header?.toLowerCase().startsWith("bearer ")) token = header.slice(7).trim();
+  } catch {
+    token = undefined;
+  }
+  if (!token) return false;
+
+  const { url, key } = resolveSupabasePublicConfig({
+    serverUrl: process.env["SUPABASE_URL"],
+    viteUrl: process.env["VITE_SUPABASE_URL"],
+    serverPublishableKey: process.env["SUPABASE_PUBLISHABLE_KEY"],
+    vitePublishableKey: process.env["VITE_SUPABASE_PUBLISHABLE_KEY"],
+  });
+
+  const response = await fetch(`${url}/auth/v1/user`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: key,
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ password }),
+  });
+  if (!response.ok) {
+    console.error("[acesso] falha ao rotacionar a senha", response.status, await response.text());
+    return false;
+  }
+  return true;
+}
+
+export async function finishAccess(userId: string, fullName: string) {
   const db = createAdminClient();
   const { data: profile } = await db
     .from("profiles")
@@ -188,9 +229,11 @@ export async function finishAccess(userId: string, fullName: string, accessKey?:
     await db.from("profiles").update({ full_name: nextName }).eq("id", userId);
   }
 
-  // A troca de senha acontece no navegador (é lá que a sessão vive); aqui só
-  // registramos a chave para que o próximo acesso já seja determinístico.
-  if (accessKey && !profile?.access_key) {
+  // Conta antiga: migra para a chave de acesso própria, deixando o login
+  // independente do telefone a partir do próximo acesso.
+  if (!profile?.access_key) {
+    const accessKey = crypto.randomUUID();
+    if (!(await rotatePassword(accessKey))) return { ok: true as const, migrated: false };
     const { error } = await db.rpc("sync_my_access_key", { p_key: accessKey });
     if (error) {
       console.error("[acesso] falha ao registrar a chave de acesso", error);
