@@ -273,7 +273,7 @@ export async function adminUpdateClientAccess(clientId: string, phone: string) {
  */
 export async function adminDeleteClient(clientId: string) {
   const db = createAdminClient();
-  const { error } = await db.rpc("admin_soft_delete_client", { p_client: clientId });
+  const { error } = await db.rpc("delete_client_account", { p_client: clientId });
   if (error) throw accessError(error, "excluir a conta da cliente");
   return { ok: true };
 }
