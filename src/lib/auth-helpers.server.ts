@@ -175,7 +175,7 @@ export async function resolveLogin(identifier: string) {
  * Fecha o primeiro acesso já com a sessão da cliente: acerta o nome quando ela
  * escreve diferente e migra contas antigas para a chave de acesso própria.
  */
-export async function finishAccess(userId: string, fullName: string) {
+export async function finishAccess(userId: string, fullName: string, accessKey?: string) {
   const db = createAdminClient();
   const { data: profile } = await db
     .from("profiles")
@@ -188,14 +188,14 @@ export async function finishAccess(userId: string, fullName: string) {
     await db.from("profiles").update({ full_name: nextName }).eq("id", userId);
   }
 
-  if (!profile?.access_key) {
-    const accessKey = crypto.randomUUID();
-    const { error } = await db.auth.updateUser({ password: accessKey });
+  // A troca de senha acontece no navegador (é lá que a sessão vive); aqui só
+  // registramos a chave para que o próximo acesso já seja determinístico.
+  if (accessKey && !profile?.access_key) {
+    const { error } = await db.rpc("sync_my_access_key", { p_key: accessKey });
     if (error) {
-      console.error("[acesso] falha ao migrar a chave de acesso", error);
+      console.error("[acesso] falha ao registrar a chave de acesso", error);
       return { ok: true as const, migrated: false };
     }
-    await db.rpc("sync_my_access_key", { p_key: accessKey });
     return { ok: true as const, migrated: true };
   }
 

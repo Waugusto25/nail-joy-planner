@@ -23,7 +23,7 @@ export const finishAccessFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => finishAccessInput.parse(data))
   .handler(async ({ data, context }) => {
     const { finishAccess } = await import("./auth-helpers.server");
-    return finishAccess(context.userId, data.fullName);
+    return finishAccess(context.userId, data.fullName, data.accessKey);
   });
 
 export const resolveLoginFn = createServerFn({ method: "POST" })

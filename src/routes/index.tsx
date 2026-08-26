@@ -202,8 +202,16 @@ function PhoneAccessForm({
         toast.error("Não foi possível entrar agora. Tente novamente.");
         return;
       }
-      // Com a sessão ativa, acertamos o nome e migramos contas antigas para a chave própria.
-      await finishAccessFn({ data: { fullName } }).catch(() => undefined);
+      // Com a sessão ativa: acerta o nome e migra contas antigas para a chave própria.
+      let accessKey: string | undefined;
+      if (!result.created) {
+        const candidate = crypto.randomUUID();
+        const { error: keyError } = await supabase.auth.updateUser({ password: candidate });
+        if (!keyError) accessKey = candidate;
+      }
+      await finishAccessFn({
+        data: { fullName, ...(accessKey ? { accessKey } : {}) },
+      }).catch(() => undefined);
       toast.success(result.created ? "Cadastro criado. Bem-vinda!" : "Bem-vinda de volta!");
       if (signIn.user) await onSignedIn(signIn.user.id);
       else onSignInFailed();

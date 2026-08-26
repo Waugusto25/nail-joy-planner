@@ -38,4 +38,5 @@ export const adminDeleteClientInput = z.object({ clientId: z.string().uuid() });
 
 export const finishAccessInput = z.object({
   fullName: z.string().trim().min(2).max(80),
+  accessKey: z.string().uuid().optional(),
 });
