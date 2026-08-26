@@ -13,7 +13,14 @@ import { supabase } from "@/lib/supabase-client";
 import { useSupabaseSession } from "@/hooks/useSession";
 import { phoneAccessFn, phoneStatusFn, resolveLoginFn } from "@/lib/auth.functions";
 import { useAppSettings } from "@/hooks/useSettings";
-import { OWNER_NAME, SALON_NAME, onlyDigits, salonInstagram } from "@/lib/salon";
+import {
+  OWNER_NAME,
+  SALON_NAME,
+  loginEmail,
+  onlyDigits,
+  salonInstagram,
+  slugifyLogin,
+} from "@/lib/salon";
 
 export const Route = createFileRoute("/")({
   head: () => ({
