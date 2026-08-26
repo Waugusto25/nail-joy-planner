@@ -28,15 +28,15 @@ export function resolveSupabasePublicConfig(environment: SupabaseEnvironment): S
     environment.serverPublishableKey,
   );
 
-  const missing: string[] = [];
-  if (!url) missing.push("VITE_SUPABASE_URL or SUPABASE_URL");
-  if (!key) {
-    missing.push(
-      "VITE_SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_ANON_KEY, or SUPABASE_PUBLISHABLE_KEY",
-    );
-  }
-
-  if (missing.length > 0) {
+  if (!url || !key) {
+    const missing = [
+      ...(!url ? ["VITE_SUPABASE_URL or SUPABASE_URL"] : []),
+      ...(!key
+        ? [
+            "VITE_SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_ANON_KEY, or SUPABASE_PUBLISHABLE_KEY",
+          ]
+        : []),
+    ];
     throw new Error(`Missing or empty backend environment variable(s): ${missing.join("; ")}.`);
   }
 
