@@ -5,6 +5,7 @@ import {
   adminDeleteClientInput,
   adminUpdateClientInput,
   phoneAccessInput,
+  finishAccessInput,
   phoneStatusInput,
   resolveLoginInput,
 } from "./auth-schemas";
@@ -14,6 +15,15 @@ export const phoneAccessFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { phoneAccess } = await import("./auth-helpers.server");
     return phoneAccess(data.fullName, data.phone, data.referrerPhone);
+  });
+
+/** Fecha o primeiro acesso com a sessão da cliente (nome e chave de acesso). */
+export const finishAccessFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => finishAccessInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { finishAccess } = await import("./auth-helpers.server");
+    return finishAccess(context.userId, data.fullName);
   });
 
 export const resolveLoginFn = createServerFn({ method: "POST" })

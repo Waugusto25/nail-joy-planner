@@ -11,12 +11,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase-client";
 import { useSupabaseSession } from "@/hooks/useSession";
-import { phoneAccessFn, phoneStatusFn, resolveLoginFn } from "@/lib/auth.functions";
+import {
+  finishAccessFn,
+  phoneAccessFn,
+  phoneStatusFn,
+  resolveLoginFn,
+} from "@/lib/auth.functions";
 import { useAppSettings } from "@/hooks/useSettings";
 import {
   OWNER_NAME,
   SALON_NAME,
-  clientAccessPassword,
   loginEmail,
   onlyDigits,
   salonInstagram,
@@ -180,15 +184,26 @@ function PhoneAccessForm({
         data: { fullName, phone, referrerPhone: registered ? "" : referrerPhone },
       });
       onBeforeSignIn();
-      const { data: signIn, error } = await supabase.auth.signInWithPassword({
-        email: result.email,
-        password: clientAccessPassword(phone),
-      });
-      if (error) {
+      // Contas antigas podem ter credencial derivada de outra forma: tentamos as alternativas.
+      const candidates = [result.password, ...(result.fallbackPasswords ?? [])];
+      let signIn: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"] | null = null;
+      let error: unknown = null;
+      for (const password of candidates) {
+        const attempt = await supabase.auth.signInWithPassword({ email: result.email, password });
+        if (!attempt.error && attempt.data.user) {
+          signIn = attempt.data;
+          error = null;
+          break;
+        }
+        error = attempt.error;
+      }
+      if (error || !signIn) {
         onSignInFailed();
         toast.error("Não foi possível entrar agora. Tente novamente.");
         return;
       }
+      // Já com sessão: acerta o nome e migra contas antigas para a chave própria.
+      await finishAccessFn({ data: { fullName } }).catch(() => undefined);
       toast.success(result.created ? "Cadastro criado. Bem-vinda!" : "Bem-vinda de volta!");
       if (signIn.user) await onSignedIn(signIn.user.id);
       else onSignInFailed();

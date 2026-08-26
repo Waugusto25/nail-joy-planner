@@ -47,21 +47,12 @@ async function assertFreeSlot(
   startTime: string,
   duration: number,
 ) {
-  const { data } = await db
-    .from("appointments")
-    .select("id, start_time, services(duration_minutes)")
-    .eq("day", day)
-    .in("status", ["pendente", "confirmado", "concluido"]);
+  const { data } = await db.rpc("busy_times_except", { p_day: day, p_exclude: appointmentId });
   const start = timeToMinutes(startTime);
   const end = start + duration;
-  for (const row of data ?? []) {
-    if (String(row.id) === appointmentId) continue;
-    const joined = (row as { services: unknown }).services;
-    const service = (Array.isArray(joined) ? joined[0] : joined) as
-      | { duration_minutes?: number }
-      | null;
+  for (const row of (data ?? []) as { start_time: string; duration_minutes: number }[]) {
     const otherStart = timeToMinutes(String(row.start_time));
-    const otherEnd = otherStart + Number(service?.duration_minutes ?? 60);
+    const otherEnd = otherStart + Number(row.duration_minutes ?? 60);
     if (overlaps(start, end, otherStart, otherEnd)) {
       throw new Error("Este horário já está ocupado por outro atendimento.");
     }

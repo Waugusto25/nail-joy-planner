@@ -133,23 +133,11 @@ export async function completeAppointment(appointmentId: string, paymentMethod: 
 
 /** Marca o cupom de indicação mais antigo (válido) como usado no agendamento informado. */
 export async function consumeReferralCoupon(userId: string, appointmentId: string) {
+  // A cliente não pode escrever em `referrals`; a função do banco valida e consome.
+  void userId;
   const db = admin();
-  const nowIso = new Date().toISOString();
-  const { data: coupon } = await db
-    .from("referrals")
-    .select("id")
-    .eq("referrer_id", userId)
-    .eq("status", "concluido")
-    .is("used_at", null)
-    .gt("expires_at", nowIso)
-    .order("earned_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (!coupon) throw new Error("Você não tem cupom de indicação disponível.");
-  await db
-    .from("referrals")
-    .update({ used_at: nowIso, used_appointment_id: appointmentId })
-    .eq("id", coupon.id);
+  const { error } = await db.rpc("consume_my_referral", { p_appointment: appointmentId });
+  if (error) throw new Error(error.message || "Você não tem cupom de indicação disponível.");
   return { ok: true };
 }
 

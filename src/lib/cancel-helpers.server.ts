@@ -1,4 +1,4 @@
-import { admin, sendToSubscriptions } from "./push-helpers.server";
+import { admin, adminTargets, sendToSubscriptions } from "./push-helpers.server";
 import { adminCancellationAlert } from "./salon";
 
 /** Avisa a administradora (push) que a cliente cancelou o atendimento. */
@@ -29,13 +29,9 @@ export async function notifyAdminsClientCancellation(appointmentId: string) {
     serviceName: service?.name ?? "Procedimento",
   });
 
-  const { data: admins } = await db.from("user_roles").select("user_id").eq("role", "admin");
-  const { data: rows } = await db
-    .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth")
-    .in("user_id", (admins ?? []).map((r) => String(r.user_id)));
+  const rows = await adminTargets(db);
 
-  const result = await sendToSubscriptions(db, (rows ?? []) as never, {
+  const result = await sendToSubscriptions(db, rows, {
     title: "⚠️ Cancelamento pela cliente",
     body: alert,
     url: "/admin",

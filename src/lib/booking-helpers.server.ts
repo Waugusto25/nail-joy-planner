@@ -9,18 +9,10 @@ function admin(): SupabaseClient {
 /** Returns only busy intervals (start + duration) for a day — never client identities. */
 export async function busyTimes(day: string) {
   const db = admin();
-  const { data } = await db
-    .from("appointments")
-    .select("start_time, status, services(duration_minutes)")
-    .eq("day", day)
-    .in("status", ["pendente", "confirmado", "concluido"]);
-  return (data ?? []).map((r) => {
-    const joined = r.services as unknown;
-    const service = Array.isArray(joined) ? joined[0] : joined;
-    const duration = (service as { duration_minutes?: number } | null)?.duration_minutes;
-    return {
-      start: String(r.start_time).slice(0, 5),
-      duration: Number(duration ?? 60),
-    };
-  });
+  // Função segura no banco: devolve só intervalos, nunca a identidade das clientes.
+  const { data } = await db.rpc("busy_times", { p_day: day });
+  return ((data ?? []) as { start_time: string; duration_minutes: number }[]).map((r) => ({
+    start: String(r.start_time).slice(0, 5),
+    duration: Number(r.duration_minutes ?? 60),
+  }));
 }
