@@ -1,9 +1,11 @@
 import { z } from "zod";
 
+import { onlyDigits } from "./salon";
+
 export const phoneSchema = z
   .string()
   .trim()
-  .transform((v) => v.replace(/\D/g, ""))
+  .transform(onlyDigits)
   .refine((v) => v.length >= 10 && v.length <= 13, {
     message: "Informe o telefone com DDD",
   });
@@ -24,7 +26,7 @@ export const phoneAccessInput = z.object({
     .trim()
     .max(20)
     .optional()
-    .transform((v) => (v ? v.replace(/\D/g, "") : "")),
+    .transform((v) => onlyDigits(v ?? "")),
 });
 export const resolveLoginInput = z.object({ identifier: identifierSchema });
 export const phoneStatusInput = z.object({ phone: phoneSchema });

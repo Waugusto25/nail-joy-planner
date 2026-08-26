@@ -16,6 +16,7 @@ import { useAppSettings } from "@/hooks/useSettings";
 import {
   OWNER_NAME,
   SALON_NAME,
+  clientAccessPassword,
   loginEmail,
   onlyDigits,
   salonInstagram,
@@ -181,7 +182,7 @@ function PhoneAccessForm({
       onBeforeSignIn();
       const { data: signIn, error } = await supabase.auth.signInWithPassword({
         email: result.email,
-        password: onlyDigits(phone),
+        password: clientAccessPassword(phone),
       });
       if (error) {
         onSignInFailed();
@@ -227,7 +228,7 @@ function PhoneAccessForm({
           value={phone}
           onChange={(e) => setPhone(onlyDigits(e.target.value))}
           placeholder="(35) 99999-9999"
-          maxLength={13}
+          maxLength={20}
           required
         />
         <p className="text-xs text-muted-foreground">
@@ -248,7 +249,7 @@ function PhoneAccessForm({
             value={referrerPhone}
             onChange={(e) => setReferrerPhone(onlyDigits(e.target.value))}
             placeholder="(35) 99999-9999"
-            maxLength={13}
+            maxLength={20}
           />
           <p className="text-xs text-muted-foreground">
             A amiga que te indicou ganha 10% de desconto depois do seu primeiro atendimento
