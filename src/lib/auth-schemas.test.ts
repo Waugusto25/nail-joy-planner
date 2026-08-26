@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import { phoneAccessInput, phoneSchema } from "./auth-schemas";
+import { clientAccessPassword } from "./salon";
 
 describe("normalização de telefone no acesso", () => {
   test("remove máscara, espaços e símbolos", () => {
@@ -25,5 +26,13 @@ describe("normalização de telefone no acesso", () => {
 
   test("rejeita telefone sem DDD suficiente", () => {
     assert.throws(() => phoneSchema.parse("9999-9999"), /Informe o telefone com DDD/);
+  });
+
+  test("gera a mesma credencial interna com telefone mascarado ou normalizado", () => {
+    assert.equal(
+      clientAccessPassword("(35) 99999-9999"),
+      clientAccessPassword("35999999999"),
+    );
+    assert.match(clientAccessPassword("35999999999"), /[A-Z].*[a-z].*\d.*[^A-Za-z0-9]/);
   });
 });

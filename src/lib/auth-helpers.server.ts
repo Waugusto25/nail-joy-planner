@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { AUTH_EMAIL_DOMAIN, loginEmail, onlyDigits, slugifyLogin } from "./salon";
+import {
+  AUTH_EMAIL_DOMAIN,
+  clientAccessPassword,
+  loginEmail,
+  onlyDigits,
+  slugifyLogin,
+} from "./salon";
 import { createAdminClient } from "./supabase-admin.server";
 
 type Admin = SupabaseClient;
@@ -113,7 +119,7 @@ export async function phoneAccess(fullName: string, phone: string, referrerPhone
     }
     // Garante que o telefone atual continua sendo a senha válida.
     const { error: passwordError } = await db.auth.admin.updateUserById(String(existing.id), {
-      password: normalizedPhone,
+      password: clientAccessPassword(normalizedPhone),
     });
     if (passwordError) throw new Error("Não foi possível atualizar o acesso da cliente.");
     return {
@@ -127,7 +133,7 @@ export async function phoneAccess(fullName: string, phone: string, referrerPhone
   const email = loginEmail(loginId);
   const { data: created, error } = await db.auth.admin.createUser({
     email,
-    password: normalizedPhone,
+    password: clientAccessPassword(normalizedPhone),
     email_confirm: true,
     user_metadata: { full_name: fullName.trim(), login_id: loginId },
   });

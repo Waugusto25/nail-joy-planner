@@ -16,6 +16,7 @@ import { useAppSettings } from "@/hooks/useSettings";
 import {
   OWNER_NAME,
   SALON_NAME,
+  clientAccessPassword,
   loginEmail,
   onlyDigits,
   salonInstagram,
@@ -181,7 +182,7 @@ function PhoneAccessForm({
       onBeforeSignIn();
       const { data: signIn, error } = await supabase.auth.signInWithPassword({
         email: result.email,
-        password: onlyDigits(phone),
+        password: clientAccessPassword(phone),
       });
       if (error) {
         onSignInFailed();

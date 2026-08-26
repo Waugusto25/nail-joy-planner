@@ -33,6 +33,11 @@ export function salonInstagram() {
   return salonContact.instagram;
 }
 export const AUTH_EMAIL_DOMAIN = "jannahnails.app";
+
+/** Credencial interna do acesso sem senha; a cliente continua informando apenas o telefone. */
+export function clientAccessPassword(phone: string) {
+  return `Jn!${onlyDigits(phone)}#Access26`;
+}
 /** Local do atendimento enviado no convite da Google Agenda. */
 export const SALON_ADDRESS = "Studio Jannah Nails — Nails Design (confirme o endereço no WhatsApp)";
 export const LOYALTY_CYCLE = 5;
