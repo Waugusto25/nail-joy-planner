@@ -246,7 +246,6 @@ export async function finishAccess(userId: string, fullName: string) {
 }
 
 /** Corrige o WhatsApp da cliente sem derrubar o acesso dela. */
-export async function adminUpdateClientAccess(clientId: string, phone: string) {
 export async function adminUpdateClientAccess(db: SupabaseClient, clientId: string, phone: string) {
   const normalizedPhone = onlyDigits(phone);
   const { data: taken } = await db
