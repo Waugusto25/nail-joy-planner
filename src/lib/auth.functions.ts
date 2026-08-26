@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   adminDeleteClientInput,
   adminUpdateClientInput,
@@ -9,6 +8,7 @@ import {
   phoneStatusInput,
   resolveLoginInput,
 } from "./auth-schemas";
+import { requireServerSupabaseAuth } from "./supabase-auth-middleware";
 
 export const phoneAccessFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => phoneAccessInput.parse(data))
@@ -19,7 +19,7 @@ export const phoneAccessFn = createServerFn({ method: "POST" })
 
 /** Fecha o primeiro acesso com a sessão da cliente (nome e chave de acesso). */
 export const finishAccessFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => finishAccessInput.parse(data))
   .handler(async ({ data, context }) => {
     const { finishAccess } = await import("./auth-helpers.server");
@@ -41,7 +41,7 @@ export const phoneStatusFn = createServerFn({ method: "POST" })
   });
 
 export const adminUpdateClientFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => adminUpdateClientInput.parse(data))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
@@ -54,7 +54,7 @@ export const adminUpdateClientFn = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteClientFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => adminDeleteClientInput.parse(data))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
