@@ -15,11 +15,10 @@ describe("normalização de telefone no acesso", () => {
         phone: "+55 (35) 99999-9999",
         referrerPhone: "(35) 98888-7777",
       }),
-      }),
       {
-      fullName: "Cliente Teste",
-      phone: "5535999999999",
-      referrerPhone: "35988887777",
+        fullName: "Cliente Teste",
+        phone: "5535999999999",
+        referrerPhone: "35988887777",
       },
     );
   });
