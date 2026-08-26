@@ -793,6 +793,7 @@ export type Database = {
         Returns: boolean
       }
       consume_my_referral: { Args: { p_appointment: string }; Returns: boolean }
+      delete_client_account: { Args: { p_client: string }; Returns: boolean }
       drop_push_subscriptions: { Args: { p_ids: string[] }; Returns: undefined }
       due_reminder_targets: {
         Args: { p_token: string }
