@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 import { clearFinanceHistoryFn } from "@/lib/finance.functions";
 import { PAYMENT_METHODS, formatPrice } from "@/lib/salon";
 

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { adminDeleteClientFn, adminUpdateClientFn } from "@/lib/auth.functions";
 import { decideEmailChangeFn } from "@/lib/account.functions";

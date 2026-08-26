@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PushBell } from "@/components/app/push-toggle";
 import { AccountSettingsDialog } from "@/components/app/account-settings-dialog";
 import { AdminSettingsDialog } from "@/components/app/admin-settings-dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 import { SALON_NAME } from "@/lib/salon";
 
 export function AppHeader({

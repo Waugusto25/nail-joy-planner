@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 import { useSupabaseSession } from "@/hooks/useSession";
 import { phoneAccessFn, phoneStatusFn, resolveLoginFn } from "@/lib/auth.functions";
 import { useAppSettings } from "@/hooks/useSettings";

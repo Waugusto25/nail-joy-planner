@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 import { decideRescheduleFn } from "@/lib/reschedule.functions";
 import { formatDayLabel, rescheduleMessage, shortTime, whatsappLinkTo } from "@/lib/salon";
 

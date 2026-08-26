@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 import { useSpecialDays } from "@/hooks/useSpecialDays";
 import { busyTimesFn } from "@/lib/booking.functions";
 import { requestRescheduleFn } from "@/lib/reschedule.functions";
