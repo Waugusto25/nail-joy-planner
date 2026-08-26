@@ -367,7 +367,8 @@ function AgendaTab() {
           {client && whatsappLinkTo(client.phone, "") ? (
             <Button
               size="sm"
-              variant="outline"
+              variant="default"
+              className="bg-green-600 text-white hover:bg-green-700"
               onClick={() =>
                 window.open(
                   whatsappLinkTo(
