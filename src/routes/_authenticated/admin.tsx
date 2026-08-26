@@ -41,7 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { SERVICE_IMAGE_BUCKET, StorageImage } from "@/components/app/storage-image";
+import { SERVICE_IMAGE_BUCKET, StorageImage, resolveDirectImageUrl } from "@/components/app/storage-image";
 import {
   APPOINTMENT_STATUS,
   BENEFIT_LABELS,
@@ -1425,7 +1425,11 @@ function ProductsTab() {
         {(products.data ?? []).map((p) => (
           <article key={p.id} className="surface-card overflow-hidden">
             {p.image_url ? (
-              <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />
+              <img
+                src={resolveDirectImageUrl(p.image_url) ?? p.image_url}
+                alt={p.name}
+                className="h-32 w-full object-cover"
+              />
             ) : null}
             <div className="space-y-2 p-4">
               <Badge variant="secondary">{p.category}</Badge>
