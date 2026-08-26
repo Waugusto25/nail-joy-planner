@@ -11,6 +11,9 @@ export type SupabasePublicConfig = {
   key: string;
 };
 
+const DEFAULT_SUPABASE_URL = "https://uhrurskyobcwleygmfam.supabase.co";
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = "sb_publishable__Yr_ekAvPGiJy-wZecQQkw_GztEAd3C";
+
 function firstNonEmptyString(...values: unknown[]): string | undefined {
   for (const value of values) {
     if (typeof value !== "string") continue;
@@ -21,24 +24,20 @@ function firstNonEmptyString(...values: unknown[]): string | undefined {
 }
 
 export function resolveSupabasePublicConfig(environment: SupabaseEnvironment): SupabasePublicConfig {
-  const url = firstNonEmptyString(environment.viteUrl, environment.serverUrl);
+  const url = firstNonEmptyString(
+    environment.viteUrl,
+    environment.serverUrl,
+    DEFAULT_SUPABASE_URL,
+  );
   const key = firstNonEmptyString(
     environment.vitePublishableKey,
     environment.viteAnonKey,
     environment.serverPublishableKey,
+    DEFAULT_SUPABASE_PUBLISHABLE_KEY,
   );
 
-  if (!url || !key) {
-    const missing = [
-      ...(!url ? ["VITE_SUPABASE_URL or SUPABASE_URL"] : []),
-      ...(!key
-        ? [
-            "VITE_SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_ANON_KEY, or SUPABASE_PUBLISHABLE_KEY",
-          ]
-        : []),
-    ];
-    throw new Error(`Missing or empty backend environment variable(s): ${missing.join("; ")}.`);
-  }
-
-  return { url, key };
+  return {
+    url: url ?? DEFAULT_SUPABASE_URL,
+    key: key ?? DEFAULT_SUPABASE_PUBLISHABLE_KEY,
+  };
 }
