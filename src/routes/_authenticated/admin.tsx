@@ -174,7 +174,11 @@ function AgendaTab() {
   const clients = useQuery({
     queryKey: ["admin-clients"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .is("deleted_at", null)
+        .order("full_name");
       if (error) throw error;
       return data;
     },
@@ -594,7 +598,11 @@ function ClientsTab() {
   const clients = useQuery({
     queryKey: ["admin-clients"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .is("deleted_at", null)
+        .order("full_name");
       if (error) throw error;
       return data;
     },
@@ -802,7 +810,7 @@ function EmailChangeRequests() {
   const clientNames = useQuery({
     queryKey: ["admin-clients-names"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("id, full_name");
+      const { data, error } = await supabase.from("profiles").select("id, full_name").is("deleted_at", null);
       if (error) throw error;
       return Object.fromEntries((data ?? []).map((p) => [p.id as string, String(p.full_name)]));
     },
@@ -1582,7 +1590,11 @@ function LoyaltyTab() {
   const clients = useQuery({
     queryKey: ["admin-clients"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .is("deleted_at", null)
+        .order("full_name");
       if (error) throw error;
       return data;
     },
