@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireServerSupabaseAuth } from "./supabase-auth-middleware";
 import {
   adminRescheduleInput,
   decideRescheduleInput,
@@ -17,7 +17,7 @@ async function assertAdmin(context: { supabase: { rpc: Function }; userId: strin
 
 /** Cliente solicita alteração de data/horário com justificativa. */
 export const requestRescheduleFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => requestRescheduleInput.parse(data))
   .handler(async ({ data, context }) => {
     const { requestReschedule } = await import("./reschedule-helpers.server");
@@ -32,7 +32,7 @@ export const requestRescheduleFn = createServerFn({ method: "POST" })
 
 /** Administradora aprova ou recusa um pedido de reagendamento. */
 export const decideRescheduleFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => decideRescheduleInput.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
@@ -42,7 +42,7 @@ export const decideRescheduleFn = createServerFn({ method: "POST" })
 
 /** Reagendamento direto pela administradora, já confirmado. */
 export const adminRescheduleFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => adminRescheduleInput.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);

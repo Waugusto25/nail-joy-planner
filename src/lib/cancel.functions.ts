@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireServerSupabaseAuth } from "./supabase-auth-middleware";
 import { cancelInput } from "./cancel-schemas";
 
 /** Cancelamento feito pela própria cliente: libera a vaga, limpa a Google Agenda e avisa a admin. */
 export const clientCancelAppointmentFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => cancelInput.parse(data))
   .handler(async ({ data, context }) => {
     const { data: appt, error: readError } = await context.supabase
@@ -58,7 +58,7 @@ export const clientCancelAppointmentFn = createServerFn({ method: "POST" })
 
 /** Oculta um cancelamento do histórico da cliente (dado permanece no banco). */
 export const hideCancelledForClientFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => cancelInput.parse(data))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -81,7 +81,7 @@ async function assertAdmin(context: { supabase: { rpc: Function }; userId: strin
 
 /** Oculta um cancelamento do painel da administradora. */
 export const hideCancelledForAdminFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => cancelInput.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
@@ -96,7 +96,7 @@ export const hideCancelledForAdminFn = createServerFn({ method: "POST" })
 
 /** Limpa todos os cancelamentos visíveis no painel da administradora. */
 export const clearCancelledForAdminFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context as never);
     const { error, count } = await context.supabase

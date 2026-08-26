@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireServerSupabaseAuth } from "./supabase-auth-middleware";
 import { appointmentIdInput } from "./calendar-schemas";
 
 async function assertAdmin(context: { supabase: { rpc: Function }; userId: string }) {
@@ -13,7 +13,7 @@ async function assertAdmin(context: { supabase: { rpc: Function }; userId: strin
 
 /** Confirma o atendimento e publica o compromisso na Google Agenda. */
 export const confirmAppointmentFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => appointmentIdInput.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
@@ -46,7 +46,7 @@ export const confirmAppointmentFn = createServerFn({ method: "POST" })
 
 /** Cancela o atendimento e apaga o compromisso da Google Agenda. */
 export const setAppointmentPendingFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => appointmentIdInput.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
@@ -65,7 +65,7 @@ export const setAppointmentPendingFn = createServerFn({ method: "POST" })
   });
 
 export const cancelAppointmentFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => appointmentIdInput.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
