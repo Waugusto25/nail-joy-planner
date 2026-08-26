@@ -5,9 +5,31 @@ import { createAdminClient } from "./supabase-admin.server";
 
 type Admin = SupabaseClient;
 
+/**
+ * Converte a falha de gravação em algo acionável: o erro real vai para o log do
+ * servidor e a cliente recebe uma mensagem específica por tipo de causa.
+ */
+function profileSaveError(error: unknown, subject: string): Error {
+  const e = error as { code?: string; message?: string; details?: string; hint?: string };
+  console.error("[profiles.insert] falha ao salvar", {
+    code: e?.code,
+    message: e?.message,
+    details: e?.details,
+    hint: e?.hint,
+  });
+  if (e?.code === "23505")
+    return new Error("Este telefone ou nome de acesso já está cadastrado. Tente entrar novamente.");
+  if (e?.code === "42501" || /permission denied/i.test(e?.message ?? ""))
+    return new Error("Configuração do servidor sem permissão de gravação. Avise a administradora.");
+  if (/JWT|api key/i.test(e?.message ?? ""))
+    return new Error("Configuração do servidor inválida (chave de acesso). Avise a administradora.");
+  return new Error(`Não foi possível salvar ${subject}. Tente novamente.`);
+}
+
 function admin(): Admin {
   return createAdminClient();
 }
+
 
 async function uniqueLoginId(db: Admin, fullName: string) {
   const base = slugifyLogin(fullName) || "Cliente";
