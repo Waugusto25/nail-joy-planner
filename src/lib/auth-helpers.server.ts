@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { AUTH_EMAIL_DOMAIN, loginEmail, slugifyLogin } from "./salon";
+import { AUTH_EMAIL_DOMAIN, loginEmail, onlyDigits, slugifyLogin } from "./salon";
 import { createAdminClient } from "./supabase-admin.server";
 
 type Admin = SupabaseClient;
@@ -46,11 +46,13 @@ async function uniqueLoginId(db: Admin, fullName: string) {
 /** Situação do telefone: já cadastrado? já possui indicação vinculada? */
 export async function phoneStatus(phone: string) {
   const db = admin();
-  const { data: existing } = await db
+  const normalizedPhone = onlyDigits(phone);
+  const { data: existing, error: profileError } = await db
     .from("profiles")
     .select("id")
-    .eq("phone", phone)
+    .eq("phone", normalizedPhone)
     .maybeSingle();
+  if (profileError) throw profileSaveError(profileError, "a consulta do telefone");
   if (!existing) return { registered: false, hasReferral: false };
   const { data: referral } = await db
     .from("referrals")
@@ -65,33 +67,55 @@ export const REFERRAL_ONLY_FIRST_ACCESS = "REFERRAL_ONLY_FIRST_ACCESS";
 
 export async function phoneAccess(fullName: string, phone: string, referrerPhone?: string) {
   const db = admin();
-  const { data: existing } = await db
+  const normalizedPhone = onlyDigits(phone);
+  if (normalizedPhone.length < 10 || normalizedPhone.length > 13) {
+    throw new Error("Informe o telefone com DDD.");
+  }
+
+  const { data: existing, error: lookupError } = await db
     .from("profiles")
     .select("id, full_name, login_id")
-    .eq("phone", phone)
+    .eq("phone", normalizedPhone)
     .maybeSingle();
+  if (lookupError) throw profileSaveError(lookupError, "a consulta do cadastro");
 
   if (existing) {
     // Antifraude: indicação vale só no primeiro cadastro; nunca sobrescreve o vínculo.
     if ((referrerPhone ?? "").replace(/\D/g, "")) {
       throw new Error(REFERRAL_ONLY_FIRST_ACCESS);
     }
-    const { data: roles } = await db
+    const { data: roles, error: rolesError } = await db
       .from("user_roles")
       .select("role")
       .eq("user_id", existing.id)
-      .eq("role", "admin");
+      .in("role", ["admin", "client"]);
+    if (rolesError) throw profileSaveError(rolesError, "o acesso da cliente");
     if ((roles ?? []).length > 0) {
-      throw new Error("Este telefone é da administradora. Use o acesso da administradora.");
+      if ((roles ?? []).some((row) => row.role === "admin")) {
+        throw new Error("Este telefone é da administradora. Use o acesso da administradora.");
+      }
+    } else {
+      const { error: roleError } = await db
+        .from("user_roles")
+        .insert({ user_id: existing.id, role: "client" });
+      if (roleError) throw profileSaveError(roleError, "o acesso da cliente");
     }
     if (String(existing.full_name).trim() !== fullName.trim()) {
-      await db.from("profiles").update({ full_name: fullName }).eq("id", existing.id);
-      await db.auth.admin.updateUserById(String(existing.id), {
+      const { error: nameError } = await db
+        .from("profiles")
+        .update({ full_name: fullName.trim() })
+        .eq("id", existing.id);
+      if (nameError) throw profileSaveError(nameError, "seu nome");
+      const { error: metadataError } = await db.auth.admin.updateUserById(String(existing.id), {
         user_metadata: { full_name: fullName, login_id: existing.login_id },
       });
+      if (metadataError) throw new Error("Não foi possível atualizar os dados de acesso.");
     }
     // Garante que o telefone atual continua sendo a senha válida.
-    await db.auth.admin.updateUserById(String(existing.id), { password: phone });
+    const { error: passwordError } = await db.auth.admin.updateUserById(String(existing.id), {
+      password: normalizedPhone,
+    });
+    if (passwordError) throw new Error("Não foi possível atualizar o acesso da cliente.");
     return {
       created: false,
       loginId: String(existing.login_id),
@@ -103,25 +127,32 @@ export async function phoneAccess(fullName: string, phone: string, referrerPhone
   const email = loginEmail(loginId);
   const { data: created, error } = await db.auth.admin.createUser({
     email,
-    password: phone,
+    password: normalizedPhone,
     email_confirm: true,
-    user_metadata: { full_name: fullName, login_id: loginId },
+    user_metadata: { full_name: fullName.trim(), login_id: loginId },
   });
   if (error || !created.user) throw new Error("Não foi possível criar sua conta. Tente novamente.");
 
   const { error: profileError } = await db
     .from("profiles")
-    .insert({ id: created.user.id, full_name: fullName, login_id: loginId, phone });
+    .insert({ id: created.user.id, full_name: fullName.trim(), login_id: loginId, phone: normalizedPhone });
   if (profileError) {
     await db.auth.admin.deleteUser(created.user.id);
     throw profileSaveError(profileError, "seu cadastro");
   }
 
-  await db.from("user_roles").insert({ user_id: created.user.id, role: "client" });
+  const { error: roleError } = await db
+    .from("user_roles")
+    .insert({ user_id: created.user.id, role: "client" });
+  if (roleError) {
+    // A FK com ON DELETE CASCADE remove profile/role parcial junto com o usuário.
+    await db.auth.admin.deleteUser(created.user.id);
+    throw profileSaveError(roleError, "o acesso da cliente");
+  }
 
   // Indicação: fica pendente até a nova cliente concluir o primeiro atendimento.
-  const referrer = (referrerPhone ?? "").replace(/\D/g, "");
-  if (referrer && referrer !== phone) {
+  const referrer = onlyDigits(referrerPhone ?? "");
+  if (referrer && referrer !== normalizedPhone) {
     const { data: settings } = await db
       .from("app_settings")
       .select("referral_enabled")
