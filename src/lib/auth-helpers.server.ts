@@ -191,7 +191,6 @@ async function rotatePassword(password: string): Promise<boolean> {
   } catch {
     token = undefined;
   }
-  console.log("[acesso][debug] token presente?", Boolean(token));
   if (!token) return false;
 
   const { url, key } = resolveSupabasePublicConfig({
@@ -232,7 +231,6 @@ export async function finishAccess(userId: string, fullName: string) {
 
   // Conta antiga: migra para a chave de acesso própria, deixando o login
   // independente do telefone a partir do próximo acesso.
-  console.log("[acesso][debug] finishAccess", { userId, hasKey: Boolean(profile?.access_key) });
   if (!profile?.access_key) {
     const accessKey = crypto.randomUUID();
     if (!(await rotatePassword(accessKey))) return { ok: true as const, migrated: false };
