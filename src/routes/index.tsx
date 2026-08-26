@@ -287,16 +287,26 @@ function AdminLoginForm() {
     event.preventDefault();
     setLoading(true);
     try {
-      const { email } = await resolveLoginFn({ data: { identifier } });
-      if (!email) {
-        toast.error("Conta não encontrada. Confira o ID de login.");
+      // A consulta no servidor pode falhar por configuração de ambiente; nesse caso
+      // derivamos o e-mail interno a partir do próprio ID digitado.
+      let email: string | null = null;
+      try {
+        email = (await resolveLoginFn({ data: { identifier } })).email;
+      } catch {
+        email = null;
+      }
+      const fallback = slugifyLogin(identifier) ? loginEmail(identifier) : null;
+      const target = email ?? fallback;
+      if (!target) {
+        toast.error("Informe o ID de login da administradora.");
         return;
       }
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email: target, password });
       if (error) {
         toast.error("ID de login ou senha incorretos.");
         return;
       }
+
       toast.success("Bem-vinda, Janaina!");
     } catch (error) {
       toast.error(message(error, "Não foi possível entrar agora."));
