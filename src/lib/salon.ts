@@ -4,6 +4,9 @@ export const WHATSAPP_NUMBER = "5535998844504";
 export const INSTAGRAM_HANDLE = "jannah_silvaah";
 export const INSTAGRAM_URL = "https://www.instagram.com/jannah_silvaah?igsh=OTRoZjFka2p0dDhn";
 
+/** Fonte única do endereço público do app: usada em toda mensagem enviada às clientes. */
+export const APP_URL = "https://jannahnails.com";
+
 /**
  * Contato oficial do salão em tempo de execução. A administradora edita esses
  * valores na engrenagem do painel e todos os links/disparos passam a usá-los.
@@ -355,7 +358,7 @@ export function adminWelcomeMessage(n: {
     "Seu cadastro no nosso aplicativo foi criado por mim com todo carinho! A partir de agora você pode gerenciar seus horários, acumular pontos no clube de fidelidade e ver nossas novidades.",
     "",
     "📱 Acesse o aplicativo pelo link:",
-    "https://nail-joy-planner.lovable.app",
+    APP_URL,
     "",
     `👤 Seu Usuário: ${n.loginId}`,
     `🔑 Sua Senha Inicial: ${n.phoneDigits}`,
