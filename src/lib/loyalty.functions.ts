@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireServerSupabaseAuth } from "./supabase-auth-middleware";
 import {
   completeAppointmentInput,
   consumeReferralInput,
@@ -9,7 +9,7 @@ import {
 } from "./loyalty-schemas";
 
 export const completeAppointmentFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => completeAppointmentInput.parse(data))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
@@ -29,7 +29,7 @@ export const completeAppointmentFn = createServerFn({ method: "POST" })
   });
 
 export const drawEventWinnerFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => drawWinnerInput.parse(data))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
@@ -42,7 +42,7 @@ export const drawEventWinnerFn = createServerFn({ method: "POST" })
   });
 
 export const consumeReferralFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => consumeReferralInput.parse(data))
   .handler(async ({ data, context }) => {
     const { consumeReferralCoupon } = await import("./loyalty-helpers.server");
@@ -50,7 +50,7 @@ export const consumeReferralFn = createServerFn({ method: "POST" })
   });
 /** Queima os pontos de fidelidade usados no pré-agendamento da própria cliente. */
 export const spendLoyaltyPointsFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => loyaltySpendInput.parse(data))
   .handler(async ({ data, context }) => {
     const { spendLoyaltyPoints } = await import("./loyalty-wallet.server");

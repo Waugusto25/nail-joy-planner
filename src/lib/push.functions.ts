@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireServerSupabaseAuth } from "./supabase-auth-middleware";
 import { appointmentIdOnly, endpointInput, subscriptionInput } from "./push-schemas";
 
 /** Guarda (ou atualiza) o dispositivo que aceitou receber notificações. */
 export const savePushSubscriptionFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => subscriptionInput.parse(data))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("push_subscriptions").upsert(
@@ -24,7 +24,7 @@ export const savePushSubscriptionFn = createServerFn({ method: "POST" })
 
 /** Remove o dispositivo da lista de notificações. */
 export const removePushSubscriptionFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => endpointInput.parse(data))
   .handler(async ({ data, context }) => {
     await context.supabase
@@ -37,7 +37,7 @@ export const removePushSubscriptionFn = createServerFn({ method: "POST" })
 
 /** Dispara o alerta imediato para a administradora após um novo pré-agendamento. */
 export const notifyNewAppointmentFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => appointmentIdOnly.parse(data))
   .handler(async ({ data, context }) => {
     const { data: appt } = await context.supabase
@@ -64,7 +64,7 @@ export const notifyNewAppointmentFn = createServerFn({ method: "POST" })
 
 /** Envio de teste para o próprio dispositivo (usado no painel). */
 export const sendTestPushFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("push_subscriptions")

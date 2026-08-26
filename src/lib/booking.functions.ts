@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireServerSupabaseAuth } from "./supabase-auth-middleware";
 import { dayInput } from "./booking-schemas";
 
 export const busyTimesFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireServerSupabaseAuth])
   .inputValidator((data: unknown) => dayInput.parse(data))
   .handler(async ({ data }) => {
     const { busyTimes } = await import("./booking-helpers.server");
