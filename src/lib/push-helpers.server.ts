@@ -1,5 +1,5 @@
 import { buildPushPayload, type PushSubscription } from "@block65/webcrypto-web-push";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   addMinutes,
@@ -10,11 +10,10 @@ import {
   formatPrice,
   shortTime,
 } from "./salon";
+import { createAdminClient } from "./supabase-admin.server";
 
 export function admin(): SupabaseClient {
-  return createClient(process.env["SUPABASE_URL"]!, process.env["SUPABASE_SERVICE_ROLE_KEY"]!, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  return createAdminClient();
 }
 
 function vapid() {

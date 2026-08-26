@@ -1,13 +1,12 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { AUTH_EMAIL_DOMAIN, loginEmail, slugifyLogin } from "./salon";
+import { createAdminClient } from "./supabase-admin.server";
 
 type Admin = SupabaseClient;
 
 function admin(): Admin {
-  return createClient(process.env["SUPABASE_URL"]!, process.env["SUPABASE_SERVICE_ROLE_KEY"]!, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  return createAdminClient();
 }
 
 async function uniqueLoginId(db: Admin, fullName: string) {
