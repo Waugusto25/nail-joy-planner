@@ -27,6 +27,10 @@ function profileSaveError(error: unknown, subject: string): Error {
     return new Error("Este telefone ou nome de acesso já está cadastrado. Tente entrar novamente.");
   if (e?.code === "42501" || /permission denied/i.test(e?.message ?? ""))
     return new Error("Configuração do servidor sem permissão de gravação. Avise a administradora.");
+  if (e?.code === "PGRST205" || /schema cache/i.test(e?.message ?? ""))
+    return new Error(
+      "O site publicado está conectado ao banco incorreto. Corrija as variáveis do backend na Vercel.",
+    );
   if (/JWT|api key/i.test(e?.message ?? ""))
     return new Error("Configuração do servidor inválida (chave de acesso). Avise a administradora.");
   return new Error(`Não foi possível salvar ${subject}. Tente novamente.`);

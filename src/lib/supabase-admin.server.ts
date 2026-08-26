@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const DEFAULT_SUPABASE_URL = "https://uhrurskyobcwleygmfam.supabase.co";
+import { resolveSupabaseServerUrl } from "./supabase-env";
 
 function normalized(value: string | undefined): string | undefined {
   const result = value?.trim();
@@ -27,7 +27,10 @@ function serviceRoleFetch(serviceRoleKey: string): typeof fetch {
 }
 
 export function createAdminClient(): SupabaseClient {
-  const url = normalized(process.env["SUPABASE_URL"]) ?? DEFAULT_SUPABASE_URL;
+  const url = resolveSupabaseServerUrl({
+    viteUrl: process.env["VITE_SUPABASE_URL"],
+    serverUrl: process.env["SUPABASE_URL"],
+  });
   const serviceRoleKey =
     normalized(process.env["SUPABASE_SERVICE_ROLE_KEY"]) ??
     normalized(process.env["SUPABASE_SECRET_KEY"]);
