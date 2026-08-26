@@ -4,6 +4,9 @@ export const WHATSAPP_NUMBER = "5535998844504";
 export const INSTAGRAM_HANDLE = "jannah_silvaah";
 export const INSTAGRAM_URL = "https://www.instagram.com/jannah_silvaah?igsh=OTRoZjFka2p0dDhn";
 
+/** Fonte única do endereço público do app: usada em toda mensagem enviada às clientes. */
+export const APP_URL = "https://jannahnails.com";
+
 /**
  * Contato oficial do salão em tempo de execução. A administradora edita esses
  * valores na engrenagem do painel e todos os links/disparos passam a usá-los.
