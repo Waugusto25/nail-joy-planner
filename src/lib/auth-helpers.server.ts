@@ -223,7 +223,7 @@ export async function ensureManualClient(fullName: string, phone: string) {
     .insert({ id: created.user.id, full_name: fullName, login_id: loginId, phone });
   if (profileError) {
     await db.auth.admin.deleteUser(created.user.id);
-    throw new Error("Não foi possível salvar a ficha da cliente.");
+    throw profileSaveError(profileError, "a ficha da cliente");
   }
   await db.from("user_roles").insert({ user_id: created.user.id, role: "client" });
   return { clientId: String(created.user.id), created: true, loginId, phone };
