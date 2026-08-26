@@ -61,6 +61,7 @@ import {
   whatsappLink,
 } from "@/lib/salon";
 import { StorageImage } from "@/components/app/storage-image";
+import { resolveDirectImageUrl } from "@/components/app/storage-image";
 
 const WELCOME_IMAGE = "/__l5e/assets-v1/5a73338f-8d2f-459f-8bb6-0dc055ee5917/boas-vindas.png";
 
@@ -178,7 +179,7 @@ function ClientPanel() {
       <Dialog open={welcomeOpen} onOpenChange={(open) => (open ? null : void closeWelcome())}>
         <DialogContent className="max-w-md overflow-hidden p-0">
           <img
-            src={WELCOME_IMAGE}
+            src={resolveDirectImageUrl(WELCOME_IMAGE) ?? WELCOME_IMAGE}
             alt="Bem-vinda à Jannah Nails, por Janaina Silva"
             className="w-full"
           />
@@ -1271,7 +1272,7 @@ function Store({ clientName }: { clientName: string }) {
             <article key={p.id} className="surface-card flex flex-col overflow-hidden">
               {p.image_url ? (
                 <img
-                  src={p.image_url}
+                  src={resolveDirectImageUrl(p.image_url) ?? p.image_url}
                   alt={p.name}
                   className="aspect-square w-full object-cover"
                   loading="lazy"
@@ -1351,7 +1352,7 @@ function Catalogs() {
         >
           {c.image_url ? (
             <img
-              src={c.image_url}
+              src={resolveDirectImageUrl(c.image_url) ?? c.image_url}
               alt={c.title}
               className="h-40 w-full object-cover"
               loading="lazy"
