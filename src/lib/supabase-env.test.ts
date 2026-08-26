@@ -7,10 +7,10 @@ describe("configuração do backend no servidor", () => {
   test("usa a mesma URL pública do navegador", () => {
     assert.equal(
       resolveSupabaseServerUrl({
-        viteUrl: "https://backend-correto.example/",
-        serverUrl: "https://backend-correto.example",
+        viteUrl: `${DEFAULT_SUPABASE_URL}/`,
+        serverUrl: DEFAULT_SUPABASE_URL,
       }),
-      "https://backend-correto.example",
+      DEFAULT_SUPABASE_URL,
     );
   });
 
