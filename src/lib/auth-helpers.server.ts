@@ -246,8 +246,7 @@ export async function finishAccess(userId: string, fullName: string) {
 }
 
 /** Corrige o WhatsApp da cliente sem derrubar o acesso dela. */
-export async function adminUpdateClientAccess(clientId: string, phone: string) {
-  const db = createAdminClient();
+export async function adminUpdateClientAccess(db: SupabaseClient, clientId: string, phone: string) {
   const normalizedPhone = onlyDigits(phone);
   const { data: taken } = await db
     .from("profiles")
@@ -271,8 +270,7 @@ export async function adminUpdateClientAccess(clientId: string, phone: string) {
  * e desativa o perfil. A linha de autenticação permanece inacessível, porque
  * removê-la exigiria credencial privada indisponível no deploy.
  */
-export async function adminDeleteClient(clientId: string) {
-  const db = createAdminClient();
+export async function adminDeleteClient(db: SupabaseClient, clientId: string) {
   const { error } = await db.rpc("delete_client_account", { p_client: clientId });
   if (error) throw accessError(error, "excluir a conta da cliente");
   return { ok: true };

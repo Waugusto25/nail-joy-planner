@@ -50,7 +50,7 @@ export const adminUpdateClientFn = createServerFn({ method: "POST" })
     });
     if (!isAdmin) throw new Error("Acesso restrito à administradora.");
     const { adminUpdateClientAccess } = await import("./auth-helpers.server");
-    return adminUpdateClientAccess(data.clientId, data.phone);
+    return adminUpdateClientAccess(context.supabase, data.clientId, data.phone);
   });
 
 export const adminDeleteClientFn = createServerFn({ method: "POST" })
@@ -65,5 +65,5 @@ export const adminDeleteClientFn = createServerFn({ method: "POST" })
     if (data.clientId === context.userId)
       throw new Error("Você não pode excluir sua própria conta.");
     const { adminDeleteClient } = await import("./auth-helpers.server");
-    return adminDeleteClient(data.clientId);
+    return adminDeleteClient(context.supabase, data.clientId);
   });
