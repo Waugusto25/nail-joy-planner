@@ -184,11 +184,20 @@ function PhoneAccessForm({
         data: { fullName, phone, referrerPhone: registered ? "" : referrerPhone },
       });
       onBeforeSignIn();
-      const { data: signIn, error } = await supabase.auth.signInWithPassword({
-        email: result.email,
-        password: result.password,
-      });
-      if (error) {
+      // Contas antigas podem ter credencial derivada de outra forma: tentamos as alternativas.
+      const candidates = [result.password, ...(result.fallbackPasswords ?? [])];
+      let signIn: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"] | null = null;
+      let error: unknown = null;
+      for (const password of candidates) {
+        const attempt = await supabase.auth.signInWithPassword({ email: result.email, password });
+        if (!attempt.error && attempt.data.user) {
+          signIn = attempt.data;
+          error = null;
+          break;
+        }
+        error = attempt.error;
+      }
+      if (error || !signIn) {
         onSignInFailed();
         toast.error("Não foi possível entrar agora. Tente novamente.");
         return;

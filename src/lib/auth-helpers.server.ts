@@ -63,9 +63,17 @@ async function phoneRow(db: SupabaseClient, phone: string): Promise<PhoneStatusR
  * derrubar o acesso). Contas antigas continuam derivando do telefone até a
  * primeira entrada, quando a chave é gerada.
  */
-function passwordFor(row: PhoneStatusRow, phone: string): string {
-  if (row.access_key) return row.access_key;
-  return clientAccessPassword(row.auth_phone ?? phone);
+function passwordsFor(row: PhoneStatusRow, phone: string): string[] {
+  if (row.access_key) return [row.access_key];
+  // Contas antigas foram criadas com credenciais derivadas de formas diferentes;
+  // tentamos todas e, no primeiro acesso, migramos para a chave própria.
+  const candidates = [
+    clientAccessPassword(row.auth_phone ?? phone),
+    clientAccessPassword(phone),
+    row.auth_phone ?? phone,
+    phone,
+  ];
+  return Array.from(new Set(candidates.filter(Boolean)));
 }
 
 /** Situação do telefone: já cadastrado? já possui indicação vinculada? */
@@ -79,6 +87,8 @@ export type PhoneAccessResult = {
   loginId: string;
   email: string;
   password: string;
+  /** Alternativas de credencial para contas criadas antes da chave de acesso. */
+  fallbackPasswords: string[];
 };
 
 export async function phoneAccess(
@@ -101,11 +111,13 @@ export async function phoneAccess(
       throw new Error("Este telefone é da administradora. Use o acesso da administradora.");
     }
     const loginId = String(row.login_id);
+    const passwords = passwordsFor(row, normalizedPhone);
     return {
       created: false,
       loginId,
       email: loginEmail(loginId),
-      password: passwordFor(row, normalizedPhone),
+      password: String(passwords[0]),
+      fallbackPasswords: passwords.slice(1),
     };
   }
 
@@ -148,7 +160,7 @@ export async function phoneAccess(
     await authed.rpc("link_referral", { p_referrer_phone: referrer });
   }
 
-  return { created: true, loginId, email, password: accessKey };
+  return { created: true, loginId, email, password: accessKey, fallbackPasswords: [] };
 }
 
 export async function resolveLogin(identifier: string) {
