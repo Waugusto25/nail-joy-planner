@@ -35,3 +35,7 @@ export const adminUpdateClientInput = z.object({
   phone: phoneSchema,
 });
 export const adminDeleteClientInput = z.object({ clientId: z.string().uuid() });
+
+export const finishAccessInput = z.object({
+  fullName: z.string().trim().min(2).max(80),
+});

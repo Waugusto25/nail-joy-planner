@@ -70,16 +70,19 @@ export async function sendToSubscriptions(db: SupabaseClient, rows: Row[], notic
     }),
   );
 
-  if (dead.length > 0) await db.from("push_subscriptions").delete().in("id", dead);
+  if (dead.length > 0) await db.rpc("drop_push_subscriptions", { p_ids: dead });
   return { sent, removed: dead.length };
 }
 
-async function subscriptionsFor(db: SupabaseClient, userIds: string[]) {
-  if (userIds.length === 0) return [];
-  const { data } = await db
-    .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth")
-    .in("user_id", userIds);
+/** Dispositivos da administradora (resolvidos no banco, sem expor inscrições alheias). */
+export async function adminTargets(db: SupabaseClient) {
+  const { data } = await db.rpc("push_admin_targets");
+  return (data ?? []) as Row[];
+}
+
+/** Dispositivos de uma cliente: permitido para ela mesma ou para a administradora. */
+async function clientTargets(db: SupabaseClient, clientId: string) {
+  const { data } = await db.rpc("push_client_targets", { p_client: clientId });
   return (data ?? []) as Row[];
 }
 
@@ -107,8 +110,7 @@ export async function notifyAdminsNewAppointment(appointmentId: string) {
 
   const start = shortTime(String(appt.start_time));
   const end = addMinutes(start, Number(service?.duration_minutes ?? 60));
-  const { data: admins } = await db.from("user_roles").select("user_id").eq("role", "admin");
-  const rows = await subscriptionsFor(db, (admins ?? []).map((r) => String(r.user_id)));
+  const rows = await adminTargets(db);
 
   const tag = claimTag(String(appt.benefit_type ?? "nenhum"));
   const percent = Number(appt.discount_percent ?? 0);
@@ -154,7 +156,7 @@ export async function notifyClientStatusChange(
     durationMinutes: Number(service?.duration_minutes ?? 60),
     serviceName: service?.name ?? "Procedimento",
   };
-  const rows = await subscriptionsFor(db, [String(appt.client_id)]);
+  const rows = await clientTargets(db, String(appt.client_id));
 
   return sendToSubscriptions(db, rows, {
     title: kind === "confirmado" ? "Horário confirmado 💖" : "Horário cancelado 💗",
@@ -164,40 +166,57 @@ export async function notifyClientStatusChange(
   });
 }
 
-export async function sendDueReminders() {
+type ReminderTarget = {
+  appointment_id: string;
+  day: string;
+  start_time: string;
+  service_name: string | null;
+  subscription_id: string | null;
+  endpoint: string | null;
+  p256dh: string | null;
+  auth: string | null;
+};
+
+/**
+ * Lembretes automáticos: sem credencial privada, o cron se autentica com um
+ * token de serviço validado dentro das funções do banco.
+ */
+export async function sendDueReminders(serviceToken: string) {
   const db = admin();
-  const { data } = await db
-    .from("appointments")
-    .select("id, client_id, day, start_time, services(name)")
-    .eq("status", "confirmado")
-    .is("reminder_sent_at", null);
+  const { data, error } = await db.rpc("due_reminder_targets", { p_token: serviceToken });
+  if (error) throw new Error("Token de lembretes inválido.");
 
   const now = Date.now();
-  const pending = (data ?? []).filter((row) => {
-    const start = shortTime(String(row.start_time));
-    const at = new Date(`${row.day}T${start}:00-03:00`).getTime();
+  const byAppointment = new Map<string, { row: ReminderTarget; devices: Row[] }>();
+  for (const target of (data ?? []) as ReminderTarget[]) {
+    const start = shortTime(String(target.start_time));
+    const at = new Date(`${target.day}T${start}:00-03:00`).getTime();
     const diff = at - now;
-    return diff > 0 && diff <= 24 * 60 * 60 * 1000;
-  });
-
-  let sent = 0;
-  for (const row of pending) {
-    const joined = (row as { services: unknown }).services;
-    const service = (Array.isArray(joined) ? joined[0] : joined) as { name: string } | null;
-    const rows = await subscriptionsFor(db, [String(row.client_id)]);
-    const start = shortTime(String(row.start_time));
-    const result = await sendToSubscriptions(db, rows, {
-      title: "Seu atendimento é amanhã ✨",
-      body: `${service?.name ?? "Procedimento"} • ${formatDayLabel(String(row.day))} às ${start}.\nCancelamentos ou remarcações precisam ser avisados com pelo menos 24h de antecedência.`,
-      url: "/painel",
-      tag: `lembrete-${row.id}`,
-    });
-    sent += result.sent;
-    await db
-      .from("appointments")
-      .update({ reminder_sent_at: new Date().toISOString() })
-      .eq("id", row.id);
+    if (diff <= 0 || diff > 24 * 60 * 60 * 1000) continue;
+    const entry = byAppointment.get(target.appointment_id) ?? { row: target, devices: [] };
+    if (target.subscription_id && target.endpoint && target.p256dh && target.auth) {
+      entry.devices.push({
+        id: target.subscription_id,
+        endpoint: target.endpoint,
+        p256dh: target.p256dh,
+        auth: target.auth,
+      });
+    }
+    byAppointment.set(target.appointment_id, entry);
   }
 
-  return { checked: pending.length, sent };
+  let sent = 0;
+  for (const [appointmentId, entry] of byAppointment) {
+    const start = shortTime(String(entry.row.start_time));
+    const result = await sendToSubscriptions(db, entry.devices, {
+      title: "Seu atendimento é amanhã ✨",
+      body: `${entry.row.service_name ?? "Procedimento"} • ${formatDayLabel(String(entry.row.day))} às ${start}.\nCancelamentos ou remarcações precisam ser avisados com pelo menos 24h de antecedência.`,
+      url: "/painel",
+      tag: `lembrete-${appointmentId}`,
+    });
+    sent += result.sent;
+    await db.rpc("mark_reminder_sent", { p_token: serviceToken, p_appointment: appointmentId });
+  }
+
+  return { checked: byAppointment.size, sent };
 }

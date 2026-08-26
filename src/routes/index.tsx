@@ -11,12 +11,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase-client";
 import { useSupabaseSession } from "@/hooks/useSession";
-import { phoneAccessFn, phoneStatusFn, resolveLoginFn } from "@/lib/auth.functions";
+import {
+  finishAccessFn,
+  phoneAccessFn,
+  phoneStatusFn,
+  resolveLoginFn,
+} from "@/lib/auth.functions";
 import { useAppSettings } from "@/hooks/useSettings";
 import {
   OWNER_NAME,
   SALON_NAME,
-  clientAccessPassword,
   loginEmail,
   onlyDigits,
   salonInstagram,
@@ -182,13 +186,15 @@ function PhoneAccessForm({
       onBeforeSignIn();
       const { data: signIn, error } = await supabase.auth.signInWithPassword({
         email: result.email,
-        password: clientAccessPassword(phone),
+        password: result.password,
       });
       if (error) {
         onSignInFailed();
         toast.error("Não foi possível entrar agora. Tente novamente.");
         return;
       }
+      // Com a sessão ativa, acertamos o nome e migramos contas antigas para a chave própria.
+      await finishAccessFn({ data: { fullName } }).catch(() => undefined);
       toast.success(result.created ? "Cadastro criado. Bem-vinda!" : "Bem-vinda de volta!");
       if (signIn.user) await onSignedIn(signIn.user.id);
       else onSignInFailed();

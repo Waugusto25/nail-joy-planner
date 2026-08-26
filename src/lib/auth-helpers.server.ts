@@ -1,290 +1,268 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  AUTH_EMAIL_DOMAIN,
-  clientAccessPassword,
-  loginEmail,
-  onlyDigits,
-  slugifyLogin,
-} from "./salon";
+import { AUTH_EMAIL_DOMAIN, clientAccessPassword, loginEmail, onlyDigits } from "./salon";
 import { createAdminClient } from "./supabase-admin.server";
+import { createPublicClient, createTokenClient } from "./supabase-public.server";
 
-type Admin = SupabaseClient;
+/** Sinalizador usado pelo app para abrir o aviso acolhedor sobre indicação. */
+export const REFERRAL_ONLY_FIRST_ACCESS = "REFERRAL_ONLY_FIRST_ACCESS";
+
+type PhoneStatusRow = {
+  registered: boolean;
+  is_admin: boolean;
+  has_referral: boolean;
+  login_id: string | null;
+  full_name: string | null;
+  access_key: string | null;
+  auth_phone: string | null;
+};
 
 /**
- * Converte a falha de gravação em algo acionável: o erro real vai para o log do
- * servidor e a cliente recebe uma mensagem específica por tipo de causa.
+ * Converte a falha de leitura/gravação em algo acionável: o erro real vai para
+ * o log do servidor e a cliente recebe uma mensagem específica por causa.
  */
-function profileSaveError(error: unknown, subject: string): Error {
+function accessError(error: unknown, subject: string): Error {
   const e = error as { code?: string; message?: string; details?: string; hint?: string };
-  console.error("[profiles.insert] falha ao salvar", {
+  console.error("[acesso] falha", {
     code: e?.code,
     message: e?.message,
     details: e?.details,
     hint: e?.hint,
   });
-  if (e?.code === "23505")
+  if (e?.code === "23505" || /duplicate key/i.test(e?.message ?? ""))
     return new Error("Este telefone ou nome de acesso já está cadastrado. Tente entrar novamente.");
   if (e?.code === "42501" || /permission denied/i.test(e?.message ?? ""))
-    return new Error("Configuração do servidor sem permissão de gravação. Avise a administradora.");
-  if (e?.code === "PGRST205" || /schema cache/i.test(e?.message ?? ""))
+    return new Error("Configuração do banco sem permissão. Avise a administradora.");
+  if (e?.code === "PGRST202" || e?.code === "PGRST205" || /schema cache/i.test(e?.message ?? ""))
     return new Error(
-      "O site publicado está conectado ao banco incorreto. Corrija as variáveis do backend na Vercel.",
+      "O site publicado está conectado a um banco sem as funções de acesso. Refaça o deploy.",
     );
-  if (/JWT|api key/i.test(e?.message ?? ""))
-    return new Error("Configuração do servidor inválida (chave de acesso). Avise a administradora.");
-  return new Error(`Não foi possível salvar ${subject}. Tente novamente.`);
+  return new Error(`Não foi possível ${subject}. Tente novamente.`);
 }
 
-function admin(): Admin {
-  return createAdminClient();
+async function phoneRow(db: SupabaseClient, phone: string): Promise<PhoneStatusRow> {
+  const { data, error } = await db.rpc("phone_login_status", { p_phone: phone });
+  if (error) throw accessError(error, "consultar seu cadastro");
+  const rows = (data ?? []) as PhoneStatusRow[];
+  return (
+    rows[0] ?? {
+      registered: false,
+      is_admin: false,
+      has_referral: false,
+      login_id: null,
+      full_name: null,
+      access_key: null,
+      auth_phone: null,
+    }
+  );
 }
 
-
-async function uniqueLoginId(db: Admin, fullName: string) {
-  const base = slugifyLogin(fullName) || "Cliente";
-  const { data } = await db.from("profiles").select("login_id").ilike("login_id", `${base}%`);
-  const taken = new Set((data ?? []).map((r) => String(r.login_id).toLowerCase()));
-  if (!taken.has(base.toLowerCase())) return base;
-  for (let i = 0; i < 60; i++) {
-    const candidate = `${base}${Math.floor(100 + Math.random() * 900)}`;
-    if (!taken.has(candidate.toLowerCase())) return candidate;
-  }
-  return `${base}${Date.now().toString().slice(-5)}`;
+/**
+ * Senha interna da conta. Contas novas usam a chave de acesso do perfil, o que
+ * desvincula a senha do telefone (a administradora pode corrigir o WhatsApp sem
+ * derrubar o acesso). Contas antigas continuam derivando do telefone até a
+ * primeira entrada, quando a chave é gerada.
+ */
+function passwordFor(row: PhoneStatusRow, phone: string): string {
+  if (row.access_key) return row.access_key;
+  return clientAccessPassword(row.auth_phone ?? phone);
 }
 
 /** Situação do telefone: já cadastrado? já possui indicação vinculada? */
 export async function phoneStatus(phone: string) {
-  const db = admin();
-  const normalizedPhone = onlyDigits(phone);
-  const { data: existing, error: profileError } = await db
-    .from("profiles")
-    .select("id")
-    .eq("phone", normalizedPhone)
-    .maybeSingle();
-  if (profileError) throw profileSaveError(profileError, "a consulta do telefone");
-  if (!existing) return { registered: false, hasReferral: false };
-  const { data: referral } = await db
-    .from("referrals")
-    .select("id")
-    .eq("referred_id", existing.id)
-    .maybeSingle();
-  return { registered: true, hasReferral: Boolean(referral) };
+  const row = await phoneRow(createPublicClient(), onlyDigits(phone));
+  return { registered: row.registered, hasReferral: row.has_referral };
 }
 
-/** Sinalizador usado pelo app para abrir o aviso acolhedor sobre indicação. */
-export const REFERRAL_ONLY_FIRST_ACCESS = "REFERRAL_ONLY_FIRST_ACCESS";
+export type PhoneAccessResult = {
+  created: boolean;
+  loginId: string;
+  email: string;
+  password: string;
+};
 
-export async function phoneAccess(fullName: string, phone: string, referrerPhone?: string) {
-  const db = admin();
+export async function phoneAccess(
+  fullName: string,
+  phone: string,
+  referrerPhone?: string,
+): Promise<PhoneAccessResult> {
+  const db = createPublicClient();
   const normalizedPhone = onlyDigits(phone);
   if (normalizedPhone.length < 10 || normalizedPhone.length > 13) {
     throw new Error("Informe o telefone com DDD.");
   }
 
-  const { data: existing, error: lookupError } = await db
-    .from("profiles")
-    .select("id, full_name, login_id")
-    .eq("phone", normalizedPhone)
-    .maybeSingle();
-  if (lookupError) throw profileSaveError(lookupError, "a consulta do cadastro");
+  const row = await phoneRow(db, normalizedPhone);
 
-  if (existing) {
+  if (row.registered) {
     // Antifraude: indicação vale só no primeiro cadastro; nunca sobrescreve o vínculo.
-    if ((referrerPhone ?? "").replace(/\D/g, "")) {
-      throw new Error(REFERRAL_ONLY_FIRST_ACCESS);
+    if (onlyDigits(referrerPhone ?? "")) throw new Error(REFERRAL_ONLY_FIRST_ACCESS);
+    if (row.is_admin) {
+      throw new Error("Este telefone é da administradora. Use o acesso da administradora.");
     }
-    const { data: roles, error: rolesError } = await db
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", existing.id)
-      .in("role", ["admin", "client"]);
-    if (rolesError) throw profileSaveError(rolesError, "o acesso da cliente");
-    if ((roles ?? []).length > 0) {
-      if ((roles ?? []).some((row) => row.role === "admin")) {
-        throw new Error("Este telefone é da administradora. Use o acesso da administradora.");
-      }
-    } else {
-      const { error: roleError } = await db
-        .from("user_roles")
-        .insert({ user_id: existing.id, role: "client" });
-      if (roleError) throw profileSaveError(roleError, "o acesso da cliente");
-    }
-    if (String(existing.full_name).trim() !== fullName.trim()) {
-      const { error: nameError } = await db
-        .from("profiles")
-        .update({ full_name: fullName.trim() })
-        .eq("id", existing.id);
-      if (nameError) throw profileSaveError(nameError, "seu nome");
-      const { error: metadataError } = await db.auth.admin.updateUserById(String(existing.id), {
-        user_metadata: { full_name: fullName, login_id: existing.login_id },
-      });
-      if (metadataError) throw new Error("Não foi possível atualizar os dados de acesso.");
-    }
-    // Garante que o telefone atual continua sendo a senha válida.
-    const { error: passwordError } = await db.auth.admin.updateUserById(String(existing.id), {
-      password: clientAccessPassword(normalizedPhone),
-    });
-    if (passwordError) throw new Error("Não foi possível atualizar o acesso da cliente.");
+    const loginId = String(row.login_id);
     return {
       created: false,
-      loginId: String(existing.login_id),
-      email: loginEmail(String(existing.login_id)),
+      loginId,
+      email: loginEmail(loginId),
+      password: passwordFor(row, normalizedPhone),
     };
   }
 
-  const loginId = await uniqueLoginId(db, fullName);
-  const email = loginEmail(loginId);
-  const { data: created, error } = await db.auth.admin.createUser({
-    email,
-    password: clientAccessPassword(normalizedPhone),
-    email_confirm: true,
-    user_metadata: { full_name: fullName.trim(), login_id: loginId },
+  const { data: allocated, error: allocateError } = await db.rpc("allocate_login_id", {
+    p_full_name: fullName,
   });
-  if (error || !created.user) throw new Error("Não foi possível criar sua conta. Tente novamente.");
+  if (allocateError) throw accessError(allocateError, "preparar seu nome de acesso");
+  const loginId = String(allocated);
+  const email = loginEmail(loginId);
+  const accessKey = crypto.randomUUID();
 
-  const { error: profileError } = await db
-    .from("profiles")
-    .insert({ id: created.user.id, full_name: fullName.trim(), login_id: loginId, phone: normalizedPhone });
-  if (profileError) {
-    await db.auth.admin.deleteUser(created.user.id);
-    throw profileSaveError(profileError, "seu cadastro");
+  const { data: signUp, error: signUpError } = await db.auth.signUp({
+    email,
+    password: accessKey,
+    options: { data: { full_name: fullName.trim(), login_id: loginId, phone: normalizedPhone } },
+  });
+  if (signUpError || !signUp.user) {
+    console.error("[acesso] falha no cadastro", signUpError);
+    throw new Error("Não foi possível criar sua conta. Tente novamente.");
   }
 
-  const { error: roleError } = await db
-    .from("user_roles")
-    .insert({ user_id: created.user.id, role: "client" });
-  if (roleError) {
-    // A FK com ON DELETE CASCADE remove profile/role parcial junto com o usuário.
-    await db.auth.admin.deleteUser(created.user.id);
-    throw profileSaveError(roleError, "o acesso da cliente");
-  }
+  // A sessão do cadastro é usada para criar o perfil com as regras do banco.
+  const token =
+    signUp.session?.access_token ??
+    (await db.auth.signInWithPassword({ email, password: accessKey })).data.session?.access_token;
+  if (!token) throw new Error("Não foi possível concluir seu cadastro. Tente novamente.");
+
+  const authed = createTokenClient(token);
+  const { error: bootstrapError } = await authed.rpc("bootstrap_my_profile", {
+    p_full_name: fullName.trim(),
+    p_login_id: loginId,
+    p_phone: normalizedPhone,
+    p_access_key: accessKey,
+  });
+  if (bootstrapError) throw accessError(bootstrapError, "salvar seu cadastro");
 
   // Indicação: fica pendente até a nova cliente concluir o primeiro atendimento.
   const referrer = onlyDigits(referrerPhone ?? "");
   if (referrer && referrer !== normalizedPhone) {
-    const { data: settings } = await db
-      .from("app_settings")
-      .select("referral_enabled")
-      .eq("id", true)
-      .maybeSingle();
-    if (settings?.referral_enabled) {
-      const { data: friend } = await db
-        .from("profiles")
-        .select("id")
-        .eq("phone", referrer)
-        .maybeSingle();
-      if (friend) {
-        await db
-          .from("referrals")
-          .insert({ referrer_id: friend.id, referred_id: created.user.id, status: "pendente" });
-      }
-    }
+    await authed.rpc("link_referral", { p_referrer_phone: referrer });
   }
 
-  return { created: true, loginId, email };
-}
-
-async function findProfile(db: Admin, identifier: string) {
-  const slug = slugifyLogin(identifier);
-  const byLogin = await db
-    .from("profiles")
-    .select("id, full_name, login_id, phone")
-    .ilike("login_id", slug)
-    .maybeSingle();
-  if (byLogin.data) return byLogin.data;
-  const byName = await db
-    .from("profiles")
-    .select("id, full_name, login_id, phone")
-    .ilike("full_name", identifier)
-    .limit(2);
-  const rows = byName.data ?? [];
-  if (rows.length === 1) return rows[0]!;
-  return null;
+  return { created: true, loginId, email, password: accessKey };
 }
 
 export async function resolveLogin(identifier: string) {
-  const db = admin();
-  const profile = await findProfile(db, identifier);
-  if (!profile) return { email: null, loginId: null };
-  return { email: loginEmail(String(profile.login_id)), loginId: String(profile.login_id) };
+  const db = createPublicClient();
+  const { data, error } = await db.rpc("resolve_login_id", { p_identifier: identifier });
+  if (error) throw accessError(error, "localizar sua conta");
+  if (!data) return { email: null, loginId: null };
+  return { email: loginEmail(String(data)), loginId: String(data) };
 }
 
+/**
+ * Fecha o primeiro acesso já com a sessão da cliente: acerta o nome quando ela
+ * escreve diferente e migra contas antigas para a chave de acesso própria.
+ */
+export async function finishAccess(userId: string, fullName: string) {
+  const db = createAdminClient();
+  const { data: profile } = await db
+    .from("profiles")
+    .select("full_name, access_key")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const nextName = fullName.trim();
+  if (nextName && String(profile?.full_name ?? "").trim() !== nextName) {
+    await db.from("profiles").update({ full_name: nextName }).eq("id", userId);
+  }
+
+  if (!profile?.access_key) {
+    const accessKey = crypto.randomUUID();
+    const { error } = await db.auth.updateUser({ password: accessKey });
+    if (error) {
+      console.error("[acesso] falha ao migrar a chave de acesso", error);
+      return { ok: true as const, migrated: false };
+    }
+    await db.rpc("sync_my_access_key", { p_key: accessKey });
+    return { ok: true as const, migrated: true };
+  }
+
+  return { ok: true as const, migrated: false };
+}
+
+/** Corrige o WhatsApp da cliente sem derrubar o acesso dela. */
 export async function adminUpdateClientAccess(clientId: string, phone: string) {
-  const db = admin();
-  const { data: adminRoles } = await db
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", clientId)
-    .eq("role", "admin");
-  if ((adminRoles ?? []).length > 0)
-    throw new Error("Não é possível alterar a conta da administradora.");
-  const { error } = await db.auth.admin.updateUserById(clientId, { password: phone });
-  if (error) throw new Error("Não foi possível atualizar o acesso da cliente.");
-  const { error: profileError } = await db.from("profiles").update({ phone }).eq("id", clientId);
-  if (profileError) throw new Error("Não foi possível atualizar o telefone.");
+  const db = createAdminClient();
+  const normalizedPhone = onlyDigits(phone);
+  const { data: taken } = await db
+    .from("profiles")
+    .select("id")
+    .eq("phone", normalizedPhone)
+    .neq("id", clientId)
+    .maybeSingle();
+  if (taken) throw new Error("Esse telefone já está cadastrado em outra conta.");
+
+  const { error } = await db
+    .from("profiles")
+    .update({ phone: normalizedPhone })
+    .eq("id", clientId)
+    .is("deleted_at", null);
+  if (error) throw accessError(error, "atualizar o telefone");
   return { ok: true, domain: AUTH_EMAIL_DOMAIN };
 }
 
 /**
- * Garante uma conta de cliente para agendamentos manuais feitos pela administradora.
- * Reaproveita a cliente pelo telefone quando informado; sem telefone, cria uma
- * ficha offline (sem acesso ao app até cadastrar o WhatsApp).
+ * Exclusão da cliente: remove atendimentos, indicações, dispositivos e o papel,
+ * e desativa o perfil. A linha de autenticação permanece inacessível, porque
+ * removê-la exigiria credencial privada indisponível no deploy.
  */
-export async function ensureManualClient(fullName: string, phone: string) {
-  const db = admin();
-  if (phone) {
-    const { data: existing } = await db
-      .from("profiles")
-      .select("id, login_id, phone")
-      .eq("phone", phone)
-      .maybeSingle();
-    if (existing)
-      return {
-        clientId: String(existing.id),
-        created: false,
-        loginId: String(existing.login_id),
-        phone: String(existing.phone ?? phone),
-      };
-  }
-
-  const loginId = await uniqueLoginId(db, fullName);
-  const email = loginEmail(loginId);
-  const password = phone || `manual-${crypto.randomUUID()}`;
-  const { data: created, error } = await db.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: fullName, login_id: loginId },
-  });
-  if (error || !created.user) throw new Error("Não foi possível criar a ficha da cliente.");
-
-  const { error: profileError } = await db
-    .from("profiles")
-    .insert({ id: created.user.id, full_name: fullName, login_id: loginId, phone });
-  if (profileError) {
-    await db.auth.admin.deleteUser(created.user.id);
-    throw profileSaveError(profileError, "a ficha da cliente");
-  }
-  await db.from("user_roles").insert({ user_id: created.user.id, role: "client" });
-  return { clientId: String(created.user.id), created: true, loginId, phone };
+export async function adminDeleteClient(clientId: string) {
+  const db = createAdminClient();
+  const { error } = await db.rpc("admin_soft_delete_client", { p_client: clientId });
+  if (error) throw accessError(error, "excluir a conta da cliente");
+  return { ok: true };
 }
 
-/** Removes a client completely: appointments, profile, role and auth account. */
-export async function adminDeleteClient(clientId: string) {
-  const db = admin();
-  const { data: roles } = await db
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", clientId)
-    .eq("role", "admin");
-  if ((roles ?? []).length > 0)
-    throw new Error("Não é possível excluir a conta da administradora.");
+/**
+ * Cadastro criado pela administradora no agendamento avulso. Sem credencial
+ * privada, a conta nasce pelo próprio fluxo de inscrição (chave pública) e o
+ * perfil é gravado com a sessão recém-criada.
+ */
+export async function ensureManualClient(fullName: string, phone: string) {
+  const db = createPublicClient();
+  const normalizedPhone = onlyDigits(phone);
+  if (normalizedPhone.length < 10) throw new Error("Informe o telefone da cliente com DDD.");
 
-  await db.from("appointments").delete().eq("client_id", clientId);
-  await db.from("user_roles").delete().eq("user_id", clientId);
-  await db.from("profiles").delete().eq("id", clientId);
-  const { error } = await db.auth.admin.deleteUser(clientId);
-  if (error) throw new Error("Não foi possível excluir a conta da cliente.");
-  return { ok: true };
+  const { data: allocated, error: allocateError } = await db.rpc("allocate_login_id", {
+    p_full_name: fullName,
+  });
+  if (allocateError) throw accessError(allocateError, "preparar o acesso da cliente");
+  const loginId = String(allocated);
+  const email = loginEmail(loginId);
+  const accessKey = crypto.randomUUID();
+
+  const { data: signUp, error: signUpError } = await db.auth.signUp({
+    email,
+    password: accessKey,
+    options: { data: { full_name: fullName.trim(), login_id: loginId, phone: normalizedPhone } },
+  });
+  if (signUpError || !signUp.user) {
+    console.error("[acesso] falha ao criar cliente manual", signUpError);
+    throw new Error("Não foi possível criar o cadastro da cliente.");
+  }
+
+  const token =
+    signUp.session?.access_token ??
+    (await db.auth.signInWithPassword({ email, password: accessKey })).data.session?.access_token;
+  if (!token) throw new Error("Não foi possível concluir o cadastro da cliente.");
+
+  const { error: bootstrapError } = await createTokenClient(token).rpc("bootstrap_my_profile", {
+    p_full_name: fullName.trim(),
+    p_login_id: loginId,
+    p_phone: normalizedPhone,
+    p_access_key: accessKey,
+  });
+  if (bootstrapError) throw accessError(bootstrapError, "salvar o cadastro da cliente");
+
+  return { clientId: String(signUp.user.id), created: true, loginId };
 }

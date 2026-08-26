@@ -54,13 +54,15 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           client_hidden_at: string | null
-          client_id: string
+          client_id: string | null
           completed_at: string | null
           created_at: string
           day: string
           discount_applied: boolean
           discount_percent: number
           google_event_id: string | null
+          guest_name: string | null
+          guest_phone: string | null
           id: string
           loyalty_earned: boolean
           loyalty_expires_at: string | null
@@ -80,13 +82,15 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           client_hidden_at?: string | null
-          client_id: string
+          client_id?: string | null
           completed_at?: string | null
           created_at?: string
           day: string
           discount_applied?: boolean
           discount_percent?: number
           google_event_id?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
           id?: string
           loyalty_earned?: boolean
           loyalty_expires_at?: string | null
@@ -106,13 +110,15 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           client_hidden_at?: string | null
-          client_id?: string
+          client_id?: string | null
           completed_at?: string | null
           created_at?: string
           day?: string
           discount_applied?: boolean
           discount_percent?: number
           google_event_id?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
           id?: string
           loyalty_earned?: boolean
           loyalty_expires_at?: string | null
@@ -327,8 +333,11 @@ export type Database = {
       }
       profiles: {
         Row: {
+          access_key: string | null
+          auth_phone: string | null
           calendar_prompt_dismissed: boolean
           created_at: string
+          deleted_at: string | null
           email: string | null
           full_name: string
           id: string
@@ -338,8 +347,11 @@ export type Database = {
           welcome_seen: boolean
         }
         Insert: {
+          access_key?: string | null
+          auth_phone?: string | null
           calendar_prompt_dismissed?: boolean
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           full_name: string
           id: string
@@ -349,8 +361,11 @@ export type Database = {
           welcome_seen?: boolean
         }
         Update: {
+          access_key?: string | null
+          auth_phone?: string | null
           calendar_prompt_dismissed?: boolean
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           full_name?: string
           id?: string
@@ -566,6 +581,24 @@ export type Database = {
         }
         Relationships: []
       }
+      service_tokens: {
+        Row: {
+          created_at: string
+          name: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
+          token?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           active: boolean
@@ -730,6 +763,50 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_soft_delete_client: { Args: { p_client: string }; Returns: boolean }
+      allocate_login_id: { Args: { p_full_name: string }; Returns: string }
+      bootstrap_my_profile: {
+        Args: {
+          p_access_key: string
+          p_full_name: string
+          p_login_id: string
+          p_phone: string
+        }
+        Returns: undefined
+      }
+      busy_times: {
+        Args: { p_day: string }
+        Returns: {
+          duration_minutes: number
+          start_time: string
+        }[]
+      }
+      busy_times_except: {
+        Args: { p_day: string; p_exclude: string }
+        Returns: {
+          duration_minutes: number
+          start_time: string
+        }[]
+      }
+      claim_my_event_prize: {
+        Args: { p_appointment: string; p_event: string }
+        Returns: boolean
+      }
+      consume_my_referral: { Args: { p_appointment: string }; Returns: boolean }
+      drop_push_subscriptions: { Args: { p_ids: string[] }; Returns: undefined }
+      due_reminder_targets: {
+        Args: { p_token: string }
+        Returns: {
+          appointment_id: string
+          auth: string
+          day: string
+          endpoint: string
+          p256dh: string
+          service_name: string
+          start_time: string
+          subscription_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -737,6 +814,44 @@ export type Database = {
         }
         Returns: boolean
       }
+      link_referral: { Args: { p_referrer_phone: string }; Returns: boolean }
+      mark_reminder_sent: {
+        Args: { p_appointment: string; p_token: string }
+        Returns: undefined
+      }
+      phone_login_status: {
+        Args: { p_phone: string }
+        Returns: {
+          access_key: string
+          auth_phone: string
+          full_name: string
+          has_referral: boolean
+          is_admin: boolean
+          login_id: string
+          registered: boolean
+        }[]
+      }
+      phone_taken: { Args: { p_phone: string }; Returns: boolean }
+      push_admin_targets: {
+        Args: never
+        Returns: {
+          auth: string
+          endpoint: string
+          id: string
+          p256dh: string
+        }[]
+      }
+      push_client_targets: {
+        Args: { p_client: string }
+        Returns: {
+          auth: string
+          endpoint: string
+          id: string
+          p256dh: string
+        }[]
+      }
+      resolve_login_id: { Args: { p_identifier: string }; Returns: string }
+      sync_my_access_key: { Args: { p_key: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "client"

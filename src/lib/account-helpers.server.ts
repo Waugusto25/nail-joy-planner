@@ -33,8 +33,8 @@ export async function updateMyAccount(userId: string, phone: string, email: stri
   if (error) throw new Error("Não foi possível salvar seus dados.");
   if (!lockedEmail && nextEmail) await syncClientCalendar(userId);
 
-  const { error: authError } = await db.auth.admin.updateUserById(userId, { password: phone });
-  if (authError) throw new Error("Não foi possível atualizar seu acesso.");
+  // A senha interna é a chave de acesso do perfil, então trocar o telefone
+  // não mexe nas credenciais da conta.
   return { ok: true as const };
 }
 
@@ -139,17 +139,13 @@ export async function decideEmailChange(requestId: string, approve: boolean) {
 
 /** Marca o prêmio do sorteio como reivindicado no pré-agendamento informado. */
 export async function claimEventPrize(userId: string, eventId: string, appointmentId: string) {
+  void userId;
   const db = admin();
-  const { data: event } = await db
-    .from("events")
-    .select("id, winner_id, prize_claimed_at")
-    .eq("id", eventId)
-    .maybeSingle();
-  if (!event || String(event.winner_id) !== userId) throw new Error("Você não é a ganhadora deste evento.");
-  if (event.prize_claimed_at) throw new Error("Este prêmio já foi reivindicado.");
-  await db
-    .from("events")
-    .update({ prize_claimed_at: new Date().toISOString(), prize_claimed_appointment_id: appointmentId })
-    .eq("id", eventId);
+  // `events` é somente leitura para a cliente: a função valida a ganhadora.
+  const { error } = await db.rpc("claim_my_event_prize", {
+    p_event: eventId,
+    p_appointment: appointmentId,
+  });
+  if (error) throw new Error(error.message || "Não foi possível reivindicar o prêmio.");
   return { ok: true as const };
 }

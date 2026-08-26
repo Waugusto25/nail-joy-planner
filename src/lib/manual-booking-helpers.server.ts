@@ -25,19 +25,13 @@ async function assertFreeSlot(
   startTime: string,
   duration: number,
 ) {
-  const { data } = await db
-    .from("appointments")
-    .select("start_time, services(duration_minutes)")
-    .eq("day", day)
-    .in("status", ["pendente", "confirmado", "concluido"]);
+  const { data } = await db.rpc("busy_times", { p_day: day });
 
   const startA = timeToMinutes(startTime);
   const endA = startA + duration;
-  for (const row of data ?? []) {
-    const joined = (row as { services: unknown }).services;
-    const service = Array.isArray(joined) ? joined[0] : joined;
+  for (const row of (data ?? []) as { start_time: string; duration_minutes: number }[]) {
     const otherStart = timeToMinutes(String(row.start_time));
-    const otherEnd = otherStart + Number((service as { duration_minutes?: number })?.duration_minutes ?? 60);
+    const otherEnd = otherStart + Number(row.duration_minutes ?? 60);
     if (overlaps(startA, endA, otherStart, otherEnd)) {
       throw new Error("Este horário já está ocupado por outro atendimento.");
     }
@@ -103,6 +97,21 @@ export async function createManualAppointment(input: ManualAppointmentData) {
   let clientId = input.clientId ?? null;
   let createdClient = false;
   let clientLoginId: string | null = null;
+
+  // Cliente já cadastrada: a administradora enxerga os perfis pelas policies.
+  if (!clientId && input.clientPhone) {
+    const { data: existing } = await db
+      .from("profiles")
+      .select("id, login_id")
+      .eq("phone", input.clientPhone.replace(/\D/g, ""))
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (existing) {
+      clientId = String(existing.id);
+      clientLoginId = existing.login_id ? String(existing.login_id) : null;
+    }
+  }
+
   if (!clientId) {
     const { ensureManualClient } = await import("./auth-helpers.server");
     const result = await ensureManualClient(String(input.clientName), input.clientPhone ?? "");
