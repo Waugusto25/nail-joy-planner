@@ -7,6 +7,20 @@ function normalized(value: string | undefined): string | undefined {
   return result ? result : undefined;
 }
 
+function resolveServiceRoleKey(): string {
+  const serviceRoleKey =
+    normalized(process.env["SUPABASE_SERVICE_ROLE_KEY"]) ??
+    normalized(process.env["SUPABASE_SECRET_KEY"]);
+
+  if (!serviceRoleKey) {
+    throw new Error(
+      "Configuração do servidor ausente: vincule novamente os secrets do backend antes de executar operações administrativas.",
+    );
+  }
+
+  return serviceRoleKey;
+}
+
 function serviceRoleFetch(serviceRoleKey: string): typeof fetch {
   return (input, init) => {
     const headers = new Headers(
@@ -31,15 +45,7 @@ export function createAdminClient(): SupabaseClient {
     viteUrl: process.env["VITE_SUPABASE_URL"],
     serverUrl: process.env["SUPABASE_URL"],
   });
-  const serviceRoleKey =
-    normalized(process.env["SUPABASE_SERVICE_ROLE_KEY"]) ??
-    normalized(process.env["SUPABASE_SECRET_KEY"]);
-
-  if (!serviceRoleKey) {
-    throw new Error(
-      "Configuração do servidor ausente: SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_SECRET_KEY é obrigatória para operações administrativas.",
-    );
-  }
+  const serviceRoleKey = resolveServiceRoleKey();
 
   // Chaves novas (sb_secret_/sb_publishable_) são opacas, não JWT. Enviá-las como
   // "Authorization: Bearer" faz a API de dados falhar com "Expected 3 parts in JWT".

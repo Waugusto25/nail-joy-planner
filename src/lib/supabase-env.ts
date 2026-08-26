@@ -17,7 +17,7 @@ export type SupabasePublicConfig = {
 };
 
 export const DEFAULT_SUPABASE_URL = "https://uhrurskyobcwleygmfam.supabase.co";
-const DEFAULT_SUPABASE_PUBLISHABLE_KEY = "sb_publishable__Yr_ekAvPGiJy-wZecQQkw_GztEAd3C";
+export const DEFAULT_SUPABASE_PUBLISHABLE_KEY = "sb_publishable__Yr_ekAvPGiJy-wZecQQkw_GztEAd3C";
 
 function firstNonEmptyString(...values: unknown[]): string | undefined {
   for (const value of values) {
@@ -36,6 +36,7 @@ function normalizedUrl(value: string): string {
 export function resolveSupabaseServerUrl(environment: SupabaseServerEnvironment): string {
   const viteUrl = firstNonEmptyString(environment.viteUrl);
   const serverUrl = firstNonEmptyString(environment.serverUrl);
+  const expectedUrl = normalizedUrl(DEFAULT_SUPABASE_URL);
 
   if (viteUrl && serverUrl && normalizedUrl(viteUrl) !== normalizedUrl(serverUrl)) {
     throw new Error(
@@ -43,7 +44,14 @@ export function resolveSupabaseServerUrl(environment: SupabaseServerEnvironment)
     );
   }
 
-  return normalizedUrl(viteUrl ?? serverUrl ?? DEFAULT_SUPABASE_URL);
+  const configuredUrl = viteUrl ?? serverUrl;
+  if (configuredUrl && normalizedUrl(configuredUrl) !== expectedUrl) {
+    throw new Error(
+      "Configuração do deploy inconsistente: a URL configurada não pertence ao backend deste aplicativo.",
+    );
+  }
+
+  return expectedUrl;
 }
 
 export function resolveSupabasePublicConfig(environment: SupabaseEnvironment): SupabasePublicConfig {
