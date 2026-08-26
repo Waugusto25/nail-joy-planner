@@ -646,8 +646,9 @@ function ClientsTab() {
       await adminDeleteClientFn({ data: { clientId } });
       toast.success("Cliente excluída.");
       await queryClient.invalidateQueries();
-    } catch {
-      toast.error("Não foi possível excluir a cliente.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível excluir a cliente.";
+      toast.error(message);
     }
   }
 
