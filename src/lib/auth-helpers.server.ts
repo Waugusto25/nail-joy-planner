@@ -92,8 +92,9 @@ export async function phoneAccess(fullName: string, phone: string, referrerPhone
     .insert({ id: created.user.id, full_name: fullName, login_id: loginId, phone });
   if (profileError) {
     await db.auth.admin.deleteUser(created.user.id);
-    throw new Error("Não foi possível salvar seu cadastro. Tente novamente.");
+    throw profileSaveError(profileError, "seu cadastro");
   }
+
   await db.from("user_roles").insert({ user_id: created.user.id, role: "client" });
 
   // Indicação: fica pendente até a nova cliente concluir o primeiro atendimento.
