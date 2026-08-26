@@ -358,7 +358,7 @@ export function adminWelcomeMessage(n: {
     "Seu cadastro no nosso aplicativo foi criado por mim com todo carinho! A partir de agora você pode gerenciar seus horários, acumular pontos no clube de fidelidade e ver nossas novidades.",
     "",
     "📱 Acesse o aplicativo pelo link:",
-    "https://nail-joy-planner.lovable.app",
+    APP_URL,
     "",
     `👤 Seu Usuário: ${n.loginId}`,
     `🔑 Sua Senha Inicial: ${n.phoneDigits}`,
