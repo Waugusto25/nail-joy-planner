@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/app/password-input";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 import { useAppSettings } from "@/hooks/useSettings";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { onlyDigits, setSalonContact } from "@/lib/salon";

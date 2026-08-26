@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCurrentProfile } from "@/hooks/useSession";
 import { requestEmailChangeFn, updateMyAccountFn } from "@/lib/account.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 import { useQuery } from "@tanstack/react-query";
 import { formatPhone } from "@/lib/salon";
 
