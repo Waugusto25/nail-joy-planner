@@ -41,6 +41,7 @@ function serviceRoleFetch(serviceRoleKey: string): typeof fetch {
 }
 
 export function createAdminClient(): SupabaseClient {
+  // A URL pertence ao ambiente do deploy; não há validação contra um ID fixo.
   const url = resolveSupabaseServerUrl({
     viteUrl: process.env["VITE_SUPABASE_URL"],
     serverUrl: process.env["SUPABASE_URL"],
