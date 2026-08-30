@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getRequest } from "@tanstack/react-start/server";
 
 import {
   BENEFIT_LABELS,
@@ -16,6 +17,14 @@ const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_calendar/calen
 export const CALENDAR_ID = "jannahsilva.oliveira@gmail.com";
 const TIME_ZONE = "America/Sao_Paulo";
 
+/**
+ * Hospedagem onde as credenciais do conector da Google Agenda existem.
+ * Deploys externos (ex.: Vercel) não recebem essas credenciais, então
+ * encaminhamos a operação para cá.
+ */
+const CALENDAR_BRIDGE_BASE = "https://nail-joy-planner.lovable.app";
+const BRIDGE_MARKER = "x-calendar-bridge";
+
 /** Padrão visual por status na Google Agenda: azul, amarelo, verde e vermelho. */
 export const STATUS_COLOR_ID: Record<string, string> = {
   pendente: "9",
@@ -28,11 +37,60 @@ function admin(): SupabaseClient {
   return createAdminClient();
 }
 
+/** Só a hospedagem com as credenciais do conector fala direto com a Google. */
+function hasGatewayCredentials(): boolean {
+  return Boolean(process.env["LOVABLE_API_KEY"] && process.env["GOOGLE_CALENDAR_API_KEY"]);
+}
+
+function currentRequestHeaders(): Headers | null {
+  try {
+    return getRequest()?.headers ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export type CalendarBridgeAction = "sync" | "cancel" | "color" | "remove" | "client-future";
+
+/**
+ * Encaminha a operação para a hospedagem que tem a Google Agenda conectada.
+ * Retorna `null` quando não é possível/necessário usar a ponte, e nesse caso o
+ * fluxo segue localmente (ou falha com o erro original).
+ */
+async function bridge(
+  action: CalendarBridgeAction,
+  target: string,
+): Promise<Record<string, unknown> | null> {
+  if (hasGatewayCredentials()) return null;
+  const headers = currentRequestHeaders();
+  // Evita laço infinito: se já somos o destino da ponte, não reencaminhamos.
+  if (headers?.get(BRIDGE_MARKER)) return null;
+  const authorization = headers?.get("authorization");
+  if (!authorization) return null;
+
+  const base = process.env["CALENDAR_BRIDGE_URL"]?.replace(/\/+$/, "") || CALENDAR_BRIDGE_BASE;
+  const response = await fetch(`${base}/api/public/hooks/calendar-sync`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: authorization,
+      [BRIDGE_MARKER]: "1",
+    },
+    body: JSON.stringify({ action, target }),
+  });
+  const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!response.ok) {
+    const detail = typeof payload?.["error"] === "string" ? String(payload["error"]) : "";
+    throw new Error(detail || `Google Agenda recusou a operação (${response.status}).`);
+  }
+  return payload ?? {};
+}
+
 function gatewayHeaders() {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const connectionKey = process.env["GOOGLE_CALENDAR_API_KEY"];
   if (!lovableKey || !connectionKey) {
-    throw new Error("Google Agenda não está conectada.");
+    throw new Error("Google Agenda não está conectada nesta hospedagem.");
   }
   return {
     Authorization: `Bearer ${lovableKey}`,
@@ -87,6 +145,8 @@ async function loadAppointment(db: SupabaseClient, appointmentId: string) {
 
 /** Cria (ou atualiza) o compromisso na Google Agenda para um atendimento confirmado. */
 export async function syncAppointmentToCalendar(appointmentId: string) {
+  const remote = await bridge("sync", appointmentId);
+  if (remote) return { eventId: (remote["eventId"] as string | null) ?? null };
   const db = admin();
   const appt = await loadAppointment(db, appointmentId);
   const { data: client } = await db
@@ -155,6 +215,8 @@ export async function syncAppointmentToCalendar(appointmentId: string) {
  * convidado e os horários já marcados apareçam na agenda dela.
  */
 export async function syncFutureAppointmentsForClient(clientId: string) {
+  const remote = await bridge("client-future", clientId);
+  if (remote) return { synced: Number(remote["synced"] ?? 0) };
   const db = admin();
   const today = new Date().toISOString().slice(0, 10);
   const { data } = await db
@@ -176,6 +238,8 @@ export async function syncFutureAppointmentsForClient(clientId: string) {
 }
 
 export async function removeAppointmentFromCalendar(appointmentId: string) {
+  const remote = await bridge("remove", appointmentId);
+  if (remote) return { removed: Boolean(remote["removed"]) };
   const db = admin();
   const { data } = await db
     .from("appointments")
@@ -197,6 +261,8 @@ export async function removeAppointmentFromCalendar(appointmentId: string) {
  * marca o título como CANCELADO, avisando a cliente convidada.
  */
 export async function markAppointmentCancelledInCalendar(appointmentId: string) {
+  const remote = await bridge("cancel", appointmentId);
+  if (remote) return { updated: Boolean(remote["updated"]) };
   const db = admin();
   const appt = await loadAppointment(db, appointmentId);
   if (!appt.google_event_id) return { updated: false };
@@ -226,6 +292,8 @@ export async function markAppointmentCancelledInCalendar(appointmentId: string) 
  * Se o evento ainda não existir na agenda, cria o compromisso completo.
  */
 export async function syncCalendarStatusColor(appointmentId: string) {
+  const remote = await bridge("color", appointmentId);
+  if (remote) return { updated: Boolean(remote["updated"]) };
   const db = admin();
   const { data } = await db
     .from("appointments")
