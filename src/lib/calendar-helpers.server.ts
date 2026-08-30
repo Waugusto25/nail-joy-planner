@@ -145,6 +145,8 @@ async function loadAppointment(db: SupabaseClient, appointmentId: string) {
 
 /** Cria (ou atualiza) o compromisso na Google Agenda para um atendimento confirmado. */
 export async function syncAppointmentToCalendar(appointmentId: string) {
+  const remote = await bridge("sync", appointmentId);
+  if (remote) return { eventId: (remote["eventId"] as string | null) ?? null };
   const db = admin();
   const appt = await loadAppointment(db, appointmentId);
   const { data: client } = await db
@@ -213,6 +215,8 @@ export async function syncAppointmentToCalendar(appointmentId: string) {
  * convidado e os horários já marcados apareçam na agenda dela.
  */
 export async function syncFutureAppointmentsForClient(clientId: string) {
+  const remote = await bridge("client-future", clientId);
+  if (remote) return { synced: Number(remote["synced"] ?? 0) };
   const db = admin();
   const today = new Date().toISOString().slice(0, 10);
   const { data } = await db
@@ -234,6 +238,8 @@ export async function syncFutureAppointmentsForClient(clientId: string) {
 }
 
 export async function removeAppointmentFromCalendar(appointmentId: string) {
+  const remote = await bridge("remove", appointmentId);
+  if (remote) return { removed: Boolean(remote["removed"]) };
   const db = admin();
   const { data } = await db
     .from("appointments")
@@ -255,6 +261,8 @@ export async function removeAppointmentFromCalendar(appointmentId: string) {
  * marca o título como CANCELADO, avisando a cliente convidada.
  */
 export async function markAppointmentCancelledInCalendar(appointmentId: string) {
+  const remote = await bridge("cancel", appointmentId);
+  if (remote) return { updated: Boolean(remote["updated"]) };
   const db = admin();
   const appt = await loadAppointment(db, appointmentId);
   if (!appt.google_event_id) return { updated: false };
@@ -284,6 +292,8 @@ export async function markAppointmentCancelledInCalendar(appointmentId: string) 
  * Se o evento ainda não existir na agenda, cria o compromisso completo.
  */
 export async function syncCalendarStatusColor(appointmentId: string) {
+  const remote = await bridge("color", appointmentId);
+  if (remote) return { updated: Boolean(remote["updated"]) };
   const db = admin();
   const { data } = await db
     .from("appointments")
