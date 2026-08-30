@@ -223,11 +223,15 @@ function AgendaTab() {
     try {
       if (status === "confirmado") {
         const result = await confirmAppointmentFn({ data: { appointmentId: id } });
-        toast.success(
-          result.calendar === "ok"
-            ? "Confirmado e adicionado à Google Agenda."
-            : "Confirmado. Não foi possível criar o evento na Google Agenda.",
-        );
+        if (result.calendar === "ok") {
+          toast.success("Confirmado e adicionado à Google Agenda.");
+        } else {
+          toast.warning(
+            result.calendarMessage
+              ? `Confirmado, mas a Google Agenda falhou: ${result.calendarMessage}`
+              : "Confirmado. Não foi possível criar o evento na Google Agenda.",
+          );
+        }
         openClientWhatsapp(notice);
       } else if (status === "cancelado") {
         await cancelAppointmentFn({ data: { appointmentId: id } });
