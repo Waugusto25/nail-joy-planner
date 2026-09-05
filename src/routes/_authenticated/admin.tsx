@@ -167,6 +167,8 @@ function AdminPanel() {
 function AgendaTab() {
   const queryClient = useQueryClient();
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [confirmedMonth, setConfirmedMonth] = useState(currentMonthKey());
+
   const appointments = useQuery({
     queryKey: ["admin-appointments"],
     queryFn: async () => {
