@@ -28,6 +28,8 @@ export type StoreOrderInstallment = {
   merged_into_order_id: string | null;
   /** Valor que veio de um pedido anterior e foi somado nesta parcela. */
   merged_extra_cents: number;
+  /** Valor acumulado de produtos acrescentados depois ao pedido e somados nesta parcela. */
+  added_extra_cents: number;
 };
 
 export type StoreOrderWithDetails = {
