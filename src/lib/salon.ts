@@ -150,6 +150,18 @@ export function formatDateTime(value?: string | null) {
   });
 }
 
+/**
+ * Formata uma data "YYYY-MM-DD" como "DD/MM/AAAA" sem passar por Date,
+ * evitando o recuo de um dia causado pela interpretação em UTC.
+ */
+export function formatISODate(value?: string | null) {
+  if (!value) return "—";
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+  if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+  return formatDateTime(value);
+}
+
+
 export const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"] as const;
 
 export const APPOINTMENT_STATUS: Record<string, string> = {
