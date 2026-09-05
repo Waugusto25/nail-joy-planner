@@ -33,6 +33,8 @@ import { MonthsManager } from "@/components/app/months-manager";
 import { SpecialDaysManager } from "@/components/app/special-days-manager";
 import { FinanceTab } from "@/components/app/finance-tab";
 import { StoreOrdersTab } from "@/components/app/store-orders-tab";
+import { StoreClientsTab } from "@/components/app/store-clients-tab";
+import { StoreDashboardTab } from "@/components/app/store-dashboard-tab";
 
 import {
   Dialog,
@@ -118,6 +120,7 @@ function AdminPanel() {
             <TabsTrigger value="loja">Loja</TabsTrigger>
             <TabsTrigger value="pedidos">Pedidos da Loja</TabsTrigger>
             <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           </TabsList>
           <TabsContent value="agenda" className="pt-6">
             <AgendaTab />
@@ -126,7 +129,7 @@ function AdminPanel() {
             <FinanceTab />
           </TabsContent>
           <TabsContent value="clientes" className="pt-6">
-            <ClientsTab />
+            <ClientsTabs />
           </TabsContent>
           <TabsContent value="servicos" className="pt-6">
             <ServicesTab />
@@ -148,6 +151,9 @@ function AdminPanel() {
           </TabsContent>
           <TabsContent value="catalogos" className="pt-6">
             <CatalogsTab />
+          </TabsContent>
+          <TabsContent value="dashboard" className="pt-6">
+            <StoreDashboardTab />
           </TabsContent>
         </Tabs>
       </main>
@@ -597,6 +603,24 @@ function BlockedDates() {
   );
 }
 
+/** Clientes do salão e clientes exclusivos da loja em sub-abas. */
+function ClientsTabs() {
+  return (
+    <Tabs defaultValue="salao">
+      <TabsList>
+        <TabsTrigger value="salao">Clientes Salão</TabsTrigger>
+        <TabsTrigger value="loja">Clientes LOJA</TabsTrigger>
+      </TabsList>
+      <TabsContent value="salao" className="pt-5">
+        <ClientsTab />
+      </TabsContent>
+      <TabsContent value="loja" className="pt-5">
+        <StoreClientsTab />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
 function ClientsTab() {
   const queryClient = useQueryClient();
   const clients = useQuery({
@@ -615,6 +639,7 @@ function ClientsTab() {
   const [phone, setPhone] = useState("");
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
   const [savingNickname, setSavingNickname] = useState<string | null>(null);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
   const adminIds = useQuery({
     queryKey: ["admin-role-ids"],
     queryFn: async () => {
@@ -653,6 +678,34 @@ function ClientsTab() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Não foi possível excluir a cliente.";
       toast.error(message);
+    }
+  }
+
+  /** Copia nome, telefone e apelido da cliente do salão para a lista da loja. */
+  async function copyToStore(client: { id: string; full_name: string; phone: string; nickname: string | null }) {
+    setCopyingId(client.id);
+    try {
+      const { data: existing } = await supabase
+        .from("store_clients")
+        .select("id")
+        .eq("source_profile_id", client.id)
+        .maybeSingle();
+      const payload = {
+        full_name: client.full_name,
+        phone: client.phone,
+        nickname: client.nickname,
+        source_profile_id: client.id,
+      };
+      const { error } = existing
+        ? await supabase.from("store_clients").update(payload).eq("id", existing.id)
+        : await supabase.from("store_clients").insert(payload);
+      if (error) throw new Error(error.message);
+      toast.success(existing ? "Cadastro da loja atualizado." : "Cliente copiada para a loja.");
+      await queryClient.invalidateQueries({ queryKey: ["store-clients"] });
+    } catch {
+      toast.error("Não foi possível copiar para a loja.");
+    } finally {
+      setCopyingId(null);
     }
   }
 
@@ -734,6 +787,21 @@ function ClientsTab() {
                       }}
                     >
                       Editar telefone
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={copyingId === c.id}
+                      onClick={() =>
+                        void copyToStore({
+                          id: c.id,
+                          full_name: c.full_name,
+                          phone: c.phone,
+                          nickname: c.nickname ?? null,
+                        })
+                      }
+                    >
+                      {copyingId === c.id ? "Copiando..." : "Copiar para Loja"}
                     </Button>
                     <Button
                       size="sm"

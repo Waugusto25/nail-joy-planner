@@ -10,6 +10,7 @@ export type AppSettings = {
   max_advance_months: number;
   instagram_url: string;
   whatsapp_number: string;
+  pix_key: string;
 };
 
 export function useAppSettings() {
@@ -19,7 +20,7 @@ export function useAppSettings() {
       const { data, error } = await supabase
         .from("app_settings")
         .select(
-          "loyalty_enabled, referral_enabled, benefit_expiry_days, max_advance_months, instagram_url, whatsapp_number",
+          "loyalty_enabled, referral_enabled, benefit_expiry_days, max_advance_months, instagram_url, whatsapp_number, pix_key",
         )
         .eq("id", true)
         .maybeSingle();
@@ -32,6 +33,7 @@ export function useAppSettings() {
         max_advance_months: data?.max_advance_months ?? 2,
         instagram_url: data?.instagram_url ?? INSTAGRAM_URL,
         whatsapp_number: data?.whatsapp_number ?? WHATSAPP_NUMBER,
+        pix_key: data?.pix_key ?? "",
       };
     },
   });

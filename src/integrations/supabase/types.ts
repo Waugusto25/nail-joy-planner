@@ -21,6 +21,7 @@ export type Database = {
           instagram_url: string
           loyalty_enabled: boolean
           max_advance_months: number
+          pix_key: string
           referral_enabled: boolean
           updated_at: string
           whatsapp_number: string
@@ -31,6 +32,7 @@ export type Database = {
           instagram_url?: string
           loyalty_enabled?: boolean
           max_advance_months?: number
+          pix_key?: string
           referral_enabled?: boolean
           updated_at?: string
           whatsapp_number?: string
@@ -41,6 +43,7 @@ export type Database = {
           instagram_url?: string
           loyalty_enabled?: boolean
           max_advance_months?: number
+          pix_key?: string
           referral_enabled?: boolean
           updated_at?: string
           whatsapp_number?: string
@@ -665,6 +668,118 @@ export type Database = {
         }
         Relationships: []
       }
+      store_clients: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          nickname: string | null
+          notes: string | null
+          phone: string
+          source_profile_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          nickname?: string | null
+          notes?: string | null
+          phone?: string
+          source_profile_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          nickname?: string | null
+          notes?: string | null
+          phone?: string
+          source_profile_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      store_order_installments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          due_date: string | null
+          id: string
+          number: number
+          order_id: string
+          paid_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents?: number
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          number?: number
+          order_id: string
+          paid_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          number?: number
+          order_id?: string
+          paid_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_order_installments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "store_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          order_id: string
+          sort_order: number
+          unit_price_cents: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          order_id: string
+          sort_order?: number
+          unit_price_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_id?: string
+          sort_order?: number
+          unit_price_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "store_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_orders: {
         Row: {
           amount_cents: number
@@ -678,6 +793,7 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           status: string
+          store_client_id: string | null
           updated_at: string
         }
         Insert: {
@@ -692,6 +808,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           status?: string
+          store_client_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -706,9 +823,18 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           status?: string
+          store_client_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "store_orders_store_client_id_fkey"
+            columns: ["store_client_id"]
+            isOneToOne: false
+            referencedRelation: "store_clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

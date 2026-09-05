@@ -471,3 +471,78 @@ export function rescheduleMessage(n: {
     `Sua Google Agenda já foi atualizada. Qualquer dúvida, me chame! 🥰 — ${SALON_NAME}`,
   ].join("\n");
 }
+
+/* ============================================================
+ * Loja — mensagens neutras (público de todos os gêneros)
+ * ============================================================ */
+
+/** Divide o total em N parcelas em centavos, jogando a sobra na última. */
+export function splitInstallments(totalCents: number, count: number): number[] {
+  const n = Math.max(1, Math.floor(count) || 1);
+  const base = Math.floor(totalCents / n);
+  return Array.from({ length: n }, (_, i) => (i === n - 1 ? totalCents - base * (n - 1) : base));
+}
+
+export type CatalogLink = { title: string; url: string };
+
+/** Saudação com os catálogos ativos, um por linha. */
+export function catalogsGreetingMessage(catalogs: CatalogLink[]) {
+  const lines = catalogs
+    .filter((c) => c.url.trim())
+    .map((c) => `👉 ${c.title.trim() || "Catálogo"}: ${c.url.trim()}`);
+  return [
+    "Olá! Estamos com catálogos novos. Que tal dar uma olhada e ver o que tem de novo? 🛍️✨",
+    "",
+    lines.length > 0 ? lines.join("\n") : "Em breve enviamos os links dos catálogos.",
+    "",
+    "Qualquer dúvida estamos à disposição!",
+  ].join("\n");
+}
+
+export type OrderMessageArgs = {
+  name: string;
+  amountCents: number;
+  dueDate?: string | null;
+  pixKey?: string | null;
+};
+
+/** Cobrança enviada quando o pedido já foi entregue. */
+export function orderChargeMessage(args: OrderMessageArgs) {
+  return [
+    `Olá, ${args.name}! Passando para informar sobre o seu pedido. 📦`,
+    "",
+    `Valor: ${formatPrice(args.amountCents)}`,
+    `Vencimento/Data: ${args.dueDate ? formatDateTime(args.dueDate) : "a combinar"}`,
+    "",
+    `Chave Pix para pagamento: ${args.pixKey?.trim() || "consulte com a gente"}`,
+    "",
+    "Se já realizou o pagamento, favor desconsiderar esta mensagem. Obrigado!",
+  ].join("\n");
+}
+
+/** Pedido disponível para retirada. */
+export function orderReadyMessage(name: string) {
+  return [
+    `Olá, ${name}! Boas notícias! 🎉`,
+    "O seu pedido já chegou e está prontinho para ser retirado.",
+    "",
+    "Ficamos no aguardo de sua visita! Qualquer dúvida, nos chame aqui.",
+  ].join("\n");
+}
+
+/** Pedido encaminhado ao fornecedor. */
+export function orderOrderedMessage(name: string) {
+  return [
+    `Olá, ${name}! Seu pedido já foi encaminhado aos nossos fornecedores. 🚚`,
+    "",
+    "Assim que os produtos chegarem até nós, te avisamos imediatamente para você retirar. Obrigado pela confiança!",
+  ].join("\n");
+}
+
+/** Mensagem do pedido conforme o status — `null` quando não deve enviar nada. */
+export function orderStatusMessage(status: string, args: OrderMessageArgs): string | null {
+  if (status === "entregue") return orderChargeMessage(args);
+  if (status === "pronto") return orderReadyMessage(args.name);
+  if (status === "encomendado") return orderOrderedMessage(args.name);
+  return null;
+}
