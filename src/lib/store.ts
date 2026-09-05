@@ -53,6 +53,106 @@ export function pendingInstallments(list: StoreOrderInstallment[]): StoreOrderIn
   return list.filter((p) => !p.paid_at && !p.merged_into_order_id);
 }
 
+/** Soma meses a uma data "YYYY-MM-DD" sem passar por conversão de fuso. */
+export function addMonthsISO(iso: string, months: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const base = new Date(y, m - 1 + months, 1);
+  const lastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+  const day = Math.min(d, lastDay);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${base.getFullYear()}-${p(base.getMonth() + 1)}-${p(day)}`;
+}
+
+/** Data local de hoje em "YYYY-MM-DD", sem deslocamento de fuso. */
+export function todayISO(): string {
+  const now = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
+/** Divide um valor em N parcelas, deixando a sobra de centavos na primeira. */
+function splitFirstHeavy(totalCents: number, count: number): number[] {
+  const n = Math.max(1, Math.floor(count) || 1);
+  const base = Math.floor(totalCents / n);
+  return Array.from({ length: n }, (_, i) => (i === 0 ? totalCents - base * (n - 1) : base));
+}
+
+export type InstallmentPlanChange = {
+  /** Parcelas pendentes existentes que mudam de valor/vencimento. */
+  update: { id: string; amount_cents: number; due_date: string | null }[];
+  /** Parcelas novas a criar (quando o saldo é redividido em mais parcelas). */
+  insert: { number: number; amount_cents: number; due_date: string | null }[];
+  /** Parcelas pendentes que deixam de existir (redivisão em menos parcelas). */
+  remove: string[];
+  /** Novo total de parcelas do pedido (pagas + pendentes). */
+  totalInstallments: number;
+  /** Saldo devedor após o acréscimo. */
+  pendingBalanceCents: number;
+};
+
+/**
+ * Recalcula apenas o saldo devedor de um pedido ao acrescentar itens.
+ * Parcelas pagas e parcelas unificadas em outro pedido nunca são tocadas.
+ */
+export function redistributeInstallments(
+  order: StoreOrderWithDetails,
+  addedCents: number,
+  mode: "keep" | "resplit",
+  count: number,
+): InstallmentPlanChange {
+  const active = order.installments_list.filter((p) => !p.merged_into_order_id);
+  const paid = active.filter((p) => p.paid_at);
+  const pending = pendingInstallments(order.installments_list).sort((a, b) => a.number - b.number);
+  const pendingBalanceCents =
+    pending.reduce((sum, p) => sum + p.amount_cents, 0) + Math.max(0, addedCents);
+
+  // Sem parcela pendente, só resta criar novas parcelas para o valor acrescentado.
+  const effectiveMode = pending.length === 0 ? "resplit" : mode;
+
+  if (effectiveMode === "keep") {
+    const amounts = splitFirstHeavy(pendingBalanceCents, pending.length);
+    return {
+      update: pending.map((p, i) => ({
+        id: p.id,
+        amount_cents: amounts[i] ?? p.amount_cents,
+        due_date: p.due_date,
+      })),
+      insert: [],
+      remove: [],
+      totalInstallments: paid.length + pending.length,
+      pendingBalanceCents,
+    };
+  }
+
+  const n = Math.max(1, Math.floor(count) || 1);
+  const amounts = splitFirstHeavy(pendingBalanceCents, n);
+  const baseDue = pending[0]?.due_date ?? order.delivery_date ?? todayISO();
+  const maxNumber = active.reduce((max, p) => Math.max(max, p.number), 0);
+
+  const update: InstallmentPlanChange["update"] = [];
+  const insert: InstallmentPlanChange["insert"] = [];
+  for (let i = 0; i < n; i += 1) {
+    const due = addMonthsISO(baseDue, i);
+    const reused = pending[i];
+    if (reused) update.push({ id: reused.id, amount_cents: amounts[i] ?? 0, due_date: due });
+    else
+      insert.push({
+        number: maxNumber + 1 + (i - pending.length),
+        amount_cents: amounts[i] ?? 0,
+        due_date: due,
+      });
+  }
+
+  return {
+    update,
+    insert,
+    remove: pending.slice(n).map((p) => p.id),
+    totalInstallments: paid.length + n,
+    pendingBalanceCents,
+  };
+}
+
 export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
   const { data, error } = await supabase
     .from("store_orders")

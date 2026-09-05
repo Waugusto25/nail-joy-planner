@@ -17,6 +17,7 @@ import {
   splitInstallments,
 } from "@/lib/salon";
 import {
+  addMonthsISO,
   displayName,
   fetchStoreClients,
   pendingInstallments,
@@ -39,16 +40,6 @@ function toInput(cents: number) {
   return (cents / 100).toFixed(2).replace(".", ",");
 }
 
-/** Soma meses a uma data "YYYY-MM-DD" sem passar por conversão de fuso. */
-function addMonthsISO(iso: string, months: number): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  if (!y || !m || !d) return iso;
-  const base = new Date(y, m - 1 + months, 1);
-  const lastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
-  const day = Math.min(d, lastDay);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${base.getFullYear()}-${p(base.getMonth() + 1)}-${p(day)}`;
-}
 
 /** Primeira parcela pendente (a vencer) de pedidos anteriores do mesmo cliente. */
 function firstPendingFromHistory(

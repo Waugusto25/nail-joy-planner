@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import {
   whatsappLinkTo,
 } from "@/lib/salon";
 import { StoreStatementButton } from "@/components/app/store-statement-button";
+import { StoreOrderAddItemsDialog } from "@/components/app/store-order-add-items-dialog";
 import { cn } from "@/lib/utils";
 import { pendingInstallments, type StoreOrderInstallment, type StoreOrderWithDetails } from "@/lib/store";
 
@@ -45,8 +46,12 @@ export function StoreOrderCard({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const pending = pendingInstallments(order.installments_list);
   const nextDue = pending[0];
+  // Pedido em aberto: ainda em andamento ou com saldo devedor.
+  const isOpenOrder =
+    order.status === "pendente" || order.status === "encomendado" || pending.length > 0;
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
@@ -277,6 +282,11 @@ export function StoreOrderCard({
             >
               WhatsApp
             </Button>
+            {isOpenOrder ? (
+              <Button size="sm" variant="outline" className="gap-1" onClick={() => setAddOpen(true)}>
+                <Plus size={16} /> Adicionar Produto a este Pedido
+              </Button>
+            ) : null}
             <Button size="sm" variant="secondary" onClick={onEdit}>
               Editar
             </Button>
@@ -292,6 +302,8 @@ export function StoreOrderCard({
           </div>
         </div>
       </div>
+
+      <StoreOrderAddItemsDialog order={order} open={addOpen} onOpenChange={setAddOpen} />
     </article>
   );
 }
