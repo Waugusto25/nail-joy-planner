@@ -528,7 +528,7 @@ export function orderChargeMessage(args: OrderMessageArgs) {
     "Chave Pix para pagamento:",
     "```" + (args.pixKey?.trim() || "consulte com a gente") + "```",
     "",
-    "Se já realizou o pagamento, favor desconsiderar esta mensagem. Obrigado!",
+    "Se já realizou o pagamento, favor desconsiderar esta mensagem. Obrigada!",
   ].join("\n");
 }
 
@@ -547,7 +547,7 @@ export function orderOrderedMessage() {
   return [
     "Olá! Seu pedido já foi encaminhado aos nossos fornecedores. 🚚",
     "",
-    "Assim que os produtos chegarem até nós, te avisamos imediatamente para você retirar. Obrigado pela confiança!",
+    "Assim que os produtos chegarem até nós, te avisamos imediatamente para você retirar. Obrigada pela confiança!",
   ].join("\n");
 }
 
