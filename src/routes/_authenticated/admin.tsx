@@ -445,7 +445,15 @@ function AgendaTab() {
     .slice()
     .sort((a, b) => b.day.localeCompare(a.day));
 
-  const confirmedDays = [...new Set(confirmados.map((a) => a.day))];
+  // Meses com atendimentos confirmados + o mês vigente (sempre visível/selecionável).
+  const nowMonth = currentMonthKey();
+  const confirmedMonths = [
+    ...new Set([nowMonth, ...confirmados.map((a) => monthKeyOf(a.day))]),
+  ].sort();
+  const activeMonth = confirmedMonths.includes(confirmedMonth) ? confirmedMonth : nowMonth;
+  const monthConfirmados = confirmados.filter((a) => monthKeyOf(a.day) === activeMonth);
+  const confirmedDays = [...new Set(monthConfirmados.map((a) => a.day))];
+
 
   return (
     <div className="space-y-4">
