@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase-client";
 import { catalogsGreetingMessage, formatPhone, onlyDigits, whatsappLinkTo } from "@/lib/salon";
+import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { fetchActiveCatalogs, fetchStoreClients, type StoreClient } from "@/lib/store";
 
 type ClientForm = { full_name: string; phone: string; nickname: string; notes: string };
@@ -182,6 +183,11 @@ export function StoreClientsTab() {
                 >
                   WhatsApp
                 </Button>
+                <StoreStatementButton
+                  clientId={c.id}
+                  clientName={c.full_name}
+                  clientPhone={c.phone ?? ""}
+                />
                 <Button
                   size="sm"
                   variant="secondary"

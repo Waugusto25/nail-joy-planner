@@ -16,12 +16,14 @@ import {
   orderStatusMessage,
   whatsappLinkTo,
 } from "@/lib/salon";
+import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { cn } from "@/lib/utils";
 import type { StoreOrderInstallment, StoreOrderItem } from "@/lib/store";
 
 export type StoreOrderWithDetails = {
   id: string;
   store_client_id: string | null;
+  created_at: string | null;
   client_name: string;
   client_phone: string;
   nickname: string | null;
@@ -235,6 +237,12 @@ export function StoreOrderCard({
         <Button size="sm" variant="secondary" onClick={onEdit}>
           Editar
         </Button>
+        <StoreStatementButton
+          clientId={order.store_client_id}
+          clientName={order.client_name}
+          clientPhone={order.client_phone}
+        />
+
         <Button size="sm" variant="ghost" onClick={() => void remove()}>
           Excluir
         </Button>
