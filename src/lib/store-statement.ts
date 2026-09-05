@@ -1,6 +1,6 @@
 import type { jsPDF } from "jspdf";
 
-import type { StoreOrderWithDetails } from "@/components/app/store-order-card";
+import { type StoreOrderWithDetails } from "@/lib/store";
 import { ORDER_STATUS_LABELS, formatISODate, formatPhone, formatPrice } from "@/lib/salon";
 
 export type StatementTotals = {
@@ -19,7 +19,14 @@ export function statementTotals(orders: StoreOrderWithDetails[]): StatementTotal
       if (parcel.paid_at) paidCents += parcel.amount_cents;
     }
   }
-  return { totalCents, paidCents, pendingCents: Math.max(0, totalCents - paidCents) };
+  let pendingCents = 0;
+  for (const order of orders) {
+    for (const parcel of order.installments_list) {
+      // Parcelas unificadas em outro pedido não são cobradas novamente.
+      if (!parcel.paid_at && !parcel.merged_into_order_id) pendingCents += parcel.amount_cents;
+    }
+  }
+  return { totalCents, paidCents, pendingCents };
 }
 
 export function statementFileName(clientName: string): string {
@@ -225,11 +232,27 @@ export function drawStatement(
         doc.text(formatISODate(parcel.due_date), MARGIN + 75, y);
         const paid = Boolean(parcel.paid_at);
         doc.text(
-          paid ? `Paga em ${formatISODate(parcel.paid_at?.slice(0, 10) ?? null)}` : "Pendente",
+          parcel.merged_into_order_id
+            ? "Unificada em novo pedido"
+            : paid
+              ? `Paga em ${formatISODate(parcel.paid_at?.slice(0, 10) ?? null)}`
+              : "Pendente",
           MARGIN + 115,
           y,
         );
         y += 5.5;
+        if (parcel.merged_extra_cents > 0) {
+          ensureSpace(8);
+          doc.setFontSize(8);
+          setInk(PALETTE.soft);
+          doc.text(
+            `(Inclui ${formatPrice(parcel.merged_extra_cents)} do pedido anterior)`,
+            MARGIN + 4,
+            y,
+          );
+          doc.setFontSize(9.5);
+          y += 5;
+        }
       }
     }
     y += 4;

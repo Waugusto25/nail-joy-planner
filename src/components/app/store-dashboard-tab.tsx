@@ -23,13 +23,17 @@ export function StoreDashboardTab() {
   const parcels = useMemo(
     () =>
       rows.flatMap((o) =>
-        o.installments_list.map((p) => ({
-          ...p,
-          clientName: o.client_name,
-          nickname: o.nickname,
-          status: o.status,
-        })),
+        o.installments_list
+          // Parcelas unificadas em um novo pedido não entram no caixa duas vezes.
+          .filter((p) => !p.merged_into_order_id)
+          .map((p) => ({
+            ...p,
+            clientName: o.client_name,
+            nickname: o.nickname,
+            status: o.status,
+          })),
       ),
+
     [rows],
   );
 

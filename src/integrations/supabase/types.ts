@@ -707,6 +707,8 @@ export type Database = {
           created_at: string
           due_date: string | null
           id: string
+          merged_extra_cents: number
+          merged_into_order_id: string | null
           number: number
           order_id: string
           paid_at: string | null
@@ -717,6 +719,8 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          merged_extra_cents?: number
+          merged_into_order_id?: string | null
           number?: number
           order_id: string
           paid_at?: string | null
@@ -727,12 +731,21 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          merged_extra_cents?: number
+          merged_into_order_id?: string | null
           number?: number
           order_id?: string
           paid_at?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "store_order_installments_merged_into_order_id_fkey"
+            columns: ["merged_into_order_id"]
+            isOneToOne: false
+            referencedRelation: "store_orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "store_order_installments_order_id_fkey"
             columns: ["order_id"]
