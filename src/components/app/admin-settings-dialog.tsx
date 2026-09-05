@@ -31,6 +31,7 @@ export function AdminSettingsDialog() {
   const [passwordError, setPasswordError] = useState("");
   const [instagram, setInstagram] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [pixKey, setPixKey] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
 
@@ -41,7 +42,8 @@ export function AdminSettingsDialog() {
     setPasswordError("");
     setInstagram(settings.data?.instagram_url ?? "");
     setWhatsapp(settings.data?.whatsapp_number ?? "");
-  }, [open, settings.data?.instagram_url, settings.data?.whatsapp_number]);
+    setPixKey(settings.data?.pix_key ?? "");
+  }, [open, settings.data?.instagram_url, settings.data?.whatsapp_number, settings.data?.pix_key]);
 
   async function savePassword() {
     if (password !== confirmPassword) {
@@ -77,7 +79,7 @@ export function AdminSettingsDialog() {
     try {
       const { error } = await supabase
         .from("app_settings")
-        .update({ instagram_url: instagram.trim(), whatsapp_number: digits })
+        .update({ instagram_url: instagram.trim(), whatsapp_number: digits, pix_key: pixKey.trim() })
         .eq("id", true);
       if (error) throw new Error(error.message);
       setSalonContact({ instagram: instagram.trim(), whatsapp: digits });
@@ -168,6 +170,18 @@ export function AdminSettingsDialog() {
               />
               <p className="text-xs text-muted-foreground">
                 Atualiza todos os links e mensagens enviadas para o salão.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="admin-pix">Chave Pix da loja</Label>
+              <Input
+                id="admin-pix"
+                value={pixKey}
+                onChange={(e) => setPixKey(e.target.value)}
+                placeholder="E-mail, telefone ou chave aleatória"
+              />
+              <p className="text-xs text-muted-foreground">
+                Usada nas mensagens de cobrança dos pedidos da loja.
               </p>
             </div>
             <Button
