@@ -146,7 +146,7 @@ export function StoreOrderForm({
           order_id: orderId,
           number: index + 1,
           amount_cents: amount,
-          due_date: paid.get(index + 1)?.due_date ?? deliveryDate || null,
+          due_date: paid.get(index + 1)?.due_date ?? (deliveryDate || null),
           paid_at: paid.get(index + 1)?.paid_at ?? null,
         })),
       );
