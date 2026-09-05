@@ -481,19 +481,49 @@ function AgendaTab() {
         </TabsContent>
 
         <TabsContent value="confirmados" className="space-y-4 pt-4">
-          {confirmados.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum atendimento confirmado.</p>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
+            {confirmedMonths.map((key) => {
+              const count = confirmados.filter((a) => monthKeyOf(a.day) === key).length;
+              const past = key < nowMonth;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={key === activeMonth}
+                  onClick={() => setConfirmedMonth(key)}
+                  className={cn(
+                    "chip shrink-0 whitespace-nowrap",
+                    key === activeMonth
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {monthShortLabel(key)} ({count}){past ? " · histórico" : ""}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {activeMonth < nowMonth
+              ? `Histórico de ${monthLabel(activeMonth)}.`
+              : `Agenda de ${monthLabel(activeMonth)}.`}
+          </p>
+          {monthConfirmados.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum atendimento confirmado em {monthLabel(activeMonth)}.
+            </p>
           ) : (
             confirmedDays.map((day) => (
               <section key={day} className="space-y-3">
                 <h3 className="font-display text-base capitalize">{dayGroupLabel(day)}</h3>
-                {confirmados
+                {monthConfirmados
                   .filter((a) => a.day === day)
                   .map((a) => renderCard(a, "confirmado"))}
               </section>
             ))
           )}
         </TabsContent>
+
 
         <TabsContent value="concluidos" className="space-y-3 pt-4">
           {concluidos.length === 0 ? (
