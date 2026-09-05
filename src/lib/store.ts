@@ -81,76 +81,83 @@ function splitFirstHeavy(totalCents: number, count: number): number[] {
 }
 
 export type InstallmentPlanChange = {
-  /** Parcelas pendentes existentes que mudam de valor/vencimento. */
-  update: { id: string; amount_cents: number; due_date: string | null }[];
-  /** Parcelas novas a criar (quando o saldo é redividido em mais parcelas). */
-  insert: { number: number; amount_cents: number; due_date: string | null }[];
-  /** Parcelas pendentes que deixam de existir (redivisão em menos parcelas). */
-  remove: string[];
-  /** Novo total de parcelas do pedido (pagas + pendentes). */
+  /** Parcelas pendentes existentes que recebem parte do item acrescentado. */
+  update: {
+    id: string;
+    number: number;
+    amount_cents: number;
+    due_date: string | null;
+    added_extra_cents: number;
+  }[];
+  /** Meses novos criados para as parcelas excedentes do item acrescentado. */
+  insert: {
+    number: number;
+    amount_cents: number;
+    due_date: string | null;
+    added_extra_cents: number;
+  }[];
+  /** Novo total de parcelas do pedido (pagas + pendentes + novas). */
   totalInstallments: number;
   /** Saldo devedor após o acréscimo. */
   pendingBalanceCents: number;
 };
 
 /**
- * Recalcula apenas o saldo devedor de um pedido ao acrescentar itens.
+ * Encaixe cronológico: divide o valor acrescentado em `count` parcelas e soma cada
+ * uma na parcela pendente do mês correspondente, mantendo os vencimentos já
+ * agendados. As parcelas excedentes viram meses novos ao final do cronograma.
  * Parcelas pagas e parcelas unificadas em outro pedido nunca são tocadas.
  */
-export function redistributeInstallments(
+export function appendItemInstallments(
   order: StoreOrderWithDetails,
   addedCents: number,
-  mode: "keep" | "resplit",
   count: number,
 ): InstallmentPlanChange {
   const active = order.installments_list.filter((p) => !p.merged_into_order_id);
   const paid = active.filter((p) => p.paid_at);
   const pending = pendingInstallments(order.installments_list).sort((a, b) => a.number - b.number);
-  const pendingBalanceCents =
-    pending.reduce((sum, p) => sum + p.amount_cents, 0) + Math.max(0, addedCents);
-
-  // Sem parcela pendente, só resta criar novas parcelas para o valor acrescentado.
-  const effectiveMode = pending.length === 0 ? "resplit" : mode;
-
-  if (effectiveMode === "keep") {
-    const amounts = splitFirstHeavy(pendingBalanceCents, pending.length);
-    return {
-      update: pending.map((p, i) => ({
-        id: p.id,
-        amount_cents: amounts[i] ?? p.amount_cents,
-        due_date: p.due_date,
-      })),
-      insert: [],
-      remove: [],
-      totalInstallments: paid.length + pending.length,
-      pendingBalanceCents,
-    };
-  }
 
   const n = Math.max(1, Math.floor(count) || 1);
-  const amounts = splitFirstHeavy(pendingBalanceCents, n);
-  const baseDue = pending[0]?.due_date ?? order.delivery_date ?? todayISO();
+  const amounts = splitFirstHeavy(Math.max(0, addedCents), n);
+
   const maxNumber = active.reduce((max, p) => Math.max(max, p.number), 0);
+  // Novos meses continuam a partir do último vencimento existente do pedido.
+  const lastDue =
+    [...active].sort((a, b) => a.number - b.number).at(-1)?.due_date ??
+    order.delivery_date ??
+    todayISO();
 
   const update: InstallmentPlanChange["update"] = [];
   const insert: InstallmentPlanChange["insert"] = [];
   for (let i = 0; i < n; i += 1) {
-    const due = addMonthsISO(baseDue, i);
-    const reused = pending[i];
-    if (reused) update.push({ id: reused.id, amount_cents: amounts[i] ?? 0, due_date: due });
-    else
-      insert.push({
-        number: maxNumber + 1 + (i - pending.length),
-        amount_cents: amounts[i] ?? 0,
-        due_date: due,
+    const share = amounts[i] ?? 0;
+    const target = pending[i];
+    if (target) {
+      update.push({
+        id: target.id,
+        number: target.number,
+        amount_cents: target.amount_cents + share,
+        due_date: target.due_date,
+        added_extra_cents: target.added_extra_cents + share,
       });
+    } else {
+      const extraIndex = i - pending.length;
+      insert.push({
+        number: maxNumber + 1 + extraIndex,
+        amount_cents: share,
+        due_date: addMonthsISO(lastDue, extraIndex + 1),
+        added_extra_cents: share,
+      });
+    }
   }
+
+  const pendingBalanceCents =
+    pending.reduce((sum, p) => sum + p.amount_cents, 0) + Math.max(0, addedCents);
 
   return {
     update,
     insert,
-    remove: pending.slice(n).map((p) => p.id),
-    totalInstallments: paid.length + n,
+    totalInstallments: paid.length + pending.length + insert.length,
     pendingBalanceCents,
   };
 }
