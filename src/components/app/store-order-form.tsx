@@ -200,9 +200,8 @@ export function StoreOrderForm({
             number: index + 1,
             amount_cents: amount + extra,
             merged_extra_cents: extra,
-            due_date:
-              paid.get(index + 1)?.due_date ??
-              (merging ? monthlyDue : deliveryDate || null),
+            // Cada parcela vence um mês depois da anterior, com ou sem unificação.
+            due_date: paid.get(index + 1)?.due_date ?? monthlyDue,
             paid_at: paid.get(index + 1)?.paid_at ?? null,
           };
         }),
