@@ -187,7 +187,7 @@ export function StoreOrderForm({
       await supabase.from("store_order_installments").delete().eq("order_id", orderId);
       const amounts = splitInstallments(total, count);
       const merging = unify && carryOver ? carryOver : null;
-      const firstDue = merging?.due_date ?? deliveryDate || null;
+      const firstDue = merging?.due_date ?? (deliveryDate || null);
       const { error: parcelsError } = await supabase.from("store_order_installments").insert(
         amounts.map((amount, index) => {
           const extra = merging && index === 0 ? merging.amount_cents : 0;
