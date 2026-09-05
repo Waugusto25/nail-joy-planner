@@ -35,6 +35,9 @@ import { FinanceTab } from "@/components/app/finance-tab";
 import { StoreOrdersTab } from "@/components/app/store-orders-tab";
 import { StoreClientsTab } from "@/components/app/store-clients-tab";
 import { StoreDashboardTab } from "@/components/app/store-dashboard-tab";
+import { currentMonthKey, monthKeyOf, monthLabel, monthShortLabel } from "@/lib/months";
+import { cn } from "@/lib/utils";
+
 
 import {
   Dialog,
@@ -164,6 +167,8 @@ function AdminPanel() {
 function AgendaTab() {
   const queryClient = useQueryClient();
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [confirmedMonth, setConfirmedMonth] = useState(currentMonthKey());
+
   const appointments = useQuery({
     queryKey: ["admin-appointments"],
     queryFn: async () => {
@@ -440,7 +445,15 @@ function AgendaTab() {
     .slice()
     .sort((a, b) => b.day.localeCompare(a.day));
 
-  const confirmedDays = [...new Set(confirmados.map((a) => a.day))];
+  // Meses com atendimentos confirmados + o mês vigente (sempre visível/selecionável).
+  const nowMonth = currentMonthKey();
+  const confirmedMonths = [
+    ...new Set([nowMonth, ...confirmados.map((a) => monthKeyOf(a.day))]),
+  ].sort();
+  const activeMonth = confirmedMonths.includes(confirmedMonth) ? confirmedMonth : nowMonth;
+  const monthConfirmados = confirmados.filter((a) => monthKeyOf(a.day) === activeMonth);
+  const confirmedDays = [...new Set(monthConfirmados.map((a) => a.day))];
+
 
   return (
     <div className="space-y-4">
@@ -468,19 +481,49 @@ function AgendaTab() {
         </TabsContent>
 
         <TabsContent value="confirmados" className="space-y-4 pt-4">
-          {confirmados.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum atendimento confirmado.</p>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
+            {confirmedMonths.map((key) => {
+              const count = confirmados.filter((a) => monthKeyOf(a.day) === key).length;
+              const past = key < nowMonth;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={key === activeMonth}
+                  onClick={() => setConfirmedMonth(key)}
+                  className={cn(
+                    "chip shrink-0 whitespace-nowrap",
+                    key === activeMonth
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {monthShortLabel(key)} ({count}){past ? " · histórico" : ""}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {activeMonth < nowMonth
+              ? `Histórico de ${monthLabel(activeMonth)}.`
+              : `Agenda de ${monthLabel(activeMonth)}.`}
+          </p>
+          {monthConfirmados.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum atendimento confirmado em {monthLabel(activeMonth)}.
+            </p>
           ) : (
             confirmedDays.map((day) => (
               <section key={day} className="space-y-3">
                 <h3 className="font-display text-base capitalize">{dayGroupLabel(day)}</h3>
-                {confirmados
+                {monthConfirmados
                   .filter((a) => a.day === day)
                   .map((a) => renderCard(a, "confirmado"))}
               </section>
             ))
           )}
         </TabsContent>
+
 
         <TabsContent value="concluidos" className="space-y-3 pt-4">
           {concluidos.length === 0 ? (
