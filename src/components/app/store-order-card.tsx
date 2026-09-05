@@ -188,9 +188,22 @@ export function StoreOrderCard({
         <div className="min-h-0 space-y-3 pt-2">
           <ul className="space-y-1 text-sm">
             {order.items.map((i) => (
-              <li key={i.id} className="flex items-center justify-between">
+              <li key={i.id} className="flex items-center justify-between gap-2">
                 <span>{i.name}</span>
-                <span>{formatPrice(i.unit_price_cents)}</span>
+                <span className="flex items-center gap-1">
+                  {formatPrice(i.unit_price_cents)}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-destructive h-7 w-7"
+                    aria-label={`Excluir ${i.name} do pedido`}
+                    title="Excluir item e retirar o valor dos cálculos"
+                    disabled={removingId === i.id}
+                    onClick={() => void removeItem(i)}
+                  >
+                    <X size={14} />
+                  </Button>
+                </span>
               </li>
             ))}
           </ul>
