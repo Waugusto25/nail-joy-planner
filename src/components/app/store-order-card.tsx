@@ -213,6 +213,11 @@ export function StoreOrderCard({
                       (Inclui {formatPrice(p.merged_extra_cents)} do pedido anterior)
                     </span>
                   ) : null}
+                  {p.added_extra_cents > 0 ? (
+                    <span className="block text-xs font-normal text-primary">
+                      (Inclui {formatPrice(p.added_extra_cents)} do item acrescentado)
+                    </span>
+                  ) : null}
                   {p.merged_into_order_id ? (
                     <span className="block text-xs font-normal text-muted-foreground">
                       Unificada / transferida para novo pedido

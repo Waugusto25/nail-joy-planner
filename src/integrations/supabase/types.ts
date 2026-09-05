@@ -703,6 +703,7 @@ export type Database = {
       }
       store_order_installments: {
         Row: {
+          added_extra_cents: number
           amount_cents: number
           created_at: string
           due_date: string | null
@@ -715,6 +716,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          added_extra_cents?: number
           amount_cents?: number
           created_at?: string
           due_date?: string | null
@@ -727,6 +729,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          added_extra_cents?: number
           amount_cents?: number
           created_at?: string
           due_date?: string | null
