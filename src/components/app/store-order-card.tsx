@@ -302,6 +302,8 @@ export function StoreOrderCard({
           </div>
         </div>
       </div>
+
+      <StoreOrderAddItemsDialog order={order} open={addOpen} onOpenChange={setAddOpen} />
     </article>
   );
 }
