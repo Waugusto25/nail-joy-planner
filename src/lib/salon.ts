@@ -507,12 +507,11 @@ export function catalogsGreetingMessage(catalogs: CatalogLink[]) {
     "",
     lines.length > 0 ? lines.join("\n") : "Em breve enviamos os links dos catálogos.",
     "",
-    "Qualquer dúvida estamos à disposição!",
+    "Qualquer dúvida, estamos à disposição!",
   ].join("\n");
 }
 
 export type OrderMessageArgs = {
-  name: string;
   amountCents: number;
   dueDate?: string | null;
   pixKey?: string | null;
@@ -521,31 +520,32 @@ export type OrderMessageArgs = {
 /** Cobrança enviada quando o pedido já foi entregue. */
 export function orderChargeMessage(args: OrderMessageArgs) {
   return [
-    `Olá, ${args.name}! Passando para informar sobre o seu pedido. 📦`,
+    "Olá! Passando para informar sobre o seu pedido. 📦",
     "",
     `Valor: ${formatPrice(args.amountCents)}`,
-    `Vencimento/Data: ${args.dueDate ? formatDateTime(args.dueDate) : "a combinar"}`,
+    `Vencimento: ${args.dueDate ? formatISODate(args.dueDate) : "a combinar"}`,
     "",
-    `Chave Pix para pagamento: ${args.pixKey?.trim() || "consulte com a gente"}`,
+    "Chave Pix para pagamento:",
+    "```" + (args.pixKey?.trim() || "consulte com a gente") + "```",
     "",
     "Se já realizou o pagamento, favor desconsiderar esta mensagem. Obrigado!",
   ].join("\n");
 }
 
 /** Pedido disponível para retirada. */
-export function orderReadyMessage(name: string) {
+export function orderReadyMessage() {
   return [
-    `Olá, ${name}! Boas notícias! 🎉`,
+    "Olá! Boas notícias! 🎉",
     "O seu pedido já chegou e está prontinho para ser retirado.",
     "",
-    "Ficamos no aguardo de sua visita! Qualquer dúvida, nos chame aqui.",
+    "Ficamos no aguardo! Qualquer dúvida, estamos à disposição.",
   ].join("\n");
 }
 
 /** Pedido encaminhado ao fornecedor. */
-export function orderOrderedMessage(name: string) {
+export function orderOrderedMessage() {
   return [
-    `Olá, ${name}! Seu pedido já foi encaminhado aos nossos fornecedores. 🚚`,
+    "Olá! Seu pedido já foi encaminhado aos nossos fornecedores. 🚚",
     "",
     "Assim que os produtos chegarem até nós, te avisamos imediatamente para você retirar. Obrigado pela confiança!",
   ].join("\n");
@@ -554,7 +554,8 @@ export function orderOrderedMessage(name: string) {
 /** Mensagem do pedido conforme o status — `null` quando não deve enviar nada. */
 export function orderStatusMessage(status: string, args: OrderMessageArgs): string | null {
   if (status === "entregue") return orderChargeMessage(args);
-  if (status === "pronto") return orderReadyMessage(args.name);
-  if (status === "encomendado") return orderOrderedMessage(args.name);
+  if (status === "pronto") return orderReadyMessage();
+  if (status === "encomendado") return orderOrderedMessage();
   return null;
+
 }
