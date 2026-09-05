@@ -10,7 +10,7 @@ import {
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
-  formatDateTime,
+  formatISODate,
   formatPhone,
   formatPrice,
   orderStatusMessage,
@@ -46,7 +46,6 @@ export function StoreOrderCard({
   onEdit: () => void;
 }) {
   const queryClient = useQueryClient();
-  const messageName = order.nickname?.trim() || order.client_name.split(" ")[0] || order.client_name;
   const pending = order.installments_list.filter((p) => !p.paid_at);
   const nextDue = pending[0];
 
@@ -112,7 +111,6 @@ export function StoreOrderCard({
   function sendWhatsapp() {
     const amount = nextDue?.amount_cents ?? order.amount_cents;
     const message = orderStatusMessage(order.status, {
-      name: messageName,
       amountCents: amount,
       dueDate: nextDue?.due_date ?? order.delivery_date,
       pixKey,
@@ -141,7 +139,7 @@ export function StoreOrderCard({
           </p>
           <p className="text-xs text-muted-foreground">
             {order.client_phone ? `${formatPhone(order.client_phone)} · ` : ""}Entrega prevista:{" "}
-            {order.delivery_date ? formatDateTime(order.delivery_date) : "a definir"}
+            {order.delivery_date ? formatISODate(order.delivery_date) : "a definir"}
           </p>
         </div>
         <Badge variant="secondary">{ORDER_STATUS_LABELS[order.status] ?? order.status}</Badge>

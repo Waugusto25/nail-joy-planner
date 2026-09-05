@@ -4,7 +4,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 
 import { Badge } from "@/components/ui/badge";
 import { fetchStoreOrders } from "@/components/app/store-orders-tab";
-import { ORDER_STATUS_LABELS, formatDateTime, formatPrice } from "@/lib/salon";
+import { ORDER_STATUS_LABELS, formatISODate, formatPrice } from "@/lib/salon";
 
 function monthBounds() {
   const now = new Date();
@@ -92,7 +92,7 @@ export function StoreDashboardTab() {
             <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span>
                 {p.nickname?.trim() || p.clientName} · parcela {p.number} ·{" "}
-                {p.due_date ? formatDateTime(p.due_date) : "sem data"}
+                {p.due_date ? formatISODate(p.due_date) : "sem data"}
               </span>
               <span className="flex items-center gap-2">
                 <Badge variant="secondary">{ORDER_STATUS_LABELS[p.status] ?? p.status}</Badge>
