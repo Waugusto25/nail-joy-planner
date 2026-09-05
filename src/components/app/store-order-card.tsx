@@ -282,6 +282,11 @@ export function StoreOrderCard({
             >
               WhatsApp
             </Button>
+            {isOpenOrder ? (
+              <Button size="sm" variant="outline" className="gap-1" onClick={() => setAddOpen(true)}>
+                <Plus size={16} /> Adicionar Produto a este Pedido
+              </Button>
+            ) : null}
             <Button size="sm" variant="secondary" onClick={onEdit}>
               Editar
             </Button>
