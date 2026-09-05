@@ -45,8 +45,12 @@ export function StoreOrderCard({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const pending = pendingInstallments(order.installments_list);
   const nextDue = pending[0];
+  // Pedido em aberto: ainda em andamento ou com saldo devedor.
+  const isOpenOrder =
+    order.status === "pendente" || order.status === "encomendado" || pending.length > 0;
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
