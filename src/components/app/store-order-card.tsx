@@ -18,6 +18,7 @@ import {
   whatsappLinkTo,
 } from "@/lib/salon";
 import { StoreStatementButton } from "@/components/app/store-statement-button";
+import { StoreOrderAddItemsDialog } from "@/components/app/store-order-add-items-dialog";
 import { cn } from "@/lib/utils";
 import { pendingInstallments, type StoreOrderInstallment, type StoreOrderWithDetails } from "@/lib/store";
 
