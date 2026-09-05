@@ -15,13 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatPrice } from "@/lib/salon";
+import { formatISODate, formatPrice } from "@/lib/salon";
 import { supabase } from "@/lib/supabase-client";
-import {
-  pendingInstallments,
-  redistributeInstallments,
-  type StoreOrderWithDetails,
-} from "@/lib/store";
+import { appendItemInstallments, type StoreOrderWithDetails } from "@/lib/store";
 
 type ItemRow = { key: string; name: string; price: string };
 
@@ -50,18 +46,12 @@ export function StoreOrderAddItemsDialog({
 }) {
   const queryClient = useQueryClient();
   const [rows, setRows] = useState<ItemRow[]>([newItem()]);
-  const [mode, setMode] = useState<"keep" | "resplit">("keep");
-  const [count, setCount] = useState("2");
+  const [count, setCount] = useState("1");
   const [saving, setSaving] = useState(false);
 
-  const pending = pendingInstallments(order.installments_list);
   const added = useMemo(() => rows.reduce((sum, r) => sum + toCents(r.price), 0), [rows]);
-  const preview = redistributeInstallments(
-    order,
-    added,
-    pending.length === 0 ? "resplit" : mode,
-    Number(count) || 1,
-  );
+  const parts = Math.max(1, Number(count) || 1);
+  const plan = appendItemInstallments(order, added, parts);
 
   async function save() {
     const parsed = rows
@@ -73,12 +63,7 @@ export function StoreOrderAddItemsDialog({
     }
     const items = parsed.flatMap((p) => (p.success ? [p.data] : []));
     const addedCents = items.reduce((sum, i) => sum + i.unit_price_cents, 0);
-    const plan = redistributeInstallments(
-      order,
-      addedCents,
-      pending.length === 0 ? "resplit" : mode,
-      Number(count) || 1,
-    );
+    const change = appendItemInstallments(order, addedCents, parts);
 
     setSaving(true);
     try {
@@ -93,29 +78,26 @@ export function StoreOrderAddItemsDialog({
       );
       if (itemsError) throw new Error(itemsError.message);
 
-      for (const parcel of plan.update) {
+      for (const parcel of change.update) {
         const { error } = await supabase
           .from("store_order_installments")
-          .update({ amount_cents: parcel.amount_cents, due_date: parcel.due_date })
+          .update({
+            amount_cents: parcel.amount_cents,
+            added_extra_cents: parcel.added_extra_cents,
+          })
           .eq("id", parcel.id);
         if (error) throw new Error(error.message);
       }
-      if (plan.insert.length > 0) {
+      if (change.insert.length > 0) {
         const { error } = await supabase.from("store_order_installments").insert(
-          plan.insert.map((p) => ({
+          change.insert.map((p) => ({
             order_id: order.id,
             number: p.number,
             amount_cents: p.amount_cents,
             due_date: p.due_date,
+            added_extra_cents: p.added_extra_cents,
           })),
         );
-        if (error) throw new Error(error.message);
-      }
-      if (plan.remove.length > 0) {
-        const { error } = await supabase
-          .from("store_order_installments")
-          .delete()
-          .in("id", plan.remove);
         if (error) throw new Error(error.message);
       }
 
@@ -125,14 +107,14 @@ export function StoreOrderAddItemsDialog({
         .update({
           amount_cents: order.amount_cents + addedCents,
           item_name: names,
-          installments: plan.totalInstallments,
+          installments: change.totalInstallments,
         })
         .eq("id", order.id);
       if (orderError) throw new Error(orderError.message);
 
       toast.success("Produto acrescentado ao pedido.");
       setRows([newItem()]);
-      setMode("keep");
+      setCount("1");
       onOpenChange(false);
       await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
     } catch (error) {
@@ -201,59 +183,52 @@ export function StoreOrderAddItemsDialog({
           </Button>
         </div>
 
+        <div className="space-y-1">
+          <Label htmlFor="add-items-count">Parcelar o novo item em quantas vezes</Label>
+          <Input
+            id="add-items-count"
+            className="w-24"
+            inputMode="numeric"
+            value={count}
+            onChange={(e) => setCount(e.target.value.replace(/\D/g, "") || "1")}
+          />
+          <p className="text-xs text-muted-foreground">
+            Cada parcela do item novo é somada à parcela pendente do mês correspondente; o que
+            sobrar cria meses novos.
+          </p>
+        </div>
+
         <div className="rounded-md border border-border/60 p-3 text-sm">
           <p>Acréscimo: {formatPrice(added)}</p>
           <p className="font-semibold">
             Novo valor total do pedido: {formatPrice(order.amount_cents + added)}
           </p>
           <p className="text-muted-foreground">
-            Saldo devedor a cobrar: {formatPrice(preview.pendingBalanceCents)}
+            Saldo devedor a cobrar: {formatPrice(plan.pendingBalanceCents)}
           </p>
         </div>
 
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">Como cobrar o acréscimo</legend>
-          {pending.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              Este pedido não tem parcela pendente, então o valor acrescentado gera novas parcelas.
-            </p>
-          ) : (
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="radio"
-                className="mt-1"
-                name="add-items-mode"
-                checked={mode === "keep"}
-                onChange={() => setMode("keep")}
-              />
-              <span>
-                Manter as {pending.length} parcela(s) restante(s)
-                <span className="block text-xs text-muted-foreground">
-                  O valor novo é dividido entre as parcelas ainda pendentes.
+        {added > 0 ? (
+          <div className="space-y-1 rounded-md border border-border/60 p-3 text-sm">
+            <p className="font-medium">Cronograma resultante</p>
+            {plan.update.map((p) => (
+              <p key={p.id} className="text-muted-foreground">
+                Parcela {p.number} · {p.due_date ? formatISODate(p.due_date) : "sem vencimento"} ·{" "}
+                {formatPrice(p.amount_cents)}{" "}
+                <span className="text-primary">
+                  (inclui {formatPrice(p.added_extra_cents)} do item novo)
                 </span>
-              </span>
-            </label>
-          )}
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="radio"
-              className="mt-1"
-              name="add-items-mode"
-              checked={mode === "resplit" || pending.length === 0}
-              onChange={() => setMode("resplit")}
-            />
-            <span>
-              Redividir o saldo devedor em
-              <Input
-                aria-label="Número de parcelas do saldo devedor"
-                className="mt-1 h-9 w-20"
-                inputMode="numeric"
-                value={count}
-                onChange={(e) => setCount(e.target.value.replace(/\D/g, "") || "1")}
-              />
-            </span>
-          </label>
-        </fieldset>
+              </p>
+            ))}
+            {plan.insert.map((p) => (
+              <p key={`new-${p.number}`} className="text-muted-foreground">
+                Parcela {p.number} (nova) ·{" "}
+                {p.due_date ? formatISODate(p.due_date) : "sem vencimento"} ·{" "}
+                {formatPrice(p.amount_cents)}
+              </p>
+            ))}
+          </div>
+        ) : null}
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
