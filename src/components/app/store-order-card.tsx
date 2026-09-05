@@ -58,6 +58,62 @@ export function StoreOrderCard({
     await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
   }
 
+  /** Exclui um item que não veio e retira o valor dele do total e das parcelas pendentes. */
+  async function removeItem(item: StoreOrderWithDetails["items"][number]) {
+    if (
+      !window.confirm(
+        `Excluir "${item.name}" (${formatPrice(item.unit_price_cents)}) deste pedido? O valor será retirado do total e das parcelas pendentes.`,
+      )
+    )
+      return;
+    setRemovingId(item.id);
+    try {
+      const plan = removeItemInstallments(order, item.unit_price_cents);
+      const { error: itemError } = await supabase
+        .from("store_order_items")
+        .delete()
+        .eq("id", item.id);
+      if (itemError) throw new Error(itemError.message);
+
+      for (const parcel of plan.update) {
+        const { error } = await supabase
+          .from("store_order_installments")
+          .update({
+            amount_cents: parcel.amount_cents,
+            added_extra_cents: parcel.added_extra_cents,
+          })
+          .eq("id", parcel.id);
+        if (error) throw new Error(error.message);
+      }
+      if (plan.deleteIds.length > 0) {
+        const { error } = await supabase
+          .from("store_order_installments")
+          .delete()
+          .in("id", plan.deleteIds);
+        if (error) throw new Error(error.message);
+      }
+
+      const { error: orderError } = await supabase
+        .from("store_orders")
+        .update({ amount_cents: plan.newTotalCents, installments: plan.totalInstallments })
+        .eq("id", order.id);
+      if (orderError) throw new Error(orderError.message);
+
+      if (plan.unappliedCents > 0) {
+        toast.warning(
+          `Item excluído. ${formatPrice(plan.unappliedCents)} já estavam pagos — confira se há valor a devolver.`,
+        );
+      } else {
+        toast.success("Item excluído e valores recalculados.");
+      }
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir o item.");
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
   async function updateStatus(status: string) {
     const { error } = await supabase.from("store_orders").update({ status }).eq("id", order.id);
     if (error) {
