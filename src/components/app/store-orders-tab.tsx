@@ -11,7 +11,7 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
   const { data, error } = await supabase
     .from("store_orders")
     .select(
-      "id, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order), store_order_installments(id, order_id, number, amount_cents, due_date, paid_at)",
+      "id, created_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order), store_order_installments(id, order_id, number, amount_cents, due_date, paid_at)",
     )
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -20,6 +20,7 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
     const client = Array.isArray(joined) ? joined[0] : joined;
     return {
       id: row.id,
+      created_at: (row as { created_at?: string | null }).created_at ?? null,
       store_client_id: row.store_client_id,
       client_name: row.client_name,
       client_phone: row.client_phone ?? "",
