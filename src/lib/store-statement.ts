@@ -1,10 +1,7 @@
+import type { jsPDF } from "jspdf";
+
 import type { StoreOrderWithDetails } from "@/components/app/store-order-card";
-import {
-  ORDER_STATUS_LABELS,
-  formatISODate,
-  formatPhone,
-  formatPrice,
-} from "@/lib/salon";
+import { ORDER_STATUS_LABELS, formatISODate, formatPhone, formatPrice } from "@/lib/salon";
 
 export type StatementTotals = {
   totalCents: number;
@@ -25,145 +22,6 @@ export function statementTotals(orders: StoreOrderWithDetails[]): StatementTotal
   return { totalCents, paidCents, pendingCents: Math.max(0, totalCents - paidCents) };
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-/** Data/hora de criação (timestamp) em DD/MM/AAAA, sem depender do fuso da string. */
-function orderDate(createdAt?: string | null): string {
-  if (!createdAt) return "—";
-  return formatISODate(createdAt.slice(0, 10));
-}
-
-function paymentCondition(order: StoreOrderWithDetails): string {
-  return order.installments > 1 ? `Parcelado em ${order.installments}x` : "À vista";
-}
-
-function itemsRows(order: StoreOrderWithDetails): string {
-  const items = order.items.length
-    ? order.items
-    : [
-        {
-          id: order.id,
-          order_id: order.id,
-          name: order.item_name,
-          unit_price_cents: order.amount_cents,
-          sort_order: 0,
-        },
-      ];
-  return items
-    .map(
-      (item) =>
-        `<tr><td>${escapeHtml(item.name)}</td><td class="num">${formatPrice(item.unit_price_cents)}</td></tr>`,
-    )
-    .join("");
-}
-
-function installmentRows(order: StoreOrderWithDetails): string {
-  if (!order.installments_list.length) {
-    return `<tr><td colspan="4" class="muted">Sem parcelas registradas.</td></tr>`;
-  }
-  return order.installments_list
-    .map((parcel) => {
-      const paid = Boolean(parcel.paid_at);
-      const situation = paid
-        ? `Paga em ${formatISODate(parcel.paid_at?.slice(0, 10) ?? null)}`
-        : "Pendente";
-      return `<tr>
-        <td>${order.installments > 1 ? `${parcel.number}ª parcela` : "Pagamento único"}</td>
-        <td class="num">${formatPrice(parcel.amount_cents)}</td>
-        <td>${formatISODate(parcel.due_date)}</td>
-        <td class="${paid ? "ok" : "due"}">${situation}</td>
-      </tr>`;
-    })
-    .join("");
-}
-
-/**
- * HTML autocontido do extrato. Usa estilos próprios (não os tokens do app)
- * para o PDF sair idêntico em qualquer tema.
- */
-export function buildStatementHtml(args: {
-  clientName: string;
-  clientPhone: string;
-  orders: StoreOrderWithDetails[];
-  generatedAt?: Date;
-}): string {
-  const totals = statementTotals(args.orders);
-  const generated = args.generatedAt ?? new Date();
-  const generatedLabel = `${String(generated.getDate()).padStart(2, "0")}/${String(
-    generated.getMonth() + 1,
-  ).padStart(2, "0")}/${generated.getFullYear()} às ${String(generated.getHours()).padStart(2, "0")}:${String(
-    generated.getMinutes(),
-  ).padStart(2, "0")}`;
-
-  const blocks = args.orders
-    .map(
-      (order) => `<section class="order">
-        <div class="order-head">
-          <strong>Pedido de ${orderDate(order.created_at)}</strong>
-          <span class="status">${escapeHtml(ORDER_STATUS_LABELS[order.status] ?? order.status)}</span>
-        </div>
-        <table class="table">
-          <thead><tr><th>Item</th><th class="num">Valor unitário</th></tr></thead>
-          <tbody>${itemsRows(order)}</tbody>
-          <tfoot><tr><th>Total do pedido</th><th class="num">${formatPrice(order.amount_cents)}</th></tr></tfoot>
-        </table>
-        <p class="cond">Condição de pagamento: ${paymentCondition(order)}${
-          order.delivery_date ? ` · Entrega prevista: ${formatISODate(order.delivery_date)}` : ""
-        }</p>
-        <table class="table">
-          <thead><tr><th>Parcela</th><th class="num">Valor</th><th>Vencimento</th><th>Situação</th></tr></thead>
-          <tbody>${installmentRows(order)}</tbody>
-        </table>
-      </section>`,
-    )
-    .join("");
-
-  return `<div class="statement">
-    <style>
-      .statement { width: 760px; padding: 28px 32px; background: #ffffff; color: #1f2430;
-        font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.45; }
-      .statement h1 { margin: 0; font-size: 19px; letter-spacing: .02em; }
-      .statement .head { border-bottom: 2px solid #4b5563; padding-bottom: 12px; margin-bottom: 16px; }
-      .statement .head p { margin: 4px 0 0; color: #4b5563; font-size: 12px; }
-      .statement .summary { display: flex; gap: 10px; margin-bottom: 18px; }
-      .statement .card { flex: 1; border: 1px solid #d7dae1; border-radius: 6px; padding: 10px 12px; }
-      .statement .card span { display: block; color: #6b7280; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; }
-      .statement .card strong { font-size: 15px; }
-      .statement .order { border: 1px solid #d7dae1; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px; page-break-inside: avoid; }
-      .statement .order-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-      .statement .status { border: 1px solid #9ca3af; border-radius: 999px; padding: 2px 10px; font-size: 10.5px; color: #374151; }
-      .statement .table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-      .statement .table th, .statement .table td { border-bottom: 1px solid #e5e7eb; padding: 5px 6px; text-align: left; }
-      .statement .table thead th { background: #f3f4f6; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: #4b5563; }
-      .statement .num { text-align: right; }
-      .statement .cond { margin: 2px 0 10px; color: #4b5563; }
-      .statement .ok { color: #15803d; }
-      .statement .due { color: #b45309; }
-      .statement .muted { color: #6b7280; }
-      .statement .foot { margin-top: 8px; color: #6b7280; font-size: 10.5px; text-align: center; }
-    </style>
-    <div class="head">
-      <h1>Studio Jannah Nails — Loja</h1>
-      <p>Extrato do cliente: <strong>${escapeHtml(args.clientName)}</strong></p>
-      <p>Telefone: ${args.clientPhone ? escapeHtml(formatPhone(args.clientPhone)) : "não informado"}</p>
-      <p>Documento gerado em ${generatedLabel}</p>
-    </div>
-    <div class="summary">
-      <div class="card"><span>Total de compras</span><strong>${formatPrice(totals.totalCents)}</strong></div>
-      <div class="card"><span>Total já pago</span><strong>${formatPrice(totals.paidCents)}</strong></div>
-      <div class="card"><span>Total pendente</span><strong>${formatPrice(totals.pendingCents)}</strong></div>
-    </div>
-    ${blocks || '<p class="muted">Nenhum pedido registrado para este cliente.</p>'}
-    <p class="foot">Documento gerado automaticamente pelo painel do Studio Jannah Nails.</p>
-  </div>`;
-}
-
 export function statementFileName(clientName: string): string {
   const slug = clientName
     .normalize("NFD")
@@ -172,4 +30,224 @@ export function statementFileName(clientName: string): string {
     .replace(/^-|-$/g, "")
     .toLowerCase();
   return `extrato-${slug || "cliente"}.pdf`;
+}
+
+/** Data de criação (timestamp ISO) em DD/MM/AAAA, sem conversão de fuso. */
+function orderDateLabel(createdAt?: string | null): string {
+  if (!createdAt) return "—";
+  return formatISODate(createdAt.slice(0, 10));
+}
+
+function paymentCondition(order: StoreOrderWithDetails): string {
+  return order.installments > 1 ? `Parcelado em ${order.installments}x` : "À vista";
+}
+
+function orderItems(order: StoreOrderWithDetails) {
+  if (order.items.length) return order.items;
+  return [
+    {
+      id: order.id,
+      order_id: order.id,
+      name: order.item_name,
+      unit_price_cents: order.amount_cents,
+      sort_order: 0,
+    },
+  ];
+}
+
+function generatedLabel(date: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(date.getDate())}/${p(date.getMonth() + 1)}/${date.getFullYear()} às ${p(date.getHours())}:${p(date.getMinutes())}`;
+}
+
+type Palette = { ink: [number, number, number]; soft: [number, number, number]; line: [number, number, number] };
+
+const PALETTE: Palette = { ink: [31, 36, 48], soft: [90, 99, 114], line: [205, 210, 219] };
+
+const PAGE_W = 210;
+const MARGIN = 14;
+const CONTENT_W = PAGE_W - MARGIN * 2;
+const PAGE_H = 297;
+
+/**
+ * Desenha o extrato do cliente em texto vetorial (legível e leve),
+ * sem depender de captura de tela do navegador.
+ */
+export function drawStatement(
+  doc: jsPDF,
+  args: {
+    clientName: string;
+    clientPhone: string;
+    orders: StoreOrderWithDetails[];
+    generatedAt?: Date;
+  },
+): void {
+  const totals = statementTotals(args.orders);
+  let y = MARGIN;
+
+  const setInk = (color: [number, number, number]) => doc.setTextColor(color[0], color[1], color[2]);
+  const ensureSpace = (needed: number) => {
+    if (y + needed <= PAGE_H - MARGIN) return;
+    doc.addPage();
+    y = MARGIN;
+  };
+
+  // Cabeçalho
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  setInk(PALETTE.ink);
+  doc.text("Studio Jannah Nails — Loja", MARGIN, y + 4);
+  y += 9;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  setInk(PALETTE.soft);
+  doc.text(`Extrato do cliente: ${args.clientName}`, MARGIN, y);
+  y += 5;
+  doc.text(
+    `Telefone: ${args.clientPhone ? formatPhone(args.clientPhone) : "não informado"}`,
+    MARGIN,
+    y,
+  );
+  y += 5;
+  doc.text(`Documento gerado em ${generatedLabel(args.generatedAt ?? new Date())}`, MARGIN, y);
+  y += 4;
+  doc.setDrawColor(PALETTE.soft[0], PALETTE.soft[1], PALETTE.soft[2]);
+  doc.setLineWidth(0.5);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  y += 8;
+
+  // Resumo em três cartões
+  const cardW = (CONTENT_W - 8) / 3;
+  const cards: [string, string][] = [
+    ["Total de compras", formatPrice(totals.totalCents)],
+    ["Total já pago", formatPrice(totals.paidCents)],
+    ["Total pendente", formatPrice(totals.pendingCents)],
+  ];
+  doc.setDrawColor(PALETTE.line[0], PALETTE.line[1], PALETTE.line[2]);
+  doc.setLineWidth(0.3);
+  cards.forEach(([label, value], index) => {
+    const x = MARGIN + index * (cardW + 4);
+    doc.roundedRect(x, y, cardW, 16, 1.5, 1.5);
+    doc.setFontSize(8);
+    setInk(PALETTE.soft);
+    doc.text(label.toUpperCase(), x + 3, y + 6);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    setInk(PALETTE.ink);
+    doc.text(value, x + 3, y + 12.5);
+    doc.setFont("helvetica", "normal");
+  });
+  y += 24;
+
+  if (args.orders.length === 0) {
+    doc.setFontSize(10);
+    setInk(PALETTE.soft);
+    doc.text("Nenhum pedido registrado para este cliente.", MARGIN, y);
+    return;
+  }
+
+  for (const order of args.orders) {
+    const items = orderItems(order);
+    const blockHeight = 26 + items.length * 5.5 + Math.max(1, order.installments_list.length) * 5.5;
+    ensureSpace(blockHeight);
+
+    // Título do pedido
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    setInk(PALETTE.ink);
+    doc.text(`Pedido de ${orderDateLabel(order.created_at)}`, MARGIN, y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    setInk(PALETTE.soft);
+    doc.text(
+      ORDER_STATUS_LABELS[order.status] ?? order.status,
+      PAGE_W - MARGIN,
+      y,
+      { align: "right" },
+    );
+    y += 5;
+
+    // Itens
+    doc.setFontSize(8);
+    doc.text("ITEM", MARGIN, y);
+    doc.text("VALOR UNITÁRIO", PAGE_W - MARGIN, y, { align: "right" });
+    y += 1.5;
+    doc.setDrawColor(PALETTE.line[0], PALETTE.line[1], PALETTE.line[2]);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 4;
+    doc.setFontSize(10);
+    setInk(PALETTE.ink);
+    for (const item of items) {
+      ensureSpace(8);
+      doc.text(doc.splitTextToSize(item.name, CONTENT_W - 40)[0] ?? item.name, MARGIN, y);
+      doc.text(formatPrice(item.unit_price_cents), PAGE_W - MARGIN, y, { align: "right" });
+      y += 5.5;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.text("Total do pedido", MARGIN, y);
+    doc.text(formatPrice(order.amount_cents), PAGE_W - MARGIN, y, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    y += 6;
+
+    // Condição de pagamento
+    doc.setFontSize(9);
+    setInk(PALETTE.soft);
+    const condition = `Condição de pagamento: ${paymentCondition(order)}${
+      order.delivery_date ? ` · Entrega prevista: ${formatISODate(order.delivery_date)}` : ""
+    }`;
+    doc.text(condition, MARGIN, y);
+    y += 6;
+
+    // Parcelas
+    doc.setFontSize(8);
+    doc.text("PARCELA", MARGIN, y);
+    doc.text("VALOR", MARGIN + 45, y);
+    doc.text("VENCIMENTO", MARGIN + 75, y);
+    doc.text("SITUAÇÃO", MARGIN + 115, y);
+    y += 1.5;
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 4;
+    doc.setFontSize(9.5);
+    if (order.installments_list.length === 0) {
+      setInk(PALETTE.soft);
+      doc.text("Sem parcelas registradas.", MARGIN, y);
+      y += 5.5;
+    } else {
+      for (const parcel of order.installments_list) {
+        ensureSpace(8);
+        setInk(PALETTE.ink);
+        doc.text(
+          order.installments > 1 ? `${parcel.number}ª parcela` : "Pagamento único",
+          MARGIN,
+          y,
+        );
+        doc.text(formatPrice(parcel.amount_cents), MARGIN + 45, y);
+        doc.text(formatISODate(parcel.due_date), MARGIN + 75, y);
+        const paid = Boolean(parcel.paid_at);
+        doc.text(
+          paid ? `Paga em ${formatISODate(parcel.paid_at?.slice(0, 10) ?? null)}` : "Pendente",
+          MARGIN + 115,
+          y,
+        );
+        y += 5.5;
+      }
+    }
+    y += 4;
+    doc.setDrawColor(PALETTE.line[0], PALETTE.line[1], PALETTE.line[2]);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 8;
+  }
+
+  const pages = doc.getNumberOfPages();
+  for (let page = 1; page <= pages; page += 1) {
+    doc.setPage(page);
+    doc.setFontSize(8);
+    setInk(PALETTE.soft);
+    doc.text(
+      `Studio Jannah Nails — Loja · página ${page} de ${pages}`,
+      PAGE_W / 2,
+      PAGE_H - 8,
+      { align: "center" },
+    );
+  }
 }
