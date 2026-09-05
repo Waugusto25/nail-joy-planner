@@ -8,9 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase-client";
-import { ORDER_STATUSES, PAYMENT_METHODS, formatPrice, splitInstallments } from "@/lib/salon";
-import { displayName, fetchStoreClients } from "@/lib/store";
-import type { StoreOrderWithDetails } from "@/components/app/store-order-card";
+import {
+  ORDER_STATUSES,
+  PAYMENT_METHODS,
+  formatISODate,
+  formatPrice,
+  splitInstallments,
+} from "@/lib/salon";
+import {
+  displayName,
+  fetchStoreClients,
+  pendingInstallments,
+  type StoreOrderInstallment,
+  type StoreOrderWithDetails,
+} from "@/lib/store";
 
 type ItemRow = { key: string; name: string; price: string };
 
@@ -27,11 +38,39 @@ function toInput(cents: number) {
   return (cents / 100).toFixed(2).replace(".", ",");
 }
 
+/** Soma meses a uma data "YYYY-MM-DD" sem passar por conversão de fuso. */
+function addMonthsISO(iso: string, months: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const base = new Date(y, m - 1 + months, 1);
+  const lastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+  const day = Math.min(d, lastDay);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${base.getFullYear()}-${p(base.getMonth() + 1)}-${p(day)}`;
+}
+
+/** Primeira parcela pendente (a vencer) de pedidos anteriores do mesmo cliente. */
+function firstPendingFromHistory(
+  orders: StoreOrderWithDetails[],
+  clientId: string,
+  excludeOrderId?: string,
+): StoreOrderInstallment | null {
+  const parcels = orders
+    .filter((o) => o.store_client_id === clientId && o.id !== excludeOrderId)
+    .flatMap((o) => pendingInstallments(o.installments_list));
+  if (parcels.length === 0) return null;
+  return [...parcels].sort((a, b) =>
+    (a.due_date ?? "9999-12-31").localeCompare(b.due_date ?? "9999-12-31"),
+  )[0] ?? null;
+}
+
 export function StoreOrderForm({
   editing,
+  orders,
   onDone,
 }: {
   editing: StoreOrderWithDetails | null;
+  orders: StoreOrderWithDetails[];
   onDone: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -44,6 +83,7 @@ export function StoreOrderForm({
   const [deliveryDate, setDeliveryDate] = useState("");
   const [status, setStatus] = useState("pendente");
   const [notes, setNotes] = useState("");
+  const [unify, setUnify] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -63,13 +103,17 @@ export function StoreOrderForm({
     setDeliveryDate(editing.delivery_date ?? "");
     setStatus(editing.status);
     setNotes(editing.notes ?? "");
+    setUnify(false);
   }, [editing]);
 
-  const total = useMemo(
-    () => items.reduce((sum, i) => sum + toCents(i.price), 0),
-    [items],
-  );
+  const total = useMemo(() => items.reduce((sum, i) => sum + toCents(i.price), 0), [items]);
   const parcels = splitInstallments(total, Number(installments) || 1);
+
+  // Saldo pendente de pedidos anteriores do cliente selecionado.
+  const carryOver = useMemo(
+    () => (clientId ? firstPendingFromHistory(orders, clientId, editing?.id) : null),
+    [orders, clientId, editing?.id],
+  );
 
   function reset() {
     setClientId("");
@@ -79,6 +123,7 @@ export function StoreOrderForm({
     setDeliveryDate("");
     setStatus("pendente");
     setNotes("");
+    setUnify(false);
   }
 
   async function save() {
@@ -141,16 +186,34 @@ export function StoreOrderForm({
       );
       await supabase.from("store_order_installments").delete().eq("order_id", orderId);
       const amounts = splitInstallments(total, count);
+      const merging = unify && carryOver ? carryOver : null;
+      const firstDue = merging?.due_date ?? deliveryDate || null;
       const { error: parcelsError } = await supabase.from("store_order_installments").insert(
-        amounts.map((amount, index) => ({
-          order_id: orderId,
-          number: index + 1,
-          amount_cents: amount,
-          due_date: paid.get(index + 1)?.due_date ?? (deliveryDate || null),
-          paid_at: paid.get(index + 1)?.paid_at ?? null,
-        })),
+        amounts.map((amount, index) => {
+          const extra = merging && index === 0 ? merging.amount_cents : 0;
+          const monthlyDue = firstDue ? addMonthsISO(firstDue, index) : null;
+          return {
+            order_id: orderId,
+            number: index + 1,
+            amount_cents: amount + extra,
+            merged_extra_cents: extra,
+            due_date:
+              paid.get(index + 1)?.due_date ??
+              (merging ? monthlyDue : deliveryDate || null),
+            paid_at: paid.get(index + 1)?.paid_at ?? null,
+          };
+        }),
       );
       if (parcelsError) throw new Error(parcelsError.message);
+
+      // A parcela antiga somada sai da cobrança, evitando duplicidade.
+      if (merging) {
+        const { error: mergeError } = await supabase
+          .from("store_order_installments")
+          .update({ merged_into_order_id: orderId })
+          .eq("id", merging.id);
+        if (mergeError) throw new Error(mergeError.message);
+      }
 
       toast.success(editing ? "Pedido atualizado." : "Pedido registrado.");
       reset();
@@ -186,6 +249,27 @@ export function StoreOrderForm({
           Os clientes vêm da sub-aba Clientes LOJA, com nome, telefone e apelido.
         </p>
       </div>
+
+      {carryOver ? (
+        <div className="rounded-md border border-primary/40 bg-primary/5 p-3">
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={unify}
+              onChange={(e) => setUnify(e.target.checked)}
+            />
+            <span>
+              Unificar parcelas pendentes anteriores a este novo pedido?
+              <span className="block text-xs text-muted-foreground">
+                Saldo pendente de {formatPrice(carryOver.amount_cents)} com vencimento em{" "}
+                {carryOver.due_date ? formatISODate(carryOver.due_date) : "data a definir"}. Marcado,
+                esse valor entra na 1ª parcela deste pedido e a parcela antiga deixa de ser cobrada.
+              </span>
+            </span>
+          </label>
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label>Itens do pedido</Label>
@@ -276,6 +360,12 @@ export function StoreOrderForm({
             <p className="text-xs text-muted-foreground">
               {parcels.length}x de {formatPrice(parcels[0] ?? 0)} (última:{" "}
               {formatPrice(parcels[parcels.length - 1] ?? 0)})
+            </p>
+          ) : null}
+          {unify && carryOver ? (
+            <p className="text-xs text-primary">
+              1ª parcela consolidada:{" "}
+              {formatPrice((parcels[0] ?? 0) + carryOver.amount_cents)}
             </p>
           ) : null}
         </div>
