@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, Plus } from "lucide-react";
+import { Check, ChevronDown, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import {
 import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { StoreOrderAddItemsDialog } from "@/components/app/store-order-add-items-dialog";
 import { cn } from "@/lib/utils";
-import { pendingInstallments, type StoreOrderInstallment, type StoreOrderWithDetails } from "@/lib/store";
+import { pendingInstallments, removeItemInstallments, type StoreOrderInstallment, type StoreOrderWithDetails } from "@/lib/store";
 
 export type { StoreOrderWithDetails };
 
@@ -47,6 +47,7 @@ export function StoreOrderCard({
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const pending = pendingInstallments(order.installments_list);
   const nextDue = pending[0];
   // Pedido em aberto: ainda em andamento ou com saldo devedor.
@@ -55,6 +56,62 @@ export function StoreOrderCard({
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
+  }
+
+  /** Exclui um item que não veio e retira o valor dele do total e das parcelas pendentes. */
+  async function removeItem(item: StoreOrderWithDetails["items"][number]) {
+    if (
+      !window.confirm(
+        `Excluir "${item.name}" (${formatPrice(item.unit_price_cents)}) deste pedido? O valor será retirado do total e das parcelas pendentes.`,
+      )
+    )
+      return;
+    setRemovingId(item.id);
+    try {
+      const plan = removeItemInstallments(order, item.unit_price_cents);
+      const { error: itemError } = await supabase
+        .from("store_order_items")
+        .delete()
+        .eq("id", item.id);
+      if (itemError) throw new Error(itemError.message);
+
+      for (const parcel of plan.update) {
+        const { error } = await supabase
+          .from("store_order_installments")
+          .update({
+            amount_cents: parcel.amount_cents,
+            added_extra_cents: parcel.added_extra_cents,
+          })
+          .eq("id", parcel.id);
+        if (error) throw new Error(error.message);
+      }
+      if (plan.deleteIds.length > 0) {
+        const { error } = await supabase
+          .from("store_order_installments")
+          .delete()
+          .in("id", plan.deleteIds);
+        if (error) throw new Error(error.message);
+      }
+
+      const { error: orderError } = await supabase
+        .from("store_orders")
+        .update({ amount_cents: plan.newTotalCents, installments: plan.totalInstallments })
+        .eq("id", order.id);
+      if (orderError) throw new Error(orderError.message);
+
+      if (plan.unappliedCents > 0) {
+        toast.warning(
+          `Item excluído. ${formatPrice(plan.unappliedCents)} já estavam pagos — confira se há valor a devolver.`,
+        );
+      } else {
+        toast.success("Item excluído e valores recalculados.");
+      }
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir o item.");
+    } finally {
+      setRemovingId(null);
+    }
   }
 
   async function updateStatus(status: string) {
@@ -188,9 +245,22 @@ export function StoreOrderCard({
         <div className="min-h-0 space-y-3 pt-2">
           <ul className="space-y-1 text-sm">
             {order.items.map((i) => (
-              <li key={i.id} className="flex items-center justify-between">
+              <li key={i.id} className="flex items-center justify-between gap-2">
                 <span>{i.name}</span>
-                <span>{formatPrice(i.unit_price_cents)}</span>
+                <span className="flex items-center gap-1">
+                  {formatPrice(i.unit_price_cents)}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-destructive h-7 w-7"
+                    aria-label={`Excluir ${i.name} do pedido`}
+                    title="Excluir item e retirar o valor dos cálculos"
+                    disabled={removingId === i.id}
+                    onClick={() => void removeItem(i)}
+                  >
+                    <X size={14} />
+                  </Button>
+                </span>
               </li>
             ))}
           </ul>
