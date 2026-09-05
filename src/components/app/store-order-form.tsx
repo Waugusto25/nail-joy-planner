@@ -13,6 +13,7 @@ import {
   PAYMENT_METHODS,
   formatISODate,
   formatPrice,
+  onlyDigits,
   splitInstallments,
 } from "@/lib/salon";
 import {
@@ -53,10 +54,17 @@ function addMonthsISO(iso: string, months: number): string {
 function firstPendingFromHistory(
   orders: StoreOrderWithDetails[],
   clientId: string,
+  clientPhone: string,
   excludeOrderId?: string,
 ): StoreOrderInstallment | null {
+  const digits = onlyDigits(clientPhone);
   const parcels = orders
-    .filter((o) => o.store_client_id === clientId && o.id !== excludeOrderId)
+    .filter((o) => {
+      if (o.id === excludeOrderId) return false;
+      if (o.store_client_id) return o.store_client_id === clientId;
+      // Pedidos antigos, sem vínculo, são reconhecidos pelo telefone.
+      return Boolean(digits) && onlyDigits(o.client_phone) === digits;
+    })
     .flatMap((o) => pendingInstallments(o.installments_list));
   if (parcels.length === 0) return null;
   return [...parcels].sort((a, b) =>
@@ -110,9 +118,13 @@ export function StoreOrderForm({
   const parcels = splitInstallments(total, Number(installments) || 1);
 
   // Saldo pendente de pedidos anteriores do cliente selecionado.
+  const selectedClient = (clients.data ?? []).find((c) => c.id === clientId) ?? null;
   const carryOver = useMemo(
-    () => (clientId ? firstPendingFromHistory(orders, clientId, editing?.id) : null),
-    [orders, clientId, editing?.id],
+    () =>
+      clientId
+        ? firstPendingFromHistory(orders, clientId, selectedClient?.phone ?? "", editing?.id)
+        : null,
+    [orders, clientId, selectedClient?.phone, editing?.id],
   );
 
   function reset() {
