@@ -415,7 +415,10 @@ export type ItemAllocation = {
   name: string;
   /** Números das parcelas que cobram este item. */
   numbers: number[];
+  /** Valor cobrado por parcela (usado no rótulo "3x de R$ ..."). */
+  perInstallmentCents: number;
 };
+
 
 export type InstallmentItemShare = {
   number: number;
