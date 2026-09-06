@@ -1,6 +1,10 @@
 import type { jsPDF } from "jspdf";
 
-import { type StoreOrderWithDetails } from "@/lib/store";
+import {
+  allocateItemsToInstallments,
+  installmentState,
+  type StoreOrderWithDetails,
+} from "@/lib/store";
 import { ORDER_STATUS_LABELS, formatISODate, formatPhone, formatPrice } from "@/lib/salon";
 
 export type StatementTotals = {
@@ -16,14 +20,19 @@ export function statementTotals(orders: StoreOrderWithDetails[]): StatementTotal
   for (const order of orders) {
     totalCents += order.amount_cents;
     for (const parcel of order.installments_list) {
-      if (parcel.paid_at) paidCents += parcel.amount_cents;
+      if (parcel.paid_at) paidCents += parcel.paid_amount_cents || parcel.amount_cents;
     }
   }
   let pendingCents = 0;
   for (const order of orders) {
     for (const parcel of order.installments_list) {
       // Parcelas unificadas em outro pedido não são cobradas novamente.
-      if (!parcel.paid_at && !parcel.merged_into_order_id) pendingCents += parcel.amount_cents;
+      if (!parcel.paid_at && !parcel.merged_into_order_id) {
+        pendingCents += parcel.amount_cents;
+      } else if (parcel.paid_at && !parcel.merged_into_order_id && parcel.paid_amount_cents > 0) {
+        // Pagamento parcial: o que faltou continua em aberto.
+        pendingCents += Math.max(0, parcel.amount_cents - parcel.paid_amount_cents);
+      }
     }
   }
   return { totalCents, paidCents, pendingCents };
@@ -75,6 +84,26 @@ const PAGE_W = 210;
 const MARGIN = 14;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 const PAGE_H = 297;
+
+type PillTone = "paid" | "pending" | "neutral";
+
+const PILL_COLORS: Record<PillTone, { fill: [number, number, number]; text: [number, number, number] }> = {
+  paid: { fill: [220, 245, 227], text: [21, 105, 57] },
+  pending: { fill: [253, 240, 214], text: [146, 89, 8] },
+  neutral: { fill: [235, 237, 241], text: [90, 99, 114] },
+};
+
+/** Pílula colorida de status; devolve a largura ocupada. */
+function drawPill(doc: jsPDF, x: number, y: number, label: string, tone: PillTone): number {
+  const colors = PILL_COLORS[tone];
+  doc.setFontSize(7.5);
+  const width = doc.getTextWidth(label) + 5;
+  doc.setFillColor(colors.fill[0], colors.fill[1], colors.fill[2]);
+  doc.roundedRect(x, y - 3.2, width, 4.8, 2.2, 2.2, "F");
+  doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+  doc.text(label, x + 2.5, y);
+  return width;
+}
 
 /**
  * Desenha o extrato do cliente em texto vetorial (legível e leve),
@@ -155,7 +184,9 @@ export function drawStatement(
 
   for (const order of args.orders) {
     const items = orderItems(order);
-    const blockHeight = 26 + items.length * 5.5 + Math.max(1, order.installments_list.length) * 5.5;
+    const allocation = allocateItemsToInstallments(order);
+    const blockHeight =
+      26 + items.length * 5.5 + Math.max(1, order.installments_list.length) * 11;
     ensureSpace(blockHeight);
 
     // Título do pedido
@@ -186,7 +217,11 @@ export function drawStatement(
     setInk(PALETTE.ink);
     for (const item of items) {
       ensureSpace(8);
-      doc.text(doc.splitTextToSize(item.name, CONTENT_W - 40)[0] ?? item.name, MARGIN, y);
+      const numbers = allocation.byItem.find((a) => a.itemId === item.id)?.numbers ?? [];
+      const label = numbers.length ? `${item.name} — [${numbers.join(", ")}]` : item.name;
+      setInk(PALETTE.ink);
+      doc.setFontSize(10);
+      doc.text(doc.splitTextToSize(label, CONTENT_W - 40)[0] ?? label, MARGIN, y);
       doc.text(formatPrice(item.unit_price_cents), PAGE_W - MARGIN, y, { align: "right" });
       y += 5.5;
     }
@@ -223,24 +258,71 @@ export function drawStatement(
       for (const parcel of order.installments_list) {
         ensureSpace(8);
         setInk(PALETTE.ink);
+        doc.setFontSize(9.5);
         doc.text(
-          order.installments > 1 ? `${parcel.number}ª parcela` : "Pagamento único",
+          order.installments > 1
+            ? `Parcela ${parcel.number}/${order.installments}`
+            : "Pagamento único",
           MARGIN,
           y,
         );
         doc.text(formatPrice(parcel.amount_cents), MARGIN + 45, y);
         doc.text(formatISODate(parcel.due_date), MARGIN + 75, y);
-        const paid = Boolean(parcel.paid_at);
-        doc.text(
-          parcel.merged_into_order_id
+        const state = installmentState(parcel);
+        const statusLabel =
+          state === "transferida"
             ? "Unificada em novo pedido"
-            : paid
+            : state === "paga"
               ? `Paga em ${formatISODate(parcel.paid_at?.slice(0, 10) ?? null)}`
-              : "Pendente",
-          MARGIN + 115,
-          y,
-        );
+              : state === "parcial"
+                ? `Parcial: ${formatPrice(parcel.paid_amount_cents)}`
+                : "Pendente";
+        const tone: PillTone =
+          state === "paga" ? "paid" : state === "transferida" ? "neutral" : "pending";
+        drawPill(doc, MARGIN + 115, y, statusLabel, tone);
+        doc.setFontSize(9.5);
         y += 5.5;
+
+        // Itens cobrados neste mês
+        const shares = allocation.byInstallment.get(parcel.number) ?? [];
+        if (shares.length > 0 && !parcel.merged_into_order_id) {
+          const line = `Itens inclusos: ${shares
+            .map((s) => `${s.name} (${s.index}/${s.total})`)
+            .join(", ")}.`;
+          doc.setFontSize(8);
+          setInk(PALETTE.soft);
+          for (const chunk of doc.splitTextToSize(line, CONTENT_W - 6) as string[]) {
+            ensureSpace(6);
+            doc.text(chunk, MARGIN + 4, y);
+            y += 4;
+          }
+          doc.setFontSize(9.5);
+          y += 1;
+        }
+        if (parcel.credit_applied_cents > 0) {
+          ensureSpace(8);
+          doc.setFontSize(8);
+          setInk(PALETTE.soft);
+          doc.text(
+            `(Abatido ${formatPrice(parcel.credit_applied_cents)} de crédito anterior)`,
+            MARGIN + 4,
+            y,
+          );
+          doc.setFontSize(9.5);
+          y += 5;
+        }
+        if (parcel.carried_in_cents > 0) {
+          ensureSpace(8);
+          doc.setFontSize(8);
+          setInk(PALETTE.soft);
+          doc.text(
+            `(Inclui ${formatPrice(parcel.carried_in_cents)} de pendência do mês anterior)`,
+            MARGIN + 4,
+            y,
+          );
+          doc.setFontSize(9.5);
+          y += 5;
+        }
         if (parcel.merged_extra_cents > 0) {
           ensureSpace(8);
           doc.setFontSize(8);
