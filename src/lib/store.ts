@@ -252,6 +252,18 @@ export type SettlementPlan = {
     credit_applied_cents: number;
     carried_in_cents: number;
   } | null;
+  /**
+   * Estorno do efeito de uma baixa anterior desta mesma parcela em outra parcela
+   * (usado quando a parcela seguinte que recebeu a pendência/crédito não é a que
+   * será ajustada agora).
+   */
+  revertUpdate: {
+    id: string;
+    amount_cents: number;
+    credit_applied_cents: number;
+    carried_in_cents: number;
+  } | null;
+
   /** Mês novo criado quando não havia parcela seguinte para receber a pendência. */
   insert: { number: number; amount_cents: number; due_date: string | null; carried_in_cents: number } | null;
   /** Crédito gerado por pagamento acima do valor da parcela. */
@@ -279,10 +291,48 @@ export function settleInstallment(
   const paid = Math.max(0, Math.round(paidCents));
   const diff = paid - parcel.amount_cents;
 
+  const sorted = [...active].sort((a, b) => a.number - b.number);
+
+  // Parcela vizinha que recebeu (ou receberá) crédito/pendência desta parcela.
+  const neighbour = sorted.find((p) => p.number > parcel.number) ?? null;
+
+  // Estorna o efeito de uma baixa anterior desta mesma parcela, para que reajustar
+  // o valor pago não deixe a pendência/crédito antigo somado na parcela seguinte.
+  let baseNeighbour = neighbour ? { ...neighbour } : null;
+  if (baseNeighbour && parcel.paid_at) {
+    const prevDiff = parcel.paid_amount_cents - parcel.amount_cents;
+    if (prevDiff < 0) {
+      const undo = Math.min(-prevDiff, baseNeighbour.carried_in_cents);
+      baseNeighbour = {
+        ...baseNeighbour,
+        amount_cents: Math.max(0, baseNeighbour.amount_cents - undo),
+        carried_in_cents: baseNeighbour.carried_in_cents - undo,
+      };
+    } else if (prevDiff > 0) {
+      const undo = Math.min(prevDiff, baseNeighbour.credit_applied_cents);
+      baseNeighbour = {
+        ...baseNeighbour,
+        amount_cents: baseNeighbour.amount_cents + undo,
+        credit_applied_cents: baseNeighbour.credit_applied_cents - undo,
+      };
+    }
+  }
+
+  const neighbourChanged =
+    baseNeighbour !== null &&
+    neighbour !== null &&
+    (baseNeighbour.amount_cents !== neighbour.amount_cents ||
+      baseNeighbour.carried_in_cents !== neighbour.carried_in_cents ||
+      baseNeighbour.credit_applied_cents !== neighbour.credit_applied_cents);
+
+  // Aplica o novo acerto na parcela vizinha quando ela ainda está em aberto;
+  // caso já esteja paga, procura a próxima pendente adiante.
   const next =
-    pendingInstallments(order.installments_list)
-      .filter((p) => p.id !== parcel.id && p.number > parcel.number)
-      .sort((a, b) => a.number - b.number)[0] ?? null;
+    baseNeighbour && !baseNeighbour.paid_at
+      ? baseNeighbour
+      : (pendingInstallments(order.installments_list)
+          .filter((p) => p.id !== parcel.id && p.number > parcel.number)
+          .sort((a, b) => a.number - b.number)[0] ?? null);
 
   const target = {
     id: parcel.id,
@@ -317,10 +367,7 @@ export function settleInstallment(
       };
     } else {
       const maxNumber = active.reduce((max, p) => Math.max(max, p.number), 0);
-      const lastDue =
-        [...active].sort((a, b) => a.number - b.number).at(-1)?.due_date ??
-        parcel.due_date ??
-        todayISO();
+      const lastDue = sorted.at(-1)?.due_date ?? parcel.due_date ?? todayISO();
       insert = {
         number: maxNumber + 1,
         amount_cents: shortfall,
@@ -330,15 +377,28 @@ export function settleInstallment(
     }
   }
 
+  // Quando o estorno recaiu numa parcela diferente da ajustada agora, grava-o separadamente.
+  const revertUpdate =
+    neighbourChanged && baseNeighbour && baseNeighbour.id !== nextUpdate?.id
+      ? {
+          id: baseNeighbour.id,
+          amount_cents: baseNeighbour.amount_cents,
+          credit_applied_cents: baseNeighbour.credit_applied_cents,
+          carried_in_cents: baseNeighbour.carried_in_cents,
+        }
+      : null;
+
   return {
     target,
     nextUpdate,
+    revertUpdate,
     insert,
     creditCents: Math.max(0, diff),
     creditLeftoverCents,
     shortfallCents: Math.max(0, -diff),
     totalInstallments: active.length + (insert ? 1 : 0),
   };
+
 }
 
 /**

@@ -78,6 +78,18 @@ export function StoreInstallmentPaymentDialog({
         .eq("id", preview.target.id);
       if (targetError) throw new Error(targetError.message);
 
+      if (preview.revertUpdate) {
+        const { error } = await supabase
+          .from("store_order_installments")
+          .update({
+            amount_cents: preview.revertUpdate.amount_cents,
+            credit_applied_cents: preview.revertUpdate.credit_applied_cents,
+            carried_in_cents: preview.revertUpdate.carried_in_cents,
+          })
+          .eq("id", preview.revertUpdate.id);
+        if (error) throw new Error(error.message);
+      }
+
       if (preview.nextUpdate) {
         const { error } = await supabase
           .from("store_order_installments")
