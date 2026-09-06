@@ -177,6 +177,9 @@ export function StoreOrderForm({
           name: i.name.trim(),
           unit_price_cents: toCents(i.price),
           sort_order: index,
+          // Itens do pedido são cobrados da 1ª parcela até a última.
+          start_installment: 1,
+          installments_count: count,
         })),
       );
       if (itemsError) throw new Error(itemsError.message);

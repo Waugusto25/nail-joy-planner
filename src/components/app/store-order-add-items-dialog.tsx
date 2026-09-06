@@ -68,12 +68,17 @@ export function StoreOrderAddItemsDialog({
     setSaving(true);
     try {
       const nextSort = order.items.reduce((max, i) => Math.max(max, i.sort_order), -1) + 1;
+      // Parcela em que o item novo começa a ser cobrado: a primeira parcela que
+      // recebeu o acréscimo (pendente existente ou mês criado agora).
+      const startInstallment = change.update[0]?.number ?? change.insert[0]?.number ?? 1;
       const { error: itemsError } = await supabase.from("store_order_items").insert(
         items.map((item, index) => ({
           order_id: order.id,
           name: item.name,
           unit_price_cents: item.unit_price_cents,
           sort_order: nextSort + index,
+          start_installment: startInstallment,
+          installments_count: parts,
         })),
       );
       if (itemsError) throw new Error(itemsError.message);

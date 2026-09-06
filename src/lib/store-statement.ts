@@ -217,8 +217,15 @@ export function drawStatement(
     setInk(PALETTE.ink);
     for (const item of items) {
       ensureSpace(8);
-      const numbers = allocation.byItem.find((a) => a.itemId === item.id)?.numbers ?? [];
-      const label = numbers.length ? `${item.name} — [${numbers.join(", ")}]` : item.name;
+      const alloc = allocation.byItem.find((a) => a.itemId === item.id);
+      const numbers = alloc?.numbers ?? [];
+      const label = numbers.length
+        ? `${item.name} — [${numbers.join(", ")}]${
+            numbers.length > 1
+              ? ` (${numbers.length}x de ${formatPrice(alloc?.perInstallmentCents ?? 0)})`
+              : ""
+          }`
+        : item.name;
       setInk(PALETTE.ink);
       doc.setFontSize(10);
       doc.text(doc.splitTextToSize(label, CONTENT_W - 40)[0] ?? label, MARGIN, y);
@@ -287,7 +294,10 @@ export function drawStatement(
         const shares = allocation.byInstallment.get(parcel.number) ?? [];
         if (shares.length > 0 && !parcel.merged_into_order_id) {
           const line = `Itens inclusos: ${shares
-            .map((s) => `${s.name} (${s.index}/${s.total})`)
+            .map(
+              (s) =>
+                `${s.name} (${s.index}/${s.total} — ${formatPrice(s.amountCents)})`,
+            )
             .join(", ")}.`;
           doc.setFontSize(8);
           setInk(PALETTE.soft);

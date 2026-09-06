@@ -771,27 +771,33 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          installments_count: number | null
           name: string
           order_id: string
           sort_order: number
+          start_installment: number | null
           unit_price_cents: number
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
+          installments_count?: number | null
           name: string
           order_id: string
           sort_order?: number
+          start_installment?: number | null
           unit_price_cents?: number
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          installments_count?: number | null
           name?: string
           order_id?: string
           sort_order?: number
+          start_installment?: number | null
           unit_price_cents?: number
           updated_at?: string
         }

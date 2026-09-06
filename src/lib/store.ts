@@ -15,7 +15,12 @@ export type StoreOrderItem = {
   name: string;
   unit_price_cents: number;
   sort_order: number;
+  /** Primeira parcela que cobra este item (1 para itens do pedido original). */
+  start_installment: number | null;
+  /** Em quantas parcelas o item foi dividido. */
+  installments_count: number | null;
 };
+
 
 export type StoreOrderInstallment = {
   id: string;
@@ -410,7 +415,10 @@ export type ItemAllocation = {
   name: string;
   /** Números das parcelas que cobram este item. */
   numbers: number[];
+  /** Valor cobrado por parcela (usado no rótulo "3x de R$ ..."). */
+  perInstallmentCents: number;
 };
+
 
 export type InstallmentItemShare = {
   number: number;
@@ -440,7 +448,7 @@ export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
       ),
       extraCapacity: Math.max(0, p.added_extra_cents),
     }));
-  const items = order.items.length
+  const items: StoreOrderItem[] = order.items.length
     ? order.items
     : [
         {
@@ -449,13 +457,59 @@ export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
           name: order.item_name,
           unit_price_cents: order.amount_cents,
           sort_order: 0,
+          start_installment: 1,
+          installments_count: Math.max(1, order.installments),
         },
       ];
+
+  const byItem: ItemAllocation[] = [];
+  const shares = new Map<number, InstallmentItemShare[]>();
+
+  const pushShares = (
+    item: StoreOrderItem,
+    hits: { number: number; amountCents: number }[],
+  ) => {
+    byItem.push({
+      itemId: item.id,
+      name: item.name,
+      numbers: hits.map((h) => h.number),
+      perInstallmentCents: hits.length > 0 ? Math.round(item.unit_price_cents / hits.length) : item.unit_price_cents,
+    });
+    hits.forEach((hit, index) => {
+      const entry = shares.get(hit.number) ?? [];
+      entry.push({
+        number: hit.number,
+        name: item.name,
+        index: index + 1,
+        total: hits.length,
+        amountCents: hit.amountCents,
+      });
+      shares.set(hit.number, entry);
+    });
+  };
+
+  // Caminho preferencial: cada item guarda a parcela inicial e a quantidade de
+  // parcelas, então o vínculo é exato — parcelasInclusas = [inicial, inicial+1, ...].
+  const explicit = items.filter((i) => i.start_installment && i.installments_count);
+  if (explicit.length === items.length) {
+    for (const item of items) {
+      const start = Math.max(1, item.start_installment ?? 1);
+      const count = Math.max(1, item.installments_count ?? 1);
+      const amounts = splitFirstHeavy(item.unit_price_cents, count);
+      const hits = Array.from({ length: count }, (_, i) => ({
+        number: start + i,
+        amountCents: amounts[i] ?? 0,
+      }));
+      pushShares(item, hits);
+    }
+    return { byItem, byInstallment: shares };
+  }
 
   // Itens acrescentados entram por último (sort_order crescente). Percorrendo
   // do fim para o começo, separamos os itens cuja soma bate com o total de
   // added_extra_cents. Se a conta não fechar (dados antigos), tratamos tudo
   // como original: é o comportamento anterior, seguro como fallback.
+
   const totalAdded = parcels.reduce((sum, p) => sum + p.extraCapacity, 0);
   let appendedCount = 0;
   if (totalAdded > 0) {
@@ -469,12 +523,9 @@ export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
   const originals = items.slice(0, items.length - appendedCount);
   const appended = items.slice(items.length - appendedCount);
 
-  const byItem: ItemAllocation[] = [];
-  const shares = new Map<number, InstallmentItemShare[]>();
-
   // Preenche as parcelas em ordem usando a capacidade escolhida, atribuindo a
   // cada item as parcelas que de fato o cobram.
-  const allocate = (list: typeof items, key: "baseCapacity" | "extraCapacity") => {
+  const allocate = (list: StoreOrderItem[], key: "baseCapacity" | "extraCapacity") => {
     let cursor = 0;
     for (const item of list) {
       let remaining = item.unit_price_cents;
@@ -492,20 +543,10 @@ export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
         hits.push({ number: parcel.number, amountCents: used });
         if (parcel[key] === 0) cursor += 1;
       }
-      byItem.push({ itemId: item.id, name: item.name, numbers: hits.map((h) => h.number) });
-      hits.forEach((hit, index) => {
-        const entry = shares.get(hit.number) ?? [];
-        entry.push({
-          number: hit.number,
-          name: item.name,
-          index: index + 1,
-          total: hits.length,
-          amountCents: hit.amountCents,
-        });
-        shares.set(hit.number, entry);
-      });
+      pushShares(item, hits);
     }
   };
+
 
   allocate(originals, "baseCapacity");
   allocate(appended, "extraCapacity");
@@ -520,7 +561,7 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
     .select(
       // O apontamento explícito da chave estrangeira evita ambiguidade: parcelas
       // referenciam store_orders por order_id e por merged_into_order_id.
-      "id, created_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents)",
+      "id, created_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order, start_installment, installments_count), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents)",
     )
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -541,7 +582,13 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
       delivery_date: row.delivery_date,
       status: row.status,
       notes: row.notes,
-      items: [...(row.store_order_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+      items: [...(row.store_order_items ?? [])]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((i) => ({
+          ...i,
+          start_installment: i.start_installment ?? null,
+          installments_count: i.installments_count ?? null,
+        })),
       installments_list: [...(row.store_order_installments ?? [])].sort(
         (a, b) => a.number - b.number,
       ),
