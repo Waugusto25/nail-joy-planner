@@ -15,7 +15,12 @@ export type StoreOrderItem = {
   name: string;
   unit_price_cents: number;
   sort_order: number;
+  /** Primeira parcela que cobra este item (1 para itens do pedido original). */
+  start_installment: number | null;
+  /** Em quantas parcelas o item foi dividido. */
+  installments_count: number | null;
 };
+
 
 export type StoreOrderInstallment = {
   id: string;
