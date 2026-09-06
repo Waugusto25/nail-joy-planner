@@ -365,10 +365,21 @@ export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
   byItem: ItemAllocation[];
   byInstallment: Map<number, InstallmentItemShare[]>;
 } {
+  // Cada parcela tem duas capacidades: a base (valor original do pedido) e o
+  // extra (produtos acrescentados depois, registrados em added_extra_cents).
+  // Créditos/pendências e unificações não representam produto, então ficam
+  // fora da base alocável.
   const parcels = order.installments_list
     .filter((p) => !p.merged_into_order_id)
     .sort((a, b) => a.number - b.number)
-    .map((p) => ({ number: p.number, capacity: p.amount_cents }));
+    .map((p) => ({
+      number: p.number,
+      baseCapacity: Math.max(
+        0,
+        p.amount_cents - p.added_extra_cents - p.merged_extra_cents - p.carried_in_cents,
+      ),
+      extraCapacity: Math.max(0, p.added_extra_cents),
+    }));
   const items = order.items.length
     ? order.items
     : [
@@ -381,39 +392,63 @@ export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
         },
       ];
 
+  // Itens acrescentados entram por último (sort_order crescente). Percorrendo
+  // do fim para o começo, separamos os itens cuja soma bate com o total de
+  // added_extra_cents. Se a conta não fechar (dados antigos), tratamos tudo
+  // como original: é o comportamento anterior, seguro como fallback.
+  const totalAdded = parcels.reduce((sum, p) => sum + p.extraCapacity, 0);
+  let appendedCount = 0;
+  if (totalAdded > 0) {
+    let acc = 0;
+    for (let i = items.length - 1; i >= 0 && acc < totalAdded; i -= 1) {
+      acc += items[i]?.unit_price_cents ?? 0;
+      appendedCount += 1;
+    }
+    if (acc !== totalAdded) appendedCount = 0;
+  }
+  const originals = items.slice(0, items.length - appendedCount);
+  const appended = items.slice(items.length - appendedCount);
+
   const byItem: ItemAllocation[] = [];
   const shares = new Map<number, InstallmentItemShare[]>();
-  let cursor = 0;
 
-  for (const item of items) {
-    let remaining = item.unit_price_cents;
-    const hits: { number: number; amountCents: number }[] = [];
-    while (remaining > 0 && cursor < parcels.length) {
-      const parcel = parcels[cursor];
-      if (!parcel) break;
-      if (parcel.capacity <= 0) {
-        cursor += 1;
-        continue;
+  // Preenche as parcelas em ordem usando a capacidade escolhida, atribuindo a
+  // cada item as parcelas que de fato o cobram.
+  const allocate = (list: typeof items, key: "baseCapacity" | "extraCapacity") => {
+    let cursor = 0;
+    for (const item of list) {
+      let remaining = item.unit_price_cents;
+      const hits: { number: number; amountCents: number }[] = [];
+      while (remaining > 0 && cursor < parcels.length) {
+        const parcel = parcels[cursor];
+        if (!parcel) break;
+        if (parcel[key] <= 0) {
+          cursor += 1;
+          continue;
+        }
+        const used = Math.min(parcel[key], remaining);
+        parcel[key] -= used;
+        remaining -= used;
+        hits.push({ number: parcel.number, amountCents: used });
+        if (parcel[key] === 0) cursor += 1;
       }
-      const used = Math.min(parcel.capacity, remaining);
-      parcel.capacity -= used;
-      remaining -= used;
-      hits.push({ number: parcel.number, amountCents: used });
-      if (parcel.capacity === 0) cursor += 1;
-    }
-    byItem.push({ itemId: item.id, name: item.name, numbers: hits.map((h) => h.number) });
-    hits.forEach((hit, index) => {
-      const list = shares.get(hit.number) ?? [];
-      list.push({
-        number: hit.number,
-        name: item.name,
-        index: index + 1,
-        total: hits.length,
-        amountCents: hit.amountCents,
+      byItem.push({ itemId: item.id, name: item.name, numbers: hits.map((h) => h.number) });
+      hits.forEach((hit, index) => {
+        const entry = shares.get(hit.number) ?? [];
+        entry.push({
+          number: hit.number,
+          name: item.name,
+          index: index + 1,
+          total: hits.length,
+          amountCents: hit.amountCents,
+        });
+        shares.set(hit.number, entry);
       });
-      shares.set(hit.number, list);
-    });
-  }
+    }
+  };
+
+  allocate(originals, "baseCapacity");
+  allocate(appended, "extraCapacity");
 
   return { byItem, byInstallment: shares };
 }
