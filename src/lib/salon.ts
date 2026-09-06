@@ -497,19 +497,30 @@ export function splitInstallments(totalCents: number, count: number): number[] {
 
 export type CatalogLink = { title: string; url: string };
 
-/** Saudação com os catálogos ativos, um por linha. */
+/** Garante protocolo seguro no link do catálogo. */
+export function secureUrl(raw: string): string {
+  const url = raw.trim();
+  if (!url) return "";
+  if (/^https:\/\//i.test(url)) return url;
+  if (/^http:\/\//i.test(url)) return url.replace(/^http:\/\//i, "https://");
+  return `https://${url.replace(/^\/+/, "")}`;
+}
+
+/** Saudação com os catálogos ativos: título em uma linha, link abaixo, bloco por marca. */
 export function catalogsGreetingMessage(catalogs: CatalogLink[]) {
-  const lines = catalogs
-    .filter((c) => c.url.trim())
-    .map((c) => `👉 ${c.title.trim() || "Catálogo"}: ${c.url.trim()}`);
+  const blocks = catalogs
+    .map((c) => ({ title: c.title.trim() || "Catálogo", url: secureUrl(c.url) }))
+    .filter((c) => c.url)
+    .map((c) => `🛍️ *${c.title}:*\n\n👉 ${c.url}`);
   return [
     "Olá! Estamos com catálogos novos. Que tal dar uma olhada e ver o que tem de novo? 🛍️✨",
     "",
-    lines.length > 0 ? lines.join("\n") : "Em breve enviamos os links dos catálogos.",
+    blocks.length > 0 ? blocks.join("\n\n") : "Em breve enviamos os links dos catálogos.",
     "",
     "Qualquer dúvida, estamos à disposição!",
   ].join("\n");
 }
+
 
 export type OrderMessageArgs = {
   amountCents: number;

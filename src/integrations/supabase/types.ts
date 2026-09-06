@@ -705,39 +705,48 @@ export type Database = {
         Row: {
           added_extra_cents: number
           amount_cents: number
+          carried_in_cents: number
           created_at: string
+          credit_applied_cents: number
           due_date: string | null
           id: string
           merged_extra_cents: number
           merged_into_order_id: string | null
           number: number
           order_id: string
+          paid_amount_cents: number
           paid_at: string | null
           updated_at: string
         }
         Insert: {
           added_extra_cents?: number
           amount_cents?: number
+          carried_in_cents?: number
           created_at?: string
+          credit_applied_cents?: number
           due_date?: string | null
           id?: string
           merged_extra_cents?: number
           merged_into_order_id?: string | null
           number?: number
           order_id: string
+          paid_amount_cents?: number
           paid_at?: string | null
           updated_at?: string
         }
         Update: {
           added_extra_cents?: number
           amount_cents?: number
+          carried_in_cents?: number
           created_at?: string
+          credit_applied_cents?: number
           due_date?: string | null
           id?: string
           merged_extra_cents?: number
           merged_into_order_id?: string | null
           number?: number
           order_id?: string
+          paid_amount_cents?: number
           paid_at?: string | null
           updated_at?: string
         }

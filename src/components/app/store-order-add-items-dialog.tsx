@@ -190,7 +190,9 @@ export function StoreOrderAddItemsDialog({
             className="w-24"
             inputMode="numeric"
             value={count}
-            onChange={(e) => setCount(e.target.value.replace(/\D/g, "") || "1")}
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => setCount(e.target.value.replace(/\D/g, ""))}
+            onBlur={() => setCount((v) => (Number(v) >= 1 ? String(Math.floor(Number(v))) : "1"))}
           />
           <p className="text-xs text-muted-foreground">
             Cada parcela do item novo é somada à parcela pendente do mês correspondente; o que

@@ -30,7 +30,23 @@ export type StoreOrderInstallment = {
   merged_extra_cents: number;
   /** Valor acumulado de produtos acrescentados depois ao pedido e somados nesta parcela. */
   added_extra_cents: number;
+  /** Valor efetivamente recebido no acerto desta parcela. */
+  paid_amount_cents: number;
+  /** Crédito (troco) de um pagamento maior anterior abatido desta parcela. */
+  credit_applied_cents: number;
+  /** Pendência do mês anterior somada a esta parcela. */
+  carried_in_cents: number;
 };
+
+/** Situação de cobrança da parcela, derivada dos valores gravados. */
+export type InstallmentState = "paga" | "parcial" | "pendente" | "transferida";
+
+export function installmentState(p: StoreOrderInstallment): InstallmentState {
+  if (p.merged_into_order_id) return "transferida";
+  if (!p.paid_at) return "pendente";
+  return p.paid_amount_cents > 0 && p.paid_amount_cents < p.amount_cents ? "parcial" : "paga";
+}
+
 
 export type StoreOrderWithDetails = {
   id: string;
@@ -226,13 +242,190 @@ export function appendItemInstallments(
   };
 }
 
+export type SettlementPlan = {
+  /** Baixa aplicada na própria parcela. */
+  target: { id: string; paid_at: string; paid_amount_cents: number };
+  /** Próxima parcela pendente reajustada por crédito ou pendência. */
+  nextUpdate: {
+    id: string;
+    amount_cents: number;
+    credit_applied_cents: number;
+    carried_in_cents: number;
+  } | null;
+  /** Mês novo criado quando não havia parcela seguinte para receber a pendência. */
+  insert: { number: number; amount_cents: number; due_date: string | null; carried_in_cents: number } | null;
+  /** Crédito gerado por pagamento acima do valor da parcela. */
+  creditCents: number;
+  /** Crédito que sobrou sem parcela seguinte para abater. */
+  creditLeftoverCents: number;
+  /** Valor que faltou e foi transferido para o mês seguinte. */
+  shortfallCents: number;
+  /** Novo número de parcelas ativas do pedido. */
+  totalInstallments: number;
+};
+
+/**
+ * Acerto flexível de uma parcela: pagamento exato, maior (gera crédito abatido da
+ * próxima parcela) ou parcial (o restante é somado à próxima parcela; se não houver,
+ * cria um mês novo). Parcelas pagas anteriores nunca são alteradas.
+ */
+export function settleInstallment(
+  order: StoreOrderWithDetails,
+  parcel: StoreOrderInstallment,
+  paidCents: number,
+  paidDateISO: string,
+): SettlementPlan {
+  const active = order.installments_list.filter((p) => !p.merged_into_order_id);
+  const paid = Math.max(0, Math.round(paidCents));
+  const diff = paid - parcel.amount_cents;
+
+  const next =
+    pendingInstallments(order.installments_list)
+      .filter((p) => p.id !== parcel.id && p.number > parcel.number)
+      .sort((a, b) => a.number - b.number)[0] ?? null;
+
+  const target = {
+    id: parcel.id,
+    // A data chega como "YYYY-MM-DD"; o meio-dia evita virada de fuso.
+    paid_at: new Date(`${paidDateISO}T12:00:00`).toISOString(),
+    paid_amount_cents: paid,
+  };
+
+  let nextUpdate: SettlementPlan["nextUpdate"] = null;
+  let insert: SettlementPlan["insert"] = null;
+  let creditLeftoverCents = 0;
+
+  if (diff > 0 && next) {
+    const applied = Math.min(diff, next.amount_cents);
+    nextUpdate = {
+      id: next.id,
+      amount_cents: next.amount_cents - applied,
+      credit_applied_cents: next.credit_applied_cents + applied,
+      carried_in_cents: next.carried_in_cents,
+    };
+    creditLeftoverCents = diff - applied;
+  } else if (diff > 0) {
+    creditLeftoverCents = diff;
+  } else if (diff < 0) {
+    const shortfall = -diff;
+    if (next) {
+      nextUpdate = {
+        id: next.id,
+        amount_cents: next.amount_cents + shortfall,
+        credit_applied_cents: next.credit_applied_cents,
+        carried_in_cents: next.carried_in_cents + shortfall,
+      };
+    } else {
+      const maxNumber = active.reduce((max, p) => Math.max(max, p.number), 0);
+      const lastDue =
+        [...active].sort((a, b) => a.number - b.number).at(-1)?.due_date ??
+        parcel.due_date ??
+        todayISO();
+      insert = {
+        number: maxNumber + 1,
+        amount_cents: shortfall,
+        due_date: addMonthsISO(lastDue, 1),
+        carried_in_cents: shortfall,
+      };
+    }
+  }
+
+  return {
+    target,
+    nextUpdate,
+    insert,
+    creditCents: Math.max(0, diff),
+    creditLeftoverCents,
+    shortfallCents: Math.max(0, -diff),
+    totalInstallments: active.length + (insert ? 1 : 0),
+  };
+}
+
+/**
+ * Distribui os itens do pedido pelas parcelas ativas, na ordem, para exibir no
+ * extrato quais parcelas compõem cada produto e quais itens são cobrados em cada mês.
+ */
+export type ItemAllocation = {
+  itemId: string;
+  name: string;
+  /** Números das parcelas que cobram este item. */
+  numbers: number[];
+};
+
+export type InstallmentItemShare = {
+  number: number;
+  name: string;
+  /** Posição desta cobrança entre as parcelas do item (ex: 1 de 3). */
+  index: number;
+  total: number;
+  amountCents: number;
+};
+
+export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
+  byItem: ItemAllocation[];
+  byInstallment: Map<number, InstallmentItemShare[]>;
+} {
+  const parcels = order.installments_list
+    .filter((p) => !p.merged_into_order_id)
+    .sort((a, b) => a.number - b.number)
+    .map((p) => ({ number: p.number, capacity: p.amount_cents }));
+  const items = order.items.length
+    ? order.items
+    : [
+        {
+          id: order.id,
+          order_id: order.id,
+          name: order.item_name,
+          unit_price_cents: order.amount_cents,
+          sort_order: 0,
+        },
+      ];
+
+  const byItem: ItemAllocation[] = [];
+  const shares = new Map<number, InstallmentItemShare[]>();
+  let cursor = 0;
+
+  for (const item of items) {
+    let remaining = item.unit_price_cents;
+    const hits: { number: number; amountCents: number }[] = [];
+    while (remaining > 0 && cursor < parcels.length) {
+      const parcel = parcels[cursor];
+      if (!parcel) break;
+      if (parcel.capacity <= 0) {
+        cursor += 1;
+        continue;
+      }
+      const used = Math.min(parcel.capacity, remaining);
+      parcel.capacity -= used;
+      remaining -= used;
+      hits.push({ number: parcel.number, amountCents: used });
+      if (parcel.capacity === 0) cursor += 1;
+    }
+    byItem.push({ itemId: item.id, name: item.name, numbers: hits.map((h) => h.number) });
+    hits.forEach((hit, index) => {
+      const list = shares.get(hit.number) ?? [];
+      list.push({
+        number: hit.number,
+        name: item.name,
+        index: index + 1,
+        total: hits.length,
+        amountCents: hit.amountCents,
+      });
+      shares.set(hit.number, list);
+    });
+  }
+
+  return { byItem, byInstallment: shares };
+}
+
+
 export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
   const { data, error } = await supabase
     .from("store_orders")
     .select(
       // O apontamento explícito da chave estrangeira evita ambiguidade: parcelas
       // referenciam store_orders por order_id e por merged_into_order_id.
-      "id, created_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents)",
+      "id, created_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents)",
     )
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, Plus, X } from "lucide-react";
+import { Check, ChevronDown, Plus, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,14 @@ import {
 import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { StoreOrderAddItemsDialog } from "@/components/app/store-order-add-items-dialog";
 import { cn } from "@/lib/utils";
-import { pendingInstallments, removeItemInstallments, type StoreOrderInstallment, type StoreOrderWithDetails } from "@/lib/store";
+import {
+  installmentState,
+  pendingInstallments,
+  removeItemInstallments,
+  type StoreOrderInstallment,
+  type StoreOrderWithDetails,
+} from "@/lib/store";
+import { StoreInstallmentPaymentDialog } from "@/components/app/store-installment-payment-dialog";
 
 export type { StoreOrderWithDetails };
 
@@ -48,6 +55,7 @@ export function StoreOrderCard({
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [settling, setSettling] = useState<StoreOrderInstallment | null>(null);
   const pending = pendingInstallments(order.installments_list);
   const nextDue = pending[0];
   // Pedido em aberto: ainda em andamento ou com saldo devedor.
@@ -266,7 +274,9 @@ export function StoreOrderCard({
           </ul>
 
           <ul className="space-y-2">
-            {order.installments_list.map((p) => (
+            {order.installments_list.map((p) => {
+              const state = installmentState(p);
+              return (
               <li
                 key={p.id}
                 className={cn(
@@ -278,6 +288,21 @@ export function StoreOrderCard({
                   {order.installments > 1 ? `Parcela ${p.number}` : "Pagamento"}
                   <br />
                   {formatPrice(p.amount_cents)}
+                  {state === "parcial" ? (
+                    <span className="block text-xs font-normal text-amber-600">
+                      Parcialmente paga (Pago: {formatPrice(p.paid_amount_cents)})
+                    </span>
+                  ) : null}
+                  {p.credit_applied_cents > 0 ? (
+                    <span className="block text-xs font-normal text-green-700">
+                      (Abatido {formatPrice(p.credit_applied_cents)} de crédito anterior)
+                    </span>
+                  ) : null}
+                  {p.carried_in_cents > 0 ? (
+                    <span className="block text-xs font-normal text-amber-600">
+                      (Inclui {formatPrice(p.carried_in_cents)} de pendência do mês anterior)
+                    </span>
+                  ) : null}
                   {p.merged_extra_cents > 0 ? (
                     <span className="block text-xs font-normal text-primary">
                       (Inclui {formatPrice(p.merged_extra_cents)} do pedido anterior)
@@ -316,23 +341,35 @@ export function StoreOrderCard({
                     </label>
                     <Button
                       size="sm"
+                      variant="outline"
+                      className="gap-1"
+                      onClick={() => setSettling(p)}
+                    >
+                      <Wallet size={16} /> Dar baixa
+                    </Button>
+                    <Button
+                      size="sm"
                       variant={p.paid_at ? "default" : "outline"}
                       className={cn(
                         "gap-1",
-                        p.paid_at && "bg-green-600 text-white hover:bg-green-700",
+                        state === "paga" && "bg-green-600 text-white hover:bg-green-700",
+                        state === "parcial" && "bg-amber-500 text-white hover:bg-amber-600",
                       )}
                       aria-label={
                         p.paid_at ? "Marcar parcela como pendente" : "Marcar parcela como paga"
                       }
                       onClick={() => void togglePaid(p)}
                     >
-                      <Check size={16} /> {p.paid_at ? "Paga" : "Pendente"}
+                      <Check size={16} />{" "}
+                      {state === "paga" ? "Paga" : state === "parcial" ? "Parcial" : "Pendente"}
                     </Button>
                   </>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ul>
+
 
           {order.notes ? <p className="text-xs text-muted-foreground">{order.notes}</p> : null}
 
@@ -379,6 +416,14 @@ export function StoreOrderCard({
       </div>
 
       <StoreOrderAddItemsDialog order={order} open={addOpen} onOpenChange={setAddOpen} />
+      <StoreInstallmentPaymentDialog
+        order={order}
+        parcel={settling}
+        open={settling !== null}
+        onOpenChange={(v) => {
+          if (!v) setSettling(null);
+        }}
+      />
     </article>
   );
 }
