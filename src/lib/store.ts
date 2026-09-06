@@ -525,7 +525,7 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
     .select(
       // O apontamento explícito da chave estrangeira evita ambiguidade: parcelas
       // referenciam store_orders por order_id e por merged_into_order_id.
-      "id, created_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents)",
+      "id, created_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order, start_installment, installments_count), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents)",
     )
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -546,7 +546,13 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
       delivery_date: row.delivery_date,
       status: row.status,
       notes: row.notes,
-      items: [...(row.store_order_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+      items: [...(row.store_order_items ?? [])]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((i) => ({
+          ...i,
+          start_installment: i.start_installment ?? null,
+          installments_count: i.installments_count ?? null,
+        })),
       installments_list: [...(row.store_order_installments ?? [])].sort(
         (a, b) => a.number - b.number,
       ),
