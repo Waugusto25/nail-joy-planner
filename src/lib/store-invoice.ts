@@ -196,6 +196,12 @@ export function drawInvoice(
     notes.push(`Inclui ${formatPrice(parcel.merged_extra_cents)} do pedido anterior.`);
   if (parcel.paid_amount_cents > 0 && !parcel.paid_at)
     notes.push(`Pago parcialmente: ${formatPrice(parcel.paid_amount_cents)}.`);
+  // Quando a soma dos produtos não fecha com o valor cobrado (ajustes manuais,
+  // pedidos antigos sem vínculo), a diferença é declarada em vez de escondida.
+  if (shares.length > 0 && itemsTotal !== parcel.amount_cents)
+    notes.push(
+      `Valor cobrado na parcela: ${formatPrice(parcel.amount_cents)} (diferença de ${formatPrice(Math.abs(parcel.amount_cents - itemsTotal))} referente a ajustes desta parcela).`,
+    );
   if (notes.length > 0) {
     doc.setFontSize(8.5);
     setInk(SOFT);
