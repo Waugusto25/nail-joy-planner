@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, Plus, X } from "lucide-react";
+import { Check, ChevronDown, Plus, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,14 @@ import {
 import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { StoreOrderAddItemsDialog } from "@/components/app/store-order-add-items-dialog";
 import { cn } from "@/lib/utils";
-import { pendingInstallments, removeItemInstallments, type StoreOrderInstallment, type StoreOrderWithDetails } from "@/lib/store";
+import {
+  installmentState,
+  pendingInstallments,
+  removeItemInstallments,
+  type StoreOrderInstallment,
+  type StoreOrderWithDetails,
+} from "@/lib/store";
+import { StoreInstallmentPaymentDialog } from "@/components/app/store-installment-payment-dialog";
 
 export type { StoreOrderWithDetails };
 
@@ -48,6 +55,7 @@ export function StoreOrderCard({
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [settling, setSettling] = useState<StoreOrderInstallment | null>(null);
   const pending = pendingInstallments(order.installments_list);
   const nextDue = pending[0];
   // Pedido em aberto: ainda em andamento ou com saldo devedor.
@@ -408,6 +416,14 @@ export function StoreOrderCard({
       </div>
 
       <StoreOrderAddItemsDialog order={order} open={addOpen} onOpenChange={setAddOpen} />
+      <StoreInstallmentPaymentDialog
+        order={order}
+        parcel={settling}
+        open={settling !== null}
+        onOpenChange={(v) => {
+          if (!v) setSettling(null);
+        }}
+      />
     </article>
   );
 }
