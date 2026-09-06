@@ -252,6 +252,18 @@ export type SettlementPlan = {
     credit_applied_cents: number;
     carried_in_cents: number;
   } | null;
+  /**
+   * Estorno do efeito de uma baixa anterior desta mesma parcela em outra parcela
+   * (usado quando a parcela seguinte que recebeu a pendência/crédito não é a que
+   * será ajustada agora).
+   */
+  revertUpdate: {
+    id: string;
+    amount_cents: number;
+    credit_applied_cents: number;
+    carried_in_cents: number;
+  } | null;
+
   /** Mês novo criado quando não havia parcela seguinte para receber a pendência. */
   insert: { number: number; amount_cents: number; due_date: string | null; carried_in_cents: number } | null;
   /** Crédito gerado por pagamento acima do valor da parcela. */
