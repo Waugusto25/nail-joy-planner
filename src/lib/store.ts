@@ -448,7 +448,7 @@ export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
       ),
       extraCapacity: Math.max(0, p.added_extra_cents),
     }));
-  const items = order.items.length
+  const items: StoreOrderItem[] = order.items.length
     ? order.items
     : [
         {
@@ -457,13 +457,59 @@ export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
           name: order.item_name,
           unit_price_cents: order.amount_cents,
           sort_order: 0,
+          start_installment: 1,
+          installments_count: Math.max(1, order.installments),
         },
       ];
+
+  const byItem: ItemAllocation[] = [];
+  const shares = new Map<number, InstallmentItemShare[]>();
+
+  const pushShares = (
+    item: StoreOrderItem,
+    hits: { number: number; amountCents: number }[],
+  ) => {
+    byItem.push({
+      itemId: item.id,
+      name: item.name,
+      numbers: hits.map((h) => h.number),
+      perInstallmentCents: hits.length > 0 ? Math.round(item.unit_price_cents / hits.length) : item.unit_price_cents,
+    });
+    hits.forEach((hit, index) => {
+      const entry = shares.get(hit.number) ?? [];
+      entry.push({
+        number: hit.number,
+        name: item.name,
+        index: index + 1,
+        total: hits.length,
+        amountCents: hit.amountCents,
+      });
+      shares.set(hit.number, entry);
+    });
+  };
+
+  // Caminho preferencial: cada item guarda a parcela inicial e a quantidade de
+  // parcelas, então o vínculo é exato — parcelasInclusas = [inicial, inicial+1, ...].
+  const explicit = items.filter((i) => i.start_installment && i.installments_count);
+  if (explicit.length === items.length) {
+    for (const item of items) {
+      const start = Math.max(1, item.start_installment ?? 1);
+      const count = Math.max(1, item.installments_count ?? 1);
+      const amounts = splitFirstHeavy(item.unit_price_cents, count);
+      const hits = Array.from({ length: count }, (_, i) => ({
+        number: start + i,
+        amountCents: amounts[i] ?? 0,
+      }));
+      pushShares(item, hits);
+    }
+    return { byItem, byInstallment: shares };
+  }
 
   // Itens acrescentados entram por último (sort_order crescente). Percorrendo
   // do fim para o começo, separamos os itens cuja soma bate com o total de
   // added_extra_cents. Se a conta não fechar (dados antigos), tratamos tudo
   // como original: é o comportamento anterior, seguro como fallback.
+
   const totalAdded = parcels.reduce((sum, p) => sum + p.extraCapacity, 0);
   let appendedCount = 0;
   if (totalAdded > 0) {
