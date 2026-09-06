@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, Plus, Wallet, X } from "lucide-react";
+import { Check, ChevronDown, FileText, Plus, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import {
   whatsappLinkTo,
 } from "@/lib/salon";
 import { StoreStatementButton } from "@/components/app/store-statement-button";
+import { StoreInvoiceExportDialog } from "@/components/app/store-invoice-export-dialog";
 import { StoreOrderAddItemsDialog } from "@/components/app/store-order-add-items-dialog";
 import { cn } from "@/lib/utils";
 import {
@@ -56,6 +57,8 @@ export function StoreOrderCard({
   const [addOpen, setAddOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [settling, setSettling] = useState<StoreOrderInstallment | null>(null);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoiceParcel, setInvoiceParcel] = useState<number | null>(null);
   const pending = pendingInstallments(order.installments_list);
   const nextDue = pending[0];
   // Pedido em aberto: ainda em andamento ou com saldo devedor.
@@ -348,6 +351,19 @@ export function StoreOrderCard({
                       <Wallet size={16} /> Dar baixa
                     </Button>
                     <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-9 w-9"
+                      aria-label={`Exportar fatura da parcela ${p.number} em PDF`}
+                      title="Exportar fatura deste mês (PDF)"
+                      onClick={() => {
+                        setInvoiceParcel(p.number);
+                        setInvoiceOpen(true);
+                      }}
+                    >
+                      <FileText size={16} />
+                    </Button>
+                    <Button
                       size="sm"
                       variant={p.paid_at ? "default" : "outline"}
                       className={cn(
@@ -407,6 +423,17 @@ export function StoreOrderCard({
               clientName={order.client_name}
               clientPhone={order.client_phone}
             />
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              onClick={() => {
+                setInvoiceParcel(null);
+                setInvoiceOpen(true);
+              }}
+            >
+              <FileText size={16} /> Exportar Fatura (PDF)
+            </Button>
 
             <Button size="sm" variant="ghost" onClick={() => void remove()}>
               Excluir
@@ -416,6 +443,16 @@ export function StoreOrderCard({
       </div>
 
       <StoreOrderAddItemsDialog order={order} open={addOpen} onOpenChange={setAddOpen} />
+      <StoreInvoiceExportDialog
+        order={order}
+        pixKey={pixKey}
+        open={invoiceOpen}
+        onOpenChange={(v) => {
+          setInvoiceOpen(v);
+          if (!v) setInvoiceParcel(null);
+        }}
+        initialParcelNumber={invoiceParcel}
+      />
       <StoreInstallmentPaymentDialog
         order={order}
         parcel={settling}
