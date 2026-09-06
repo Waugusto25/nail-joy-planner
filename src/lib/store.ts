@@ -30,7 +30,23 @@ export type StoreOrderInstallment = {
   merged_extra_cents: number;
   /** Valor acumulado de produtos acrescentados depois ao pedido e somados nesta parcela. */
   added_extra_cents: number;
+  /** Valor efetivamente recebido no acerto desta parcela. */
+  paid_amount_cents: number;
+  /** Crédito (troco) de um pagamento maior anterior abatido desta parcela. */
+  credit_applied_cents: number;
+  /** Pendência do mês anterior somada a esta parcela. */
+  carried_in_cents: number;
 };
+
+/** Situação de cobrança da parcela, derivada dos valores gravados. */
+export type InstallmentState = "paga" | "parcial" | "pendente" | "transferida";
+
+export function installmentState(p: StoreOrderInstallment): InstallmentState {
+  if (p.merged_into_order_id) return "transferida";
+  if (!p.paid_at) return "pendente";
+  return p.paid_amount_cents > 0 && p.paid_amount_cents < p.amount_cents ? "parcial" : "paga";
+}
+
 
 export type StoreOrderWithDetails = {
   id: string;
