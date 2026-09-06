@@ -523,12 +523,9 @@ export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
   const originals = items.slice(0, items.length - appendedCount);
   const appended = items.slice(items.length - appendedCount);
 
-  const byItem: ItemAllocation[] = [];
-  const shares = new Map<number, InstallmentItemShare[]>();
-
   // Preenche as parcelas em ordem usando a capacidade escolhida, atribuindo a
   // cada item as parcelas que de fato o cobram.
-  const allocate = (list: typeof items, key: "baseCapacity" | "extraCapacity") => {
+  const allocate = (list: StoreOrderItem[], key: "baseCapacity" | "extraCapacity") => {
     let cursor = 0;
     for (const item of list) {
       let remaining = item.unit_price_cents;
@@ -546,20 +543,10 @@ export function allocateItemsToInstallments(order: StoreOrderWithDetails): {
         hits.push({ number: parcel.number, amountCents: used });
         if (parcel[key] === 0) cursor += 1;
       }
-      byItem.push({ itemId: item.id, name: item.name, numbers: hits.map((h) => h.number) });
-      hits.forEach((hit, index) => {
-        const entry = shares.get(hit.number) ?? [];
-        entry.push({
-          number: hit.number,
-          name: item.name,
-          index: index + 1,
-          total: hits.length,
-          amountCents: hit.amountCents,
-        });
-        shares.set(hit.number, entry);
-      });
+      pushShares(item, hits);
     }
   };
+
 
   allocate(originals, "baseCapacity");
   allocate(appended, "extraCapacity");
