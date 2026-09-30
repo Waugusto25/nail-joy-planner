@@ -37,6 +37,7 @@ import { StoreClientsTab } from "@/components/app/store-clients-tab";
 import { StoreDashboardTab } from "@/components/app/store-dashboard-tab";
 import { currentMonthKey, monthKeyOf, monthLabel, monthShortLabel } from "@/lib/months";
 import { cn } from "@/lib/utils";
+import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
 
 import {
@@ -231,6 +232,17 @@ function AgendaTab() {
       setPayingId(id);
       return;
     }
+    if (status === "cancelado") {
+      const ok = await confirmDestructive({
+        title: "Cancelar este agendamento?",
+        description:
+          "O atendimento será cancelado, o horário volta a ficar livre na agenda e o evento sai da Google Agenda.",
+        confirmLabel: "Sim, cancelar agendamento",
+        cancelLabel: "Voltar",
+        tone: "warning",
+      });
+      if (!ok) return;
+    }
     try {
       if (status === "confirmado") {
         const result = await confirmAppointmentFn({ data: { appointmentId: id } });
@@ -261,7 +273,12 @@ function AgendaTab() {
   const rows = appointments.data ?? [];
 
   async function hideCancelled(id: string) {
-    if (!window.confirm("Deseja remover este histórico de cancelamento?")) return;
+    const ok = await confirmDestructive({
+      title: "Remover registro cancelado?",
+      description: "Este cancelamento deixa de aparecer no painel. O agendamento segue cancelado.",
+      confirmLabel: "Remover",
+    });
+    if (!ok) return;
     try {
       await hideCancelledForAdminFn({ data: { appointmentId: id } });
       await queryClient.invalidateQueries();
@@ -272,7 +289,13 @@ function AgendaTab() {
   }
 
   async function clearCancelled() {
-    if (!window.confirm("Limpar todo o histórico de cancelamentos do painel?")) return;
+    const ok = await confirmDestructive({
+      title: "Limpar todos os cancelados?",
+      description:
+        "Todos os cancelamentos visíveis nesta aba deixam de aparecer no painel de uma só vez. Não é possível desfazer.",
+      confirmLabel: "Sim, limpar todos",
+    });
+    if (!ok) return;
     try {
       await clearCancelledForAdminFn();
       await queryClient.invalidateQueries();
@@ -600,6 +623,13 @@ function BlockedDates() {
   }
 
   async function remove(id: string) {
+    const ok = await confirmDestructive({
+      title: "Desbloquear esta data?",
+      description: "A data deixa de estar bloqueada e volta a aceitar agendamentos.",
+      confirmLabel: "Desbloquear data",
+      tone: "warning",
+    });
+    if (!ok) return;
     await supabase.from("blocked_dates").delete().eq("id", id);
     await queryClient.invalidateQueries();
   }
@@ -707,13 +737,12 @@ function ClientsTab() {
   }
 
   async function removeClient(clientId: string, name: string) {
-    if (
-      !window.confirm(
-        `Excluir a cliente ${name}? A conta e todos os agendamentos dela serão apagados.`,
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmDestructive({
+      title: "Excluir conta da cliente?",
+      description: `A conta de ${name} será desativada, o acesso dela será cancelado e os dados pessoais apagados. Os atendimentos antigos ficam guardados apenas no histórico.`,
+      confirmLabel: "Excluir conta da cliente",
+    });
+    if (!ok) return;
     try {
       await adminDeleteClientFn({ data: { clientId } });
       toast.success("Cliente excluída.");
@@ -1065,7 +1094,12 @@ function ServicesTab() {
   }
 
   async function removeService(id: string, name: string) {
-    if (!window.confirm(`Excluir o procedimento avulso ${name}?`)) return;
+    const ok = await confirmDestructive({
+      title: "Excluir procedimento?",
+      description: `O procedimento "${name}" sai da lista e as clientes não poderão mais escolhê-lo em novos agendamentos.`,
+      confirmLabel: "Excluir procedimento",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("services").delete().eq("id", id);
     if (error) {
       toast.error("Não foi possível excluir (pode ter agendamentos).");
@@ -1256,6 +1290,14 @@ function SlotsTab() {
   }
 
   async function removeBreak(id: string) {
+    const ok = await confirmDestructive({
+      title: "Remover este intervalo?",
+      description:
+        "O intervalo deixa de bloquear a agenda e esse período volta a aceitar agendamentos.",
+      confirmLabel: "Remover intervalo",
+      tone: "warning",
+    });
+    if (!ok) return;
     await supabase.from("schedule_breaks").delete().eq("id", id);
     await queryClient.invalidateQueries();
   }
@@ -1272,6 +1314,13 @@ function SlotsTab() {
   }
 
   async function remove(id: string) {
+    const ok = await confirmDestructive({
+      title: "Remover este horário?",
+      description: "O horário sai da sua grade de atendimento e não poderá mais ser agendado.",
+      confirmLabel: "Remover horário",
+      tone: "warning",
+    });
+    if (!ok) return;
     await supabase.from("schedule_slots").delete().eq("id", id);
     await queryClient.invalidateQueries();
   }
@@ -1464,6 +1513,12 @@ function ProductsTab() {
   }
 
   async function remove(id: string) {
+    const ok = await confirmDestructive({
+      title: "Excluir produto?",
+      description: "O produto será apagado da vitrine da loja. Esta ação não pode ser desfeita.",
+      confirmLabel: "Excluir produto",
+    });
+    if (!ok) return;
     await supabase.from("products").delete().eq("id", id);
     await queryClient.invalidateQueries();
   }
@@ -1603,6 +1658,12 @@ function CatalogsTab() {
   }
 
   async function remove(id: string) {
+    const ok = await confirmDestructive({
+      title: "Excluir catálogo?",
+      description: "O catálogo sai da loja e do link enviado às clientes pelo WhatsApp.",
+      confirmLabel: "Excluir catálogo",
+    });
+    if (!ok) return;
     await supabase.from("catalogs").delete().eq("id", id);
     await queryClient.invalidateQueries();
   }
@@ -1873,6 +1934,13 @@ function EventsTab() {
   }
 
   async function remove(id: string) {
+    const ok = await confirmDestructive({
+      title: "Excluir evento ou sorteio?",
+      description:
+        "O evento e os dados de participação e prêmios ligados a ele serão apagados. Não é possível desfazer.",
+      confirmLabel: "Excluir evento",
+    });
+    if (!ok) return;
     await supabase.from("events").delete().eq("id", id);
     toast.success("Evento removido.");
     await queryClient.invalidateQueries();
