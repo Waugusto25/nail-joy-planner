@@ -701,6 +701,30 @@ export type Database = {
         }
         Relationships: []
       }
+      store_deleted_log: {
+        Row: {
+          deleted_at: string
+          deleted_by: string | null
+          id: string
+          row_data: Json
+          table_name: string
+        }
+        Insert: {
+          deleted_at?: string
+          deleted_by?: string | null
+          id?: string
+          row_data: Json
+          table_name: string
+        }
+        Update: {
+          deleted_at?: string
+          deleted_by?: string | null
+          id?: string
+          row_data?: Json
+          table_name?: string
+        }
+        Relationships: []
+      }
       store_order_installments: {
         Row: {
           added_extra_cents: number
