@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase-client";
 import { catalogsGreetingMessage, formatPhone, onlyDigits, whatsappLinkTo } from "@/lib/salon";
 import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { fetchActiveCatalogs, fetchStoreClients, type StoreClient } from "@/lib/store";
+import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
 type ClientForm = { full_name: string; phone: string; nickname: string; notes: string };
 

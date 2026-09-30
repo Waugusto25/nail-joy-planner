@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/lib/supabase-client";
 import { useSpecialDays } from "@/hooks/useSpecialDays";
 import { formatDayLabel, localTodayISO } from "@/lib/salon";
+import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
 /** Cadastro de dias especiais: data única, horários exclusivos e motivo. */
 export function SpecialDaysManager() {
@@ -203,7 +204,7 @@ export function SpecialDaysManager() {
                 variant="ghost"
                 size="icon"
                 aria-label="Remover dia especial"
-                onClick={() => void remove(row.id)}
+                onClick={() => void remove(row.id, formatDayLabel(row.day))}
               >
                 <Trash2 className="h-4 w-4" aria-hidden />
               </Button>
