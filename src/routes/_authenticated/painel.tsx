@@ -32,6 +32,7 @@ import { consumeReferralFn, spendLoyaltyPointsFn } from "@/lib/loyalty.functions
 import { useLoyaltyWallet } from "@/hooks/useLoyaltyWallet";
 import { claimEventPrizeFn } from "@/lib/account.functions";
 import { notifyNewAppointmentFn } from "@/lib/push.functions";
+import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
 import {
   APPOINTMENT_STATUS,
@@ -802,7 +803,15 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   });
 
   async function cancel(id: string) {
-    if (!window.confirm("Deseja realmente cancelar este agendamento?")) return;
+    const ok = await confirmDestructive({
+      title: "Cancelar seu agendamento?",
+      description:
+        "Seu horário será liberado para outras clientes e o lembrete deixa de valer. Para voltar a ter esse horário, será preciso agendar de novo.",
+      confirmLabel: "Sim, cancelar agendamento",
+      cancelLabel: "Não, manter",
+      tone: "warning",
+    });
+    if (!ok) return;
     try {
       const result = await clientCancelAppointmentFn({ data: { appointmentId: id } });
       await queryClient.invalidateQueries();
@@ -817,7 +826,12 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
   }
 
   async function hideHistory(id: string) {
-    if (!window.confirm("Deseja remover este histórico?")) return;
+    const ok = await confirmDestructive({
+      title: "Remover do histórico?",
+      description: "Este agendamento cancelado não será mais exibido no seu painel.",
+      confirmLabel: "Remover",
+    });
+    if (!ok) return;
     try {
       await hideCancelledForClientFn({ data: { appointmentId: id } });
       await queryClient.invalidateQueries();

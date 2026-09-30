@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase-client";
 import { catalogsGreetingMessage, formatPhone, onlyDigits, whatsappLinkTo } from "@/lib/salon";
 import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { fetchActiveCatalogs, fetchStoreClients, type StoreClient } from "@/lib/store";
+import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
 type ClientForm = { full_name: string; phone: string; nickname: string; notes: string };
 
@@ -62,7 +63,12 @@ export function StoreClientsTab() {
   }
 
   async function remove(client: StoreClient) {
-    if (!window.confirm(`Excluir ${client.full_name} da lista da loja?`)) return;
+    const ok = await confirmDestructive({
+      title: "Excluir cliente da loja?",
+      description: `${client.full_name} será removida da lista de clientes da loja. Pedidos já lançados continuam salvos, mas ela não aparecerá mais para novos pedidos.`,
+      confirmLabel: "Excluir cliente",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("store_clients").delete().eq("id", client.id);
     if (error) {
       toast.error("Não foi possível excluir. Verifique se há pedidos vinculados.");
