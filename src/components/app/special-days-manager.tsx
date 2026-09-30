@@ -73,7 +73,13 @@ export function SpecialDaysManager() {
     await queryClient.invalidateQueries({ queryKey: ["special-days"] });
   }
 
-  async function remove(id: string) {
+  async function remove(id: string, label?: string) {
+    const ok = await confirmDestructive({
+      title: "Remover dia especial?",
+      description: `A configuração especial${label ? ` de ${label}` : ""} será apagada. Esse dia volta a seguir os horários normais da semana.`,
+      confirmLabel: "Remover configuração",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("special_days").delete().eq("id", id);
     if (error) {
       toast.error("Não foi possível remover esse dia especial.");

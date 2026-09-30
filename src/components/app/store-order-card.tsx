@@ -29,6 +29,7 @@ import {
   type StoreOrderWithDetails,
 } from "@/lib/store";
 import { StoreInstallmentPaymentDialog } from "@/components/app/store-installment-payment-dialog";
+import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
 export type { StoreOrderWithDetails };
 
@@ -71,12 +72,12 @@ export function StoreOrderCard({
 
   /** Exclui um item que não veio e retira o valor dele do total e das parcelas pendentes. */
   async function removeItem(item: StoreOrderWithDetails["items"][number]) {
-    if (
-      !window.confirm(
-        `Excluir "${item.name}" (${formatPrice(item.unit_price_cents)}) deste pedido? O valor será retirado do total e das parcelas pendentes.`,
-      )
-    )
-      return;
+    const ok = await confirmDestructive({
+      title: "Remover produto do pedido?",
+      description: `O item "${item.name}" (${formatPrice(item.unit_price_cents)}) será removido deste pedido. O valor sai do total e as parcelas pendentes serão recalculadas. Esta ação não pode ser desfeita.`,
+      confirmLabel: "Remover item",
+    });
+    if (!ok) return;
     setRemovingId(item.id);
     try {
       const plan = removeItemInstallments(order, item.unit_price_cents);
@@ -171,7 +172,12 @@ export function StoreOrderCard({
   }
 
   async function remove() {
-    if (!window.confirm("Excluir este pedido da loja?")) return;
+    const ok = await confirmDestructive({
+      title: "Excluir pedido da loja?",
+      description: `O pedido de ${order.client_name} e todos os produtos e parcelas ligados a ele serão apagados. Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir pedido",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("store_orders").delete().eq("id", order.id);
     if (error) {
       toast.error("Não foi possível excluir o pedido.");

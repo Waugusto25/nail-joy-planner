@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { InstallPrompt } from "@/components/app/install-prompt";
+import { ConfirmDestructiveHost } from "@/components/app/confirm-destructive-dialog";
 import { supabase } from "@/lib/supabase-client";
 
 function NotFoundComponent() {
@@ -159,6 +160,7 @@ function RootComponent() {
       <Outlet />
       <Toaster position="top-center" richColors />
       <InstallPrompt />
+      <ConfirmDestructiveHost />
     </QueryClientProvider>
   );
 }
