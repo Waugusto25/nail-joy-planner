@@ -32,6 +32,7 @@ import { consumeReferralFn, spendLoyaltyPointsFn } from "@/lib/loyalty.functions
 import { useLoyaltyWallet } from "@/hooks/useLoyaltyWallet";
 import { claimEventPrizeFn } from "@/lib/account.functions";
 import { notifyNewAppointmentFn } from "@/lib/push.functions";
+import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
 import {
   APPOINTMENT_STATUS,
