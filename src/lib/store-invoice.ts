@@ -227,7 +227,8 @@ export function drawInvoice(
   const lines: string[] = [];
   lines.push("Próximas parcelas:");
   lines.push(...(doc.splitTextToSize(upcomingLine, CONTENT_W - 8) as string[]));
-  if (args.pixKey) {
+  // Chave Pix fixa só aparece quando não há cobrança Mercado Pago gerada.
+  if (args.pixKey && !parcel.pix_copia_e_cola && !parcel.boleto_linha_digitavel) {
     lines.push("");
     lines.push("Pagamento via Pix:");
     lines.push(...(doc.splitTextToSize(args.pixKey, CONTENT_W - 8) as string[]));
@@ -247,6 +248,8 @@ export function drawInvoice(
   doc.setFont("helvetica", "normal");
   y += boxH + 6;
 
+  drawMercadoPagoBlock(doc, parcel, y, ensureSpace, (v) => (y = v), () => y);
+
   const generated = args.generatedAt ?? new Date();
   const p = (n: number) => String(n).padStart(2, "0");
   doc.setFontSize(8);
@@ -257,4 +260,73 @@ export function drawInvoice(
     PAGE_H - 8,
     { align: "center" },
   );
+}
+
+/** Bloco de pagamento Mercado Pago: QR Code + copia e cola, ou linha digitável do boleto. */
+function drawMercadoPagoBlock(
+  doc: jsPDF,
+  parcel: StoreOrderInstallment,
+  startY: number,
+  ensureSpace: (n: number) => void,
+  setY: (v: number) => void,
+  getY: () => number,
+): void {
+  setY(startY);
+  if (parcel.pix_copia_e_cola) {
+    const qr = 48;
+    const code = doc.splitTextToSize(parcel.pix_copia_e_cola, CONTENT_W - 8) as string[];
+    const h = (parcel.pix_qr_code_base64 ? qr + 6 : 0) + code.length * 3.8 + 16;
+    ensureSpace(h);
+    let y = getY();
+    doc.setDrawColor(LINE[0], LINE[1], LINE[2]);
+    doc.roundedRect(MARGIN, y, CONTENT_W, h, 1.5, 1.5);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(INK[0], INK[1], INK[2]);
+    doc.text("Pague com Pix — escaneie o QR Code", PAGE_W / 2, y + 6, { align: "center" });
+    y += 9;
+    if (parcel.pix_qr_code_base64) {
+      try {
+        doc.addImage(`data:image/png;base64,${parcel.pix_qr_code_base64}`, "PNG", (PAGE_W - qr) / 2, y, qr, qr);
+      } catch {
+        /* imagem inválida: segue apenas com o código copia e cola */
+      }
+      y += qr + 4;
+    }
+    doc.setFontSize(8.5);
+    doc.text("Pix Copia e Cola:", MARGIN + 4, y);
+    y += 4;
+    doc.setFont("courier", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(SOFT[0], SOFT[1], SOFT[2]);
+    for (const line of code) {
+      doc.text(line, MARGIN + 4, y);
+      y += 3.8;
+    }
+    doc.setFont("helvetica", "normal");
+    setY(getY() + h + 6);
+  }
+  if (parcel.boleto_linha_digitavel) {
+    ensureSpace(22);
+    let y = getY();
+    doc.setDrawColor(LINE[0], LINE[1], LINE[2]);
+    doc.roundedRect(MARGIN, y, CONTENT_W, parcel.boleto_pdf_url ? 22 : 17, 1.5, 1.5);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(INK[0], INK[1], INK[2]);
+    doc.text("Boleto — linha digitável:", MARGIN + 4, y + 6);
+    doc.setFont("courier", "bold");
+    doc.setFontSize(10);
+    doc.text(parcel.boleto_linha_digitavel, MARGIN + 4, y + 12);
+    doc.setFont("helvetica", "normal");
+    if (parcel.boleto_pdf_url) {
+      doc.setFontSize(8);
+      doc.setTextColor(SOFT[0], SOFT[1], SOFT[2]);
+      doc.textWithLink("Baixar boleto: " + parcel.boleto_pdf_url.slice(0, 80), MARGIN + 4, y + 18, {
+        url: parcel.boleto_pdf_url,
+      });
+    }
+    y += (parcel.boleto_pdf_url ? 22 : 17) + 6;
+    setY(y);
+  }
 }

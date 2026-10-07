@@ -41,6 +41,14 @@ export type StoreOrderInstallment = {
   credit_applied_cents: number;
   /** Pendência do mês anterior somada a esta parcela. */
   carried_in_cents: number;
+  /** Cobrança gerada no Mercado Pago para esta parcela (opcional). */
+  mp_payment_id?: string | null;
+  mp_method?: string | null;
+  mp_status?: string | null;
+  pix_copia_e_cola?: string | null;
+  pix_qr_code_base64?: string | null;
+  boleto_linha_digitavel?: string | null;
+  boleto_pdf_url?: string | null;
 };
 
 /** Situação de cobrança da parcela, derivada dos valores gravados. */
@@ -632,7 +640,7 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
     .select(
       // O apontamento explícito da chave estrangeira evita ambiguidade: parcelas
       // referenciam store_orders por order_id e por merged_into_order_id.
-      "id, created_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order, start_installment, installments_count), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents)",
+      "id, created_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order, start_installment, installments_count), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents, mp_payment_id, mp_method, mp_status, pix_copia_e_cola, pix_qr_code_base64, boleto_linha_digitavel, boleto_pdf_url)",
     )
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
