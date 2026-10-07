@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { createMercadoPagoChargeFn } from "@/lib/mercado-pago.functions";
+import { checkMercadoPagoPaymentFn, createMercadoPagoChargeFn } from "@/lib/mercado-pago.functions";
 import { formatPrice } from "@/lib/salon";
 import type { StoreOrderInstallment } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ export function MercadoPagoChargeDialog({
 }) {
   const queryClient = useQueryClient();
   const createCharge = useServerFn(createMercadoPagoChargeFn);
+  const checkPayment = useServerFn(checkMercadoPagoPaymentFn);
   const [method, setMethod] = useState<Method>("pix");
   const [email, setEmail] = useState("");
   const [boleto, setBoleto] = useState<Record<BoletoKey, string>>({
@@ -58,6 +59,23 @@ export function MercadoPagoChargeDialog({
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível gerar a cobrança.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function verify() {
+    if (!parcel) return;
+    setLoading(true);
+    try {
+      const r = await checkPayment({ data: { installmentId: parcel.id } });
+      if (r.result === "paid") toast.success("Pagamento confirmado — baixa registrada.");
+      else if (r.result === "already_paid") toast.info("Esta parcela já estava paga.");
+      else toast.info(`Ainda não pago (status: ${r.status}).`);
+      await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
+      if (r.result !== "pending") onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível verificar.");
     } finally {
       setLoading(false);
     }
@@ -108,6 +126,13 @@ export function MercadoPagoChargeDialog({
             </div>
           </div>
         )}
+        {parcel?.mp_payment_id && (
+          <Button variant="secondary" onClick={() => void verify()} disabled={loading} className="gap-1">
+            {loading && <Loader2 size={16} className="animate-spin" />}
+            Verificar pagamento no Mercado Pago
+          </Button>
+        )}
+
 
         <div className="grid grid-cols-2 gap-2">
           {(["pix", "boleto"] as const).map((m) => (

@@ -62,6 +62,8 @@ export const createMercadoPagoChargeFn = createServerFn({ method: "POST" })
       transaction_amount: amountCents / 100,
       description: `Jannah Nails — Parcela ${parcel.number}`,
       external_reference: parcel.id,
+      // Webhook no endereço estável do app: o Mercado Pago avisa quando o pagamento cair.
+      notification_url: "https://nail-joy-planner.lovable.app/api/public/hooks/mercado-pago",
       payment_method_id: data.method === "pix" ? "pix" : "bolbradesco",
       payer,
     };
@@ -121,4 +123,28 @@ export const createMercadoPagoChargeFn = createServerFn({ method: "POST" })
       .eq("id", parcel.id);
     if (saveError) throw new Error("Cobrança gerada, mas não foi possível salvá-la.");
     return update;
+  });
+
+/** Consulta manual: confere no Mercado Pago e dá baixa se já foi pago. */
+export const checkMercadoPagoPaymentFn = createServerFn({ method: "POST" })
+  .middleware([requireServerSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ installmentId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const token = process.env["MERCADO_PAGO_ACCESS_TOKEN"];
+    if (!token) throw new Error("Token do Mercado Pago não configurado.");
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Acesso restrito.");
+    const { data: parcel } = await context.supabase
+      .from("store_order_installments")
+      .select("mp_payment_id")
+      .eq("id", data.installmentId)
+      .maybeSingle();
+    if (!parcel?.mp_payment_id) throw new Error("Esta parcela não tem cobrança do Mercado Pago.");
+    const { fetchMpPayment, settleFromMpPayment } = await import("./mercado-pago-settle.server");
+    const payment = await fetchMpPayment(parcel.mp_payment_id, token);
+    const result = await settleFromMpPayment(context.supabase, payment);
+    return { result, status: payment.status };
   });

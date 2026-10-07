@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as ApiPublicHooksCalendarSyncRouteImport } from './routes/api/public/hooks/calendar-sync'
+import { Route as ApiPublicHooksMercadoPagoRouteImport } from './routes/api/public/hooks/mercado-pago'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,12 @@ const ApiPublicHooksCalendarSyncRoute =
     path: '/api/public/hooks/calendar-sync',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksMercadoPagoRoute =
+  ApiPublicHooksMercadoPagoRouteImport.update({
+    id: '/api/public/hooks/mercado-pago',
+    path: '/api/public/hooks/mercado-pago',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSendRemindersRoute =
   ApiPublicHooksSendRemindersRouteImport.update({
     id: '/api/public/hooks/send-reminders',
@@ -53,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/api/public/hooks/calendar-sync': typeof ApiPublicHooksCalendarSyncRoute
+  '/api/public/hooks/mercado-pago': typeof ApiPublicHooksMercadoPagoRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
 export interface FileRoutesByTo {
@@ -60,6 +68,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/api/public/hooks/calendar-sync': typeof ApiPublicHooksCalendarSyncRoute
+  '/api/public/hooks/mercado-pago': typeof ApiPublicHooksMercadoPagoRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
 export interface FileRoutesById {
@@ -69,6 +78,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/api/public/hooks/calendar-sync': typeof ApiPublicHooksCalendarSyncRoute
+  '/api/public/hooks/mercado-pago': typeof ApiPublicHooksMercadoPagoRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
 export interface FileRouteTypes {
@@ -78,6 +88,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/painel'
     | '/api/public/hooks/calendar-sync'
+    | '/api/public/hooks/mercado-pago'
     | '/api/public/hooks/send-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -85,6 +96,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/painel'
     | '/api/public/hooks/calendar-sync'
+    | '/api/public/hooks/mercado-pago'
     | '/api/public/hooks/send-reminders'
   id:
     | '__root__'
@@ -93,6 +105,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/painel'
     | '/api/public/hooks/calendar-sync'
+    | '/api/public/hooks/mercado-pago'
     | '/api/public/hooks/send-reminders'
   fileRoutesById: FileRoutesById
 }
@@ -100,6 +113,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   ApiPublicHooksCalendarSyncRoute: typeof ApiPublicHooksCalendarSyncRoute
+  ApiPublicHooksMercadoPagoRoute: typeof ApiPublicHooksMercadoPagoRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
 }
 
@@ -140,6 +154,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksCalendarSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/mercado-pago': {
+      id: '/api/public/hooks/mercado-pago'
+      path: '/api/public/hooks/mercado-pago'
+      fullPath: '/api/public/hooks/mercado-pago'
+      preLoaderRoute: typeof ApiPublicHooksMercadoPagoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/send-reminders': {
       id: '/api/public/hooks/send-reminders'
       path: '/api/public/hooks/send-reminders'
@@ -167,6 +188,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   ApiPublicHooksCalendarSyncRoute: ApiPublicHooksCalendarSyncRoute,
+  ApiPublicHooksMercadoPagoRoute: ApiPublicHooksMercadoPagoRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
 }
 export const routeTree = rootRouteImport
