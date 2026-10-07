@@ -257,7 +257,7 @@ export function drawInvoice(
             `Parcela ${p.number}/${totalCount} em ${formatISODate(p.due_date)} — ${formatPrice(p.amount_cents)}`,
         )
         .join("  |  ")
-    : "Nenhuma parcela vincenda após esta.";
+    : "Nenhuma parcela vencida após esta.";
 
   const lines: string[] = [];
   lines.push("Próximas parcelas:");
