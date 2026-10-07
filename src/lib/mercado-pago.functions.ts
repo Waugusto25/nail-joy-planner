@@ -42,12 +42,12 @@ export const createMercadoPagoChargeFn = createServerFn({ method: "POST" })
 
     const { data: parcel, error } = await context.supabase
       .from("store_order_installments")
-      .select("id, number, amount_cents, paid_amount_cents, due_date, order_id, store_orders(client_name, client_phone)")
+      .select("id, number, amount_cents, paid_amount_cents, due_date, order_id, store_orders!store_order_installments_order_id_fkey(client_name, client_phone)")
       .eq("id", data.installmentId)
       .maybeSingle();
     if (error || !parcel) throw new Error("Parcela não encontrada.");
 
-    const order = parcel.store_orders as { client_name: string; client_phone: string } | null;
+    const order = parcel.store_orders as unknown as { client_name: string; client_phone: string } | null;
     const fullName = (order?.client_name ?? "Cliente").trim();
     const [firstName, ...rest] = fullName.split(/\s+/);
     const lastName = rest.join(" ") || firstName;
@@ -69,8 +69,8 @@ export const createMercadoPagoChargeFn = createServerFn({ method: "POST" })
     if (data.method === "boleto") {
       const cpf = (data.cpf ?? "").replace(/\D/g, "");
       if (cpf.length !== 11) throw new Error("Informe um CPF válido para gerar o boleto.");
-      payer.identification = { type: "CPF", number: cpf };
-      payer.address = {
+      payer["identification"] = { type: "CPF", number: cpf };
+      payer["address"] = {
         zip_code: (data.zipCode ?? "").replace(/\D/g, ""),
         street_name: data.street ?? "",
         street_number: data.streetNumber ?? "",
@@ -78,7 +78,7 @@ export const createMercadoPagoChargeFn = createServerFn({ method: "POST" })
         city: data.city ?? "",
         federal_unit: (data.state ?? "").toUpperCase(),
       };
-      if (parcel.due_date) body.date_of_expiration = `${parcel.due_date}T23:59:59.000-03:00`;
+      if (parcel.due_date) body["date_of_expiration"] = `${parcel.due_date}T23:59:59.000-03:00`;
     }
 
     let mp: MpResponse;
