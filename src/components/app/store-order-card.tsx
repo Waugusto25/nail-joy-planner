@@ -138,6 +138,27 @@ export function StoreOrderCard({
   }
 
   async function togglePaid(parcel: StoreOrderInstallment) {
+    // Pagamento confirmado pelo Mercado Pago é definitivo: impede estorno acidental.
+    if (parcel.paid_at && parcel.mp_status === "approved") {
+      toast.info("Pagamento confirmado pelo Mercado Pago — não pode ser desfeito.");
+      return;
+    }
+    const ok = await confirmDestructive(
+      parcel.paid_at
+        ? {
+            title: "Voltar parcela para pendente?",
+            description: `A parcela ${parcel.number} deixará de constar como paga.`,
+            confirmLabel: "Voltar para pendente",
+          }
+        : {
+            title: "Confirmar pagamento manual?",
+            description: parcel.mp_payment_id
+              ? `Existe uma cobrança Mercado Pago em aberto para a parcela ${parcel.number}. Só confirme se a cliente pagou de outra forma (dinheiro, cartão etc.).`
+              : `A parcela ${parcel.number} será marcada como paga hoje.`,
+            confirmLabel: "Marcar como paga",
+          },
+    );
+    if (!ok) return;
     const { error } = await supabase
       .from("store_order_installments")
       .update({ paid_at: parcel.paid_at ? null : new Date().toISOString() })
@@ -429,11 +450,10 @@ export function StoreOrderCard({
             >
               WhatsApp
             </Button>
-            {isOpenOrder ? (
-              <Button size="sm" variant="outline" className="gap-1" onClick={() => setAddOpen(true)}>
-                <Plus size={16} /> Adicionar Produto a este Pedido
-              </Button>
-            ) : null}
+            {/* Sempre disponível: a conta da cliente continua aberta para novas compras. */}
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => setAddOpen(true)}>
+              <Plus size={16} /> Adicionar Produto a este Pedido
+            </Button>
             <Button size="sm" variant="secondary" onClick={onEdit}>
               Editar
             </Button>
