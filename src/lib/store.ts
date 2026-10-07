@@ -124,7 +124,13 @@ export type ItemRemovalPlan = {
 export function removeItemInstallments(
   order: StoreOrderWithDetails,
   removedCents: number,
+  item?: Pick<StoreOrderItem, "start_installment" | "installments_count">,
 ): ItemRemovalPlan {
+  const start = item?.start_installment ?? 1;
+  const span = item?.installments_count ?? 0;
+  // Item acrescentado com cobrança a partir de uma parcela posterior: o estorno
+  // fica restrito às parcelas que o receberam; as anteriores não são tocadas.
+  if (start > 1 && span > 0) return removeScopedItem(order, removedCents, start, span);
   const active = order.installments_list.filter((p) => !p.merged_into_order_id);
   const paid = active.filter((p) => p.paid_at);
   const pending = pendingInstallments(order.installments_list).sort((a, b) => a.number - b.number);
@@ -166,6 +172,56 @@ export function removeItemInstallments(
     newTotalCents: Math.max(0, order.amount_cents - removed),
     totalInstallments: Math.max(1, paid.length + pending.length - deleteIds.length),
     pendingBalanceCents: newBalance,
+    unappliedCents: removed - applied,
+  };
+}
+
+/** Remove a fração do item só das parcelas [start, start+span-1]. */
+function removeScopedItem(
+  order: StoreOrderWithDetails,
+  removedCents: number,
+  start: number,
+  span: number,
+): ItemRemovalPlan {
+  const active = order.installments_list
+    .filter((p) => !p.merged_into_order_id)
+    .sort((a, b) => a.number - b.number);
+  const removed = Math.max(0, removedCents);
+  const shares = splitFirstHeavy(removed, span);
+  const update: ItemRemovalPlan["update"] = [];
+  const zeroed = new Set<string>();
+  let applied = 0;
+  for (let i = 0; i < span; i += 1) {
+    const parcel = active.find((p) => p.number === start + i);
+    const share = shares[i] ?? 0;
+    if (!parcel || parcel.paid_at) continue;
+    const cut = Math.min(share, parcel.amount_cents);
+    applied += cut;
+    const amount = parcel.amount_cents - cut;
+    update.push({
+      id: parcel.id,
+      amount_cents: amount,
+      added_extra_cents: Math.max(0, parcel.added_extra_cents - cut),
+    });
+    if (amount === 0) zeroed.add(parcel.id);
+  }
+  // Só apaga parcelas zeradas no fim do cronograma (meses criados para o item).
+  const deleteIds: string[] = [];
+  for (let i = active.length - 1; i >= 0; i -= 1) {
+    const p = active[i];
+    if (!p || !zeroed.has(p.id) || active.length - deleteIds.length <= 1) break;
+    deleteIds.push(p.id);
+  }
+  const finalUpdate = update.filter((u) => !deleteIds.includes(u.id));
+  const pendingAfter = active
+    .filter((p) => !p.paid_at && !deleteIds.includes(p.id))
+    .reduce((sum, p) => sum + (finalUpdate.find((u) => u.id === p.id)?.amount_cents ?? p.amount_cents), 0);
+  return {
+    update: finalUpdate,
+    deleteIds,
+    newTotalCents: Math.max(0, order.amount_cents - removed),
+    totalInstallments: Math.max(1, active.length - deleteIds.length),
+    pendingBalanceCents: pendingAfter,
     unappliedCents: removed - applied,
   };
 }
