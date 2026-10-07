@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { checkMercadoPagoPaymentFn, createMercadoPagoChargeFn } from "@/lib/mercado-pago.functions";
-import { formatPrice } from "@/lib/salon";
-import { BOLETO_FEE_NOTICE, chargeFeeCents } from "@/lib/mercado-pago-fees";
+import { formatISODate, formatPrice } from "@/lib/salon";
+import { BOLETO_DAYS_TO_EXPIRE, BOLETO_FEE_NOTICE, boletoExpiryISO, chargeFeeCents } from "@/lib/mercado-pago-fees";
 import type { StoreOrderInstallment } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -116,6 +116,9 @@ export function MercadoPagoChargeDialog({
         {parcel?.boleto_linha_digitavel && (
           <div className="space-y-2 rounded-md border border-border p-3 text-sm">
             <p className="font-medium">Boleto já gerado</p>
+            {parcel.boleto_expires_on && (
+              <p className="text-xs">Vence em {formatISODate(parcel.boleto_expires_on)}</p>
+            )}
             <p className="break-all text-xs text-muted-foreground">{parcel.boleto_linha_digitavel}</p>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => copy(parcel.boleto_linha_digitavel ?? "")}>
@@ -169,7 +172,9 @@ export function MercadoPagoChargeDialog({
               <span>{formatPrice(openCents + feeCents)}</span>
             </p>
             {method === "boleto" ? (
-              <p className="text-xs text-muted-foreground">{BOLETO_FEE_NOTICE}</p>
+              <p className="text-xs text-muted-foreground">
+                Vencimento do boleto: {formatISODate(boletoExpiryISO())} ({BOLETO_DAYS_TO_EXPIRE} dias a partir de hoje). {BOLETO_FEE_NOTICE}
+              </p>
             ) : null}
           </div>
         ) : null}

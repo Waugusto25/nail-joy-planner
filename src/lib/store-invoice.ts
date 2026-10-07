@@ -129,7 +129,10 @@ export function drawInvoice(
   const cardW = (CONTENT_W - 8) / 3;
   const cards: [string, string][] = [
     [isBoleto ? "Valor do boleto" : "Valor da fatura", formatPrice(parcel.amount_cents + feeCents)],
-    ["Vencimento", formatISODate(parcel.due_date)],
+    [
+      isBoleto ? "Vencimento do boleto" : "Vencimento",
+      formatISODate(isBoleto && parcel.boleto_expires_on ? parcel.boleto_expires_on : parcel.due_date),
+    ],
     ["Status", statusLabel(parcel)],
   ];
   doc.setDrawColor(LINE[0], LINE[1], LINE[2]);
