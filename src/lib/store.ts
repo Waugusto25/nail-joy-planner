@@ -140,10 +140,12 @@ export function removeItemInstallments(
       const shares = splitFirstHeavy(newBalance, pending.length);
       pending.forEach((parcel, i) => {
         const amount = shares[i] ?? 0;
+        // O saldo redividido vira a nova base: zerar o extra evita que acréscimos
+        // futuros herdem o valor antigo e exibam "inclui" maior que o produto novo.
         update.push({
           id: parcel.id,
           amount_cents: amount,
-          added_extra_cents: Math.min(parcel.added_extra_cents, amount),
+          added_extra_cents: 0,
         });
       });
     } else {
@@ -176,6 +178,8 @@ export type InstallmentPlanChange = {
     amount_cents: number;
     due_date: string | null;
     added_extra_cents: number;
+    /** Fração deste acréscimo nesta parcela (só para exibição). */
+    share_cents: number;
   }[];
   /** Meses novos criados para as parcelas excedentes do item acrescentado. */
   insert: {
@@ -234,6 +238,7 @@ export function appendItemInstallments(
         amount_cents: target.amount_cents + share,
         due_date: target.due_date,
         added_extra_cents: target.added_extra_cents + share,
+        share_cents: share,
       });
     } else {
       const extraIndex = i - pending.length;

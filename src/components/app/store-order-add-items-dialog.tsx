@@ -254,7 +254,7 @@ export function StoreOrderAddItemsDialog({
                 Parcela {p.number} · {p.due_date ? formatISODate(p.due_date) : "sem vencimento"} ·{" "}
                 {formatPrice(p.amount_cents)}{" "}
                 <span className="text-primary">
-                  (inclui {formatPrice(p.added_extra_cents)} do item novo)
+                  (+{formatPrice(p.share_cents)} deste produto)
                 </span>
               </p>
             ))}
