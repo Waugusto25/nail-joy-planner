@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { checkMercadoPagoPaymentFn, createMercadoPagoChargeFn } from "@/lib/mercado-pago.functions";
 import { formatPrice } from "@/lib/salon";
+import { BOLETO_FEE_NOTICE, chargeFeeCents } from "@/lib/mercado-pago-fees";
 import type { StoreOrderInstallment } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,8 @@ export function MercadoPagoChargeDialog({
     cpf: "", zipCode: "", street: "", streetNumber: "", neighborhood: "", city: "", state: "",
   });
   const [loading, setLoading] = useState(false);
+  const openCents = parcel ? Math.max(0, parcel.amount_cents - (parcel.paid_amount_cents ?? 0)) : 0;
+  const feeCents = chargeFeeCents(method);
 
   async function submit() {
     if (!parcel) return;
@@ -150,6 +153,26 @@ export function MercadoPagoChargeDialog({
             </button>
           ))}
         </div>
+
+        {parcel ? (
+          <div className="space-y-1 rounded-md border border-border p-3 text-sm">
+            <p className="flex justify-between">
+              <span>Valor da fatura</span>
+              <span>{formatPrice(openCents)}</span>
+            </p>
+            <p className="flex justify-between text-muted-foreground">
+              <span>{method === "boleto" ? "Taxa de emissão do boleto" : "Taxa Pix"}</span>
+              <span>+ {formatPrice(feeCents)}</span>
+            </p>
+            <p className="flex justify-between font-semibold">
+              <span>Total a cobrar</span>
+              <span>{formatPrice(openCents + feeCents)}</span>
+            </p>
+            {method === "boleto" ? (
+              <p className="text-xs text-muted-foreground">{BOLETO_FEE_NOTICE}</p>
+            ) : null}
+          </div>
+        ) : null}
 
         <label className="text-xs text-muted-foreground">
           E-mail da cliente (opcional)

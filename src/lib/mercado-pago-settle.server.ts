@@ -3,6 +3,7 @@
 // assim uma notificação forjada não consegue marcar parcela como paga.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { BOLETO_FEE_CENTS } from "./mercado-pago-fees";
 
 export type MpPayment = {
   id: number;
@@ -29,7 +30,7 @@ export async function settleFromMpPayment(
 ): Promise<SettleResult> {
   const { data: parcel } = await db
     .from("store_order_installments")
-    .select("id, paid_at, paid_amount_cents, mp_payment_id")
+    .select("id, paid_at, paid_amount_cents, mp_payment_id, mp_method")
     .or(`mp_payment_id.eq.${payment.id}${payment.external_reference ? `,id.eq.${payment.external_reference}` : ""}`)
     .maybeSingle();
   if (!parcel) return "not_found";
@@ -42,7 +43,9 @@ export async function settleFromMpPayment(
     await db.from("store_order_installments").update({ mp_status: "approved" }).eq("id", parcel.id);
     return "already_paid";
   }
-  const cents = Math.round(payment.transaction_amount * 100);
+  // A taxa do boleto é receita de repasse, não abatimento da dívida: não vira crédito.
+  const fee = parcel.mp_method === "boleto" ? BOLETO_FEE_CENTS : 0;
+  const cents = Math.max(0, Math.round(payment.transaction_amount * 100) - fee);
   const { error } = await db
     .from("store_order_installments")
     .update({
