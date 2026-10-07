@@ -705,6 +705,8 @@ export type Database = {
         Row: {
           added_extra_cents: number
           amount_cents: number
+          boleto_linha_digitavel: string | null
+          boleto_pdf_url: string | null
           carried_in_cents: number
           created_at: string
           credit_applied_cents: number
@@ -712,15 +714,22 @@ export type Database = {
           id: string
           merged_extra_cents: number
           merged_into_order_id: string | null
+          mp_method: string | null
+          mp_payment_id: string | null
+          mp_status: string | null
           number: number
           order_id: string
           paid_amount_cents: number
           paid_at: string | null
+          pix_copia_e_cola: string | null
+          pix_qr_code_base64: string | null
           updated_at: string
         }
         Insert: {
           added_extra_cents?: number
           amount_cents?: number
+          boleto_linha_digitavel?: string | null
+          boleto_pdf_url?: string | null
           carried_in_cents?: number
           created_at?: string
           credit_applied_cents?: number
@@ -728,15 +737,22 @@ export type Database = {
           id?: string
           merged_extra_cents?: number
           merged_into_order_id?: string | null
+          mp_method?: string | null
+          mp_payment_id?: string | null
+          mp_status?: string | null
           number?: number
           order_id: string
           paid_amount_cents?: number
           paid_at?: string | null
+          pix_copia_e_cola?: string | null
+          pix_qr_code_base64?: string | null
           updated_at?: string
         }
         Update: {
           added_extra_cents?: number
           amount_cents?: number
+          boleto_linha_digitavel?: string | null
+          boleto_pdf_url?: string | null
           carried_in_cents?: number
           created_at?: string
           credit_applied_cents?: number
@@ -744,10 +760,15 @@ export type Database = {
           id?: string
           merged_extra_cents?: number
           merged_into_order_id?: string | null
+          mp_method?: string | null
+          mp_payment_id?: string | null
+          mp_status?: string | null
           number?: number
           order_id?: string
           paid_amount_cents?: number
           paid_at?: string | null
+          pix_copia_e_cola?: string | null
+          pix_qr_code_base64?: string | null
           updated_at?: string
         }
         Relationships: [
