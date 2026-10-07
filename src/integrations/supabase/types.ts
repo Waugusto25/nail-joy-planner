@@ -705,6 +705,7 @@ export type Database = {
         Row: {
           added_extra_cents: number
           amount_cents: number
+          boleto_expires_on: string | null
           boleto_linha_digitavel: string | null
           boleto_pdf_url: string | null
           carried_in_cents: number
@@ -728,6 +729,7 @@ export type Database = {
         Insert: {
           added_extra_cents?: number
           amount_cents?: number
+          boleto_expires_on?: string | null
           boleto_linha_digitavel?: string | null
           boleto_pdf_url?: string | null
           carried_in_cents?: number
@@ -751,6 +753,7 @@ export type Database = {
         Update: {
           added_extra_cents?: number
           amount_cents?: number
+          boleto_expires_on?: string | null
           boleto_linha_digitavel?: string | null
           boleto_pdf_url?: string | null
           carried_in_cents?: number

@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireServerSupabaseAuth } from "./supabase-auth-middleware";
-import { chargeFeeCents } from "./mercado-pago-fees";
+import { boletoExpiryISO, chargeFeeCents } from "./mercado-pago-fees";
 
 const input = z.object({
   installmentId: z.string().uuid(),
@@ -71,6 +71,8 @@ export const createMercadoPagoChargeFn = createServerFn({ method: "POST" })
       payer,
     };
 
+    // Prazo fixo de 3 dias a partir do clique, independente do vencimento da parcela.
+    const boletoExpiresOn = boletoExpiryISO();
     if (data.method === "boleto") {
       const cpf = (data.cpf ?? "").replace(/\D/g, "");
       if (cpf.length !== 11) throw new Error("Informe um CPF válido para gerar o boleto.");
@@ -83,7 +85,7 @@ export const createMercadoPagoChargeFn = createServerFn({ method: "POST" })
         city: data.city ?? "",
         federal_unit: (data.state ?? "").toUpperCase(),
       };
-      if (parcel.due_date) body["date_of_expiration"] = `${parcel.due_date}T23:59:59.000-03:00`;
+      body["date_of_expiration"] = `${boletoExpiresOn}T23:59:59.000-03:00`;
     }
 
     let mp: MpResponse;
@@ -119,6 +121,7 @@ export const createMercadoPagoChargeFn = createServerFn({ method: "POST" })
           : null,
       boleto_pdf_url:
         data.method === "boleto" ? mp.transaction_details?.external_resource_url ?? null : null,
+      boleto_expires_on: data.method === "boleto" ? boletoExpiresOn : null,
     };
     const { error: saveError } = await context.supabase
       .from("store_order_installments")
