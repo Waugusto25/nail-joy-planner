@@ -80,7 +80,7 @@ export function StoreOrderCard({
     if (!ok) return;
     setRemovingId(item.id);
     try {
-      const plan = removeItemInstallments(order, item.unit_price_cents);
+      const plan = removeItemInstallments(order, item.unit_price_cents, item);
       const { error: itemError } = await supabase
         .from("store_order_items")
         .delete()
