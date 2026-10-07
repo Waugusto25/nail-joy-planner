@@ -41,6 +41,14 @@ export type StoreOrderInstallment = {
   credit_applied_cents: number;
   /** Pendência do mês anterior somada a esta parcela. */
   carried_in_cents: number;
+  /** Cobrança gerada no Mercado Pago para esta parcela (opcional). */
+  mp_payment_id?: string | null;
+  mp_method?: string | null;
+  mp_status?: string | null;
+  pix_copia_e_cola?: string | null;
+  pix_qr_code_base64?: string | null;
+  boleto_linha_digitavel?: string | null;
+  boleto_pdf_url?: string | null;
 };
 
 /** Situação de cobrança da parcela, derivada dos valores gravados. */
