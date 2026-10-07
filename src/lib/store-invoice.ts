@@ -7,6 +7,7 @@ import {
   type StoreOrderWithDetails,
 } from "@/lib/store";
 import { formatISODate, formatPhone, formatPrice } from "@/lib/salon";
+import { BOLETO_FEE_CENTS, BOLETO_FEE_NOTICE } from "@/lib/mercado-pago-fees";
 
 const PAGE_W = 210;
 const PAGE_H = 297;
@@ -81,6 +82,9 @@ export function drawInvoice(
   const shares = allocation.byInstallment.get(parcel.number) ?? [];
   const all = invoiceableInstallments(order);
   const totalCount = all.length || order.installments;
+  // "Modelo Boleto Mercado Pago": só quando a cobrança gerada foi boleto.
+  const isBoleto = parcel.mp_method === "boleto" && Boolean(parcel.boleto_linha_digitavel);
+  const feeCents = isBoleto ? BOLETO_FEE_CENTS : 0;
 
   const setInk = (c: [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
   let y = MARGIN;
@@ -94,7 +98,7 @@ export function drawInvoice(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
   setInk(INK);
-  doc.text("FATURA MENSAL", MARGIN, y + 4);
+  doc.text(isBoleto ? "BOLETO MERCADO PAGO" : "FATURA MENSAL", MARGIN, y + 4);
   doc.setFontSize(11);
   doc.text(
     `FATURA — PARCELA ${parcel.number}/${totalCount}`,
@@ -124,7 +128,7 @@ export function drawInvoice(
   // Métricas do mês
   const cardW = (CONTENT_W - 8) / 3;
   const cards: [string, string][] = [
-    ["Valor da fatura", formatPrice(parcel.amount_cents)],
+    [isBoleto ? "Valor do boleto" : "Valor da fatura", formatPrice(parcel.amount_cents + feeCents)],
     ["Vencimento", formatISODate(parcel.due_date)],
     ["Status", statusLabel(parcel)],
   ];
@@ -172,6 +176,14 @@ export function drawInvoice(
       y += 5.5;
     }
   }
+  if (isBoleto) {
+    ensureSpace(8);
+    doc.setFontSize(10);
+    setInk(INK);
+    doc.text("Taxa de emissão de boleto bancário", MARGIN, y);
+    doc.text(formatPrice(BOLETO_FEE_CENTS), PAGE_W - MARGIN, y, { align: "right" });
+    y += 5.5;
+  }
   ensureSpace(10);
   doc.setDrawColor(LINE[0], LINE[1], LINE[2]);
   doc.line(MARGIN, y, PAGE_W - MARGIN, y);
@@ -179,12 +191,35 @@ export function drawInvoice(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   setInk(INK);
-  doc.text("Total da fatura", MARGIN, y);
-  doc.text(formatPrice(shares.length ? itemsTotal : parcel.amount_cents), PAGE_W - MARGIN, y, {
-    align: "right",
-  });
+  doc.text(isBoleto ? "Total do boleto" : "Total da fatura", MARGIN, y);
+  doc.text(
+    formatPrice((shares.length ? itemsTotal : parcel.amount_cents) + feeCents),
+    PAGE_W - MARGIN,
+    y,
+    { align: "right" },
+  );
   doc.setFont("helvetica", "normal");
   y += 8;
+
+  if (isBoleto) {
+    const notice = doc.splitTextToSize(BOLETO_FEE_NOTICE, CONTENT_W - 8) as string[];
+    const h = notice.length * 4.6 + 8;
+    ensureSpace(h + 4);
+    doc.setDrawColor(INK[0], INK[1], INK[2]);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(MARGIN, y, CONTENT_W, h, 1.5, 1.5);
+    doc.setLineWidth(0.3);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    setInk(INK);
+    let ny = y + 6;
+    for (const line of notice) {
+      doc.text(line, MARGIN + 4, ny);
+      ny += 4.6;
+    }
+    doc.setFont("helvetica", "normal");
+    y += h + 6;
+  }
 
   // Ajustes que compõem o valor do mês
   const notes: string[] = [];
@@ -307,26 +342,42 @@ function drawMercadoPagoBlock(
     setY(getY() + h + 6);
   }
   if (parcel.boleto_linha_digitavel) {
-    ensureSpace(22);
+    const boxH = parcel.boleto_pdf_url ? 38 : 20;
+    ensureSpace(boxH + 6);
     let y = getY();
-    doc.setDrawColor(LINE[0], LINE[1], LINE[2]);
-    doc.roundedRect(MARGIN, y, CONTENT_W, parcel.boleto_pdf_url ? 22 : 17, 1.5, 1.5);
+    doc.setDrawColor(INK[0], INK[1], INK[2]);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(MARGIN, y, CONTENT_W, boxH, 1.5, 1.5);
+    doc.setLineWidth(0.3);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.setTextColor(INK[0], INK[1], INK[2]);
-    doc.text("Boleto — linha digitável:", MARGIN + 4, y + 6);
+    doc.text("Boleto Mercado Pago — linha digitável:", MARGIN + 4, y + 6);
     doc.setFont("courier", "bold");
     doc.setFontSize(10);
-    doc.text(parcel.boleto_linha_digitavel, MARGIN + 4, y + 12);
+    const code = doc.splitTextToSize(parcel.boleto_linha_digitavel, CONTENT_W - 8) as string[];
+    doc.text(code[0] ?? parcel.boleto_linha_digitavel, MARGIN + 4, y + 13);
     doc.setFont("helvetica", "normal");
     if (parcel.boleto_pdf_url) {
-      doc.setFontSize(8);
+      // Botão de destaque: o boleto oficial traz código de barras e QR Code Pix.
+      const btnY = y + 18;
+      doc.setFillColor(INK[0], INK[1], INK[2]);
+      doc.roundedRect(MARGIN + 4, btnY, CONTENT_W - 8, 10, 1.5, 1.5, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text("BAIXAR BOLETO OFICIAL (código de barras + QR Code)", PAGE_W / 2, btnY + 6.5, {
+        align: "center",
+      });
+      doc.link(MARGIN + 4, btnY, CONTENT_W - 8, 10, { url: parcel.boleto_pdf_url });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
       doc.setTextColor(SOFT[0], SOFT[1], SOFT[2]);
-      doc.textWithLink("Baixar boleto: " + parcel.boleto_pdf_url.slice(0, 80), MARGIN + 4, y + 18, {
+      doc.textWithLink(parcel.boleto_pdf_url.slice(0, 110), MARGIN + 4, btnY + 15, {
         url: parcel.boleto_pdf_url,
       });
     }
-    y += (parcel.boleto_pdf_url ? 22 : 17) + 6;
+    y += boxH + 6;
     setY(y);
   }
 }
