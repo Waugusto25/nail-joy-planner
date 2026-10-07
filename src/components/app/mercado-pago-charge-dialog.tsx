@@ -63,6 +63,23 @@ export function MercadoPagoChargeDialog({
     }
   }
 
+  async function verify() {
+    if (!parcel) return;
+    setLoading(true);
+    try {
+      const r = await checkPayment({ data: { installmentId: parcel.id } });
+      if (r.result === "paid") toast.success("Pagamento confirmado — baixa registrada.");
+      else if (r.result === "already_paid") toast.info("Esta parcela já estava paga.");
+      else toast.info(`Ainda não pago (status: ${r.status}).`);
+      await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
+      if (r.result !== "pending") onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível verificar.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const copy = (text: string) =>
     void navigator.clipboard.writeText(text).then(() => toast.success("Copiado."));
 
@@ -108,6 +125,13 @@ export function MercadoPagoChargeDialog({
             </div>
           </div>
         )}
+        {parcel?.mp_payment_id && (
+          <Button variant="secondary" onClick={() => void verify()} disabled={loading} className="gap-1">
+            {loading && <Loader2 size={16} className="animate-spin" />}
+            Verificar pagamento no Mercado Pago
+          </Button>
+        )}
+
 
         <div className="grid grid-cols-2 gap-2">
           {(["pix", "boleto"] as const).map((m) => (
