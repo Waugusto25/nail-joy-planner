@@ -64,9 +64,6 @@ export function StoreOrderCard({
   const [mpParcel, setMpParcel] = useState<StoreOrderInstallment | null>(null);
   const pending = pendingInstallments(order.installments_list);
   const nextDue = pending[0];
-  // Pedido em aberto: ainda em andamento ou com saldo devedor.
-  const isOpenOrder =
-    order.status === "pendente" || order.status === "encomendado" || pending.length > 0;
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
@@ -414,10 +411,22 @@ export function StoreOrderCard({
                       aria-label={
                         p.paid_at ? "Marcar parcela como pendente" : "Marcar parcela como paga"
                       }
+                      disabled={Boolean(p.paid_at) && p.mp_status === "approved"}
+                      title={
+                        p.paid_at && p.mp_status === "approved"
+                          ? "Pago via Mercado Pago (travado)"
+                          : undefined
+                      }
                       onClick={() => void togglePaid(p)}
                     >
                       <Check size={16} />{" "}
-                      {state === "paga" ? "Paga" : state === "parcial" ? "Parcial" : "Pendente"}
+                      {state === "paga"
+                        ? p.mp_status === "approved"
+                          ? "Paga (Mercado Pago)"
+                          : "Paga"
+                        : state === "parcial"
+                          ? "Parcial"
+                          : "Pendente"}
                     </Button>
                   </>
                 )}

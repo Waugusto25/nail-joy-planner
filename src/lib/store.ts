@@ -285,10 +285,12 @@ export function appendItemInstallments(
 
   const maxNumber = active.reduce((max, p) => Math.max(max, p.number), 0);
   // Novos meses continuam a partir do último vencimento existente do pedido.
-  const lastDue =
+  // Cliente que volta após meses: não gera vencimentos no passado.
+  const rawLastDue =
     [...active].sort((a, b) => a.number - b.number).at(-1)?.due_date ??
     order.delivery_date ??
     todayISO();
+  const lastDue = rawLastDue < todayISO() ? todayISO() : rawLastDue;
 
   const update: InstallmentPlanChange["update"] = [];
   const insert: InstallmentPlanChange["insert"] = [];
