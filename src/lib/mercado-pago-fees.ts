@@ -18,7 +18,7 @@ export const BOLETO_DAYS_TO_EXPIRE = 3;
 export function boletoExpiryISO(now: Date = new Date()): string {
   // en-CA formata como YYYY-MM-DD; o fuso garante o "hoje" brasileiro mesmo no servidor UTC.
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(now);
-  const [y, m, d] = today.split("-").map(Number);
+  const [y = 1970, m = 1, d = 1] = today.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d + BOLETO_DAYS_TO_EXPIRE));
   return date.toISOString().slice(0, 10);
 }
