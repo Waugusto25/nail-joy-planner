@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireServerSupabaseAuth } from "./supabase-auth-middleware";
+import { chargeFeeCents } from "./mercado-pago-fees";
 
 const input = z.object({
   installmentId: z.string().uuid(),
@@ -56,10 +57,12 @@ export const createMercadoPagoChargeFn = createServerFn({ method: "POST" })
     const email = data.email || `cliente${phoneDigits || parcel.id.slice(0, 8)}@jannahnails.com`;
     const amountCents = Math.max(parcel.amount_cents - (parcel.paid_amount_cents ?? 0), 0);
     if (amountCents <= 0) throw new Error("Esta parcela não tem valor em aberto.");
+    // Boleto: a taxa de emissão é somada aqui no servidor (fonte única do valor cobrado).
+    const chargeCents = amountCents + chargeFeeCents(data.method);
 
     const payer: Record<string, unknown> = { email, first_name: firstName, last_name: lastName };
     const body: Record<string, unknown> = {
-      transaction_amount: amountCents / 100,
+      transaction_amount: chargeCents / 100,
       description: `Jannah Nails — Parcela ${parcel.number}`,
       external_reference: parcel.id,
       // Webhook no endereço estável do app: o Mercado Pago avisa quando o pagamento cair.
