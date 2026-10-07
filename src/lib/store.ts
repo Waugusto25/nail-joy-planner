@@ -117,9 +117,9 @@ export type ItemRemovalPlan = {
 };
 
 /**
- * Remove o valor de um item do pedido abatendo das parcelas PENDENTES, começando
- * pelas últimas (meses mais distantes), para encurtar o cronograma em vez de
- * bagunçar os vencimentos próximos. Parcelas pagas nunca são alteradas.
+ * Remove o valor de um item do pedido e REDIVIDE o saldo restante igualmente entre
+ * as parcelas pendentes (ex.: 4x R$100, remove R$100 → 4x R$75). Parcelas pagas
+ * nunca são alteradas; só sobra parcela apagada quando o saldo zera.
  */
 export function removeItemInstallments(
   order: StoreOrderWithDetails,
@@ -128,40 +128,43 @@ export function removeItemInstallments(
   const active = order.installments_list.filter((p) => !p.merged_into_order_id);
   const paid = active.filter((p) => p.paid_at);
   const pending = pendingInstallments(order.installments_list).sort((a, b) => a.number - b.number);
+  const removed = Math.max(0, removedCents);
+  const pendingTotal = pending.reduce((sum, p) => sum + p.amount_cents, 0);
+  const applied = Math.min(removed, pendingTotal);
+  const newBalance = pendingTotal - applied;
 
   const update: ItemRemovalPlan["update"] = [];
   const deleteIds: string[] = [];
-  let remaining = Math.max(0, removedCents);
-
-  for (let i = pending.length - 1; i >= 0 && remaining > 0; i -= 1) {
-    const parcel = pending[i];
-    if (!parcel) continue;
-    const cut = Math.min(parcel.amount_cents, remaining);
-    remaining -= cut;
-    const nextAmount = parcel.amount_cents - cut;
-    // Só apaga a parcela zerada se o pedido ainda tiver algum registro de cobrança.
-    const keepAsPlaceholder = nextAmount === 0 && paid.length === 0 && pending.length === 1;
-    if (nextAmount === 0 && !keepAsPlaceholder) {
-      deleteIds.push(parcel.id);
-      continue;
+  if (pending.length > 0) {
+    if (newBalance > 0) {
+      const shares = splitFirstHeavy(newBalance, pending.length);
+      pending.forEach((parcel, i) => {
+        const amount = shares[i] ?? 0;
+        update.push({
+          id: parcel.id,
+          amount_cents: amount,
+          added_extra_cents: Math.min(parcel.added_extra_cents, amount),
+        });
+      });
+    } else {
+      // Saldo zerado: remove as pendentes, mantendo uma se não houver nenhuma paga.
+      pending.forEach((parcel, i) => {
+        if (i === 0 && paid.length === 0) {
+          update.push({ id: parcel.id, amount_cents: 0, added_extra_cents: 0 });
+        } else {
+          deleteIds.push(parcel.id);
+        }
+      });
     }
-    update.push({
-      id: parcel.id,
-      amount_cents: nextAmount,
-      added_extra_cents: Math.min(parcel.added_extra_cents, nextAmount),
-    });
   }
-
-  const pendingBalanceCents =
-    pending.reduce((sum, p) => sum + p.amount_cents, 0) - (Math.max(0, removedCents) - remaining);
 
   return {
     update,
     deleteIds,
-    newTotalCents: Math.max(0, order.amount_cents - Math.max(0, removedCents)),
+    newTotalCents: Math.max(0, order.amount_cents - removed),
     totalInstallments: Math.max(1, paid.length + pending.length - deleteIds.length),
-    pendingBalanceCents: Math.max(0, pendingBalanceCents),
-    unappliedCents: remaining,
+    pendingBalanceCents: newBalance,
+    unappliedCents: removed - applied,
   };
 }
 
@@ -197,10 +200,17 @@ export function appendItemInstallments(
   order: StoreOrderWithDetails,
   addedCents: number,
   count: number,
+  /** Número da parcela onde a cobrança começa; null = após a última (meses novos). */
+  startNumber: number | null = null,
 ): InstallmentPlanChange {
   const active = order.installments_list.filter((p) => !p.merged_into_order_id);
   const paid = active.filter((p) => p.paid_at);
-  const pending = pendingInstallments(order.installments_list).sort((a, b) => a.number - b.number);
+  const allPending = pendingInstallments(order.installments_list).sort(
+    (a, b) => a.number - b.number,
+  );
+  // Só as parcelas a partir do mês escolhido recebem o acréscimo.
+  const pending =
+    startNumber === null ? [] : allPending.filter((p) => p.number >= startNumber);
 
   const n = Math.max(1, Math.floor(count) || 1);
   const amounts = splitFirstHeavy(Math.max(0, addedCents), n);
@@ -237,12 +247,12 @@ export function appendItemInstallments(
   }
 
   const pendingBalanceCents =
-    pending.reduce((sum, p) => sum + p.amount_cents, 0) + Math.max(0, addedCents);
+    allPending.reduce((sum, p) => sum + p.amount_cents, 0) + Math.max(0, addedCents);
 
   return {
     update,
     insert,
-    totalInstallments: paid.length + pending.length + insert.length,
+    totalInstallments: paid.length + allPending.length + insert.length,
     pendingBalanceCents,
   };
 }
