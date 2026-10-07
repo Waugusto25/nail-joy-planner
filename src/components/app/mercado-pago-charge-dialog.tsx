@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { createMercadoPagoChargeFn } from "@/lib/mercado-pago.functions";
+import { checkMercadoPagoPaymentFn, createMercadoPagoChargeFn } from "@/lib/mercado-pago.functions";
 import { formatPrice } from "@/lib/salon";
 import type { StoreOrderInstallment } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ export function MercadoPagoChargeDialog({
 }) {
   const queryClient = useQueryClient();
   const createCharge = useServerFn(createMercadoPagoChargeFn);
+  const checkPayment = useServerFn(checkMercadoPagoPaymentFn);
   const [method, setMethod] = useState<Method>("pix");
   const [email, setEmail] = useState("");
   const [boleto, setBoleto] = useState<Record<BoletoKey, string>>({
