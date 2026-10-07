@@ -17,7 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatISODate, formatPrice } from "@/lib/salon";
 import { supabase } from "@/lib/supabase-client";
-import { appendItemInstallments, type StoreOrderWithDetails } from "@/lib/store";
+import {
+  appendItemInstallments,
+  pendingInstallments,
+  type StoreOrderWithDetails,
+} from "@/lib/store";
 
 type ItemRow = { key: string; name: string; price: string };
 
@@ -48,10 +52,18 @@ export function StoreOrderAddItemsDialog({
   const [rows, setRows] = useState<ItemRow[]>([newItem()]);
   const [count, setCount] = useState("1");
   const [saving, setSaving] = useState(false);
+  const pendingOptions = useMemo(
+    () => [...pendingInstallments(order.installments_list)].sort((a, b) => a.number - b.number),
+    [order.installments_list],
+  );
+  // "after" = começar após a última parcela; caso contrário, número da parcela.
+  const [start, setStart] = useState<string>("");
+  const startValue = start || (pendingOptions[0] ? String(pendingOptions[0].number) : "after");
+  const startNumber = startValue === "after" ? null : Number(startValue);
 
   const added = useMemo(() => rows.reduce((sum, r) => sum + toCents(r.price), 0), [rows]);
   const parts = Math.max(1, Number(count) || 1);
-  const plan = appendItemInstallments(order, added, parts);
+  const plan = appendItemInstallments(order, added, parts, startNumber);
 
   async function save() {
     const parsed = rows
@@ -63,7 +75,7 @@ export function StoreOrderAddItemsDialog({
     }
     const items = parsed.flatMap((p) => (p.success ? [p.data] : []));
     const addedCents = items.reduce((sum, i) => sum + i.unit_price_cents, 0);
-    const change = appendItemInstallments(order, addedCents, parts);
+    const change = appendItemInstallments(order, addedCents, parts, startNumber);
 
     setSaving(true);
     try {
@@ -120,6 +132,7 @@ export function StoreOrderAddItemsDialog({
       toast.success("Produto acrescentado ao pedido.");
       setRows([newItem()]);
       setCount("1");
+      setStart("");
       onOpenChange(false);
       await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
     } catch (error) {
@@ -203,6 +216,24 @@ export function StoreOrderAddItemsDialog({
             Cada parcela do item novo é somada à parcela pendente do mês correspondente; o que
             sobrar cria meses novos.
           </p>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="add-items-start">Começar a cobrança a partir de</Label>
+          <select
+            id="add-items-start"
+            className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+            value={startValue}
+            onChange={(e) => setStart(e.target.value)}
+          >
+            {pendingOptions.map((p) => (
+              <option key={p.id} value={String(p.number)}>
+                Parcela {p.number} ·{" "}
+                {p.due_date ? formatISODate(p.due_date) : "sem vencimento"}
+              </option>
+            ))}
+            <option value="after">Após a última parcela (meses novos)</option>
+          </select>
         </div>
 
         <div className="rounded-md border border-border/60 p-3 text-sm">
