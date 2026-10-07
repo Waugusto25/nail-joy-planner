@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, FileText, Plus, Wallet, X } from "lucide-react";
+import { Check, ChevronDown, FileText, Plus, QrCode, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ import {
 } from "@/lib/store";
 import { StoreInstallmentPaymentDialog } from "@/components/app/store-installment-payment-dialog";
 import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
+import { MercadoPagoChargeDialog } from "@/components/app/mercado-pago-charge-dialog";
 
 export type { StoreOrderWithDetails };
 
@@ -60,6 +61,7 @@ export function StoreOrderCard({
   const [settling, setSettling] = useState<StoreOrderInstallment | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [invoiceParcel, setInvoiceParcel] = useState<number | null>(null);
+  const [mpParcel, setMpParcel] = useState<StoreOrderInstallment | null>(null);
   const pending = pendingInstallments(order.installments_list);
   const nextDue = pending[0];
   // Pedido em aberto: ainda em andamento ou com saldo devedor.
@@ -369,6 +371,17 @@ export function StoreOrderCard({
                     >
                       <FileText size={16} />
                     </Button>
+                    {!p.paid_at && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1"
+                        title="Gerar Cobrança Mercado Pago"
+                        onClick={() => setMpParcel(p)}
+                      >
+                        <QrCode size={16} /> {p.mp_payment_id ? "Cobrança MP" : "Gerar Cobrança Mercado Pago"}
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant={p.paid_at ? "default" : "outline"}
@@ -458,6 +471,12 @@ export function StoreOrderCard({
           if (!v) setInvoiceParcel(null);
         }}
         initialParcelNumber={invoiceParcel}
+      />
+      <MercadoPagoChargeDialog
+        parcel={mpParcel}
+        onOpenChange={(v) => {
+          if (!v) setMpParcel(null);
+        }}
       />
       <StoreInstallmentPaymentDialog
         order={order}
