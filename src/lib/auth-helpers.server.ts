@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { AUTH_EMAIL_DOMAIN, clientAccessPassword, loginEmail, onlyDigits } from "./salon";
+import { AUTH_EMAIL_DOMAIN, clientAccessPassword, loginEmail, onlyDigits, phoneKey } from "./salon";
 import { getRequest } from "@tanstack/react-start/server";
 
 import { resolveSupabasePublicConfig } from "./supabase-env";
@@ -248,12 +248,16 @@ export async function finishAccess(userId: string, fullName: string) {
 /** Corrige o WhatsApp da cliente sem derrubar o acesso dela. */
 export async function adminUpdateClientAccess(db: SupabaseClient, clientId: string, phone: string) {
   const normalizedPhone = onlyDigits(phone);
-  const { data: taken } = await db
+  // Mesmo DDD + 8 últimos dígitos (com ou sem o 9) = mesma cliente.
+  const key = phoneKey(normalizedPhone);
+  const { data: others } = await db
     .from("profiles")
-    .select("id")
-    .eq("phone", normalizedPhone)
-    .neq("id", clientId)
-    .maybeSingle();
+    .select("id, phone")
+    .is("deleted_at", null)
+    .neq("id", clientId);
+  const taken = (others ?? []).some(
+    (p) => String(p.phone) === normalizedPhone || (key !== null && phoneKey(String(p.phone)) === key),
+  );
   if (taken) throw new Error("Esse telefone já está cadastrado em outra conta.");
 
   const { error } = await db

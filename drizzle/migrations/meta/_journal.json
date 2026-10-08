@@ -15,6 +15,13 @@
       "when": 1791417977200,
       "tag": "0001_store_orders_archived_at",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791420324927,
+      "tag": "0002_phone_match_key_salon",
+      "breakpoints": true
     }
   ]
 }

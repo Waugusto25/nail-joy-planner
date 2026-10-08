@@ -204,6 +204,17 @@ export function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
 
+/**
+ * Chave de comparação de telefone: DDD + 8 últimos dígitos (ignora o 9 após o DDD
+ * e o 55). Espelha public.phone_match_key no banco. DDDs diferentes não conflitam.
+ */
+export function phoneKey(phone: string): string | null {
+  let d = onlyDigits(phone);
+  if (d.length >= 12 && d.startsWith("55")) d = d.slice(2);
+  if (d.length < 10) return null;
+  return `${d.slice(0, 2)}-${d.slice(-8)}`;
+}
+
 export function slugifyLogin(value: string) {
   return value
     .normalize("NFD")
