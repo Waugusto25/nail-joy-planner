@@ -838,6 +838,7 @@ export type Database = {
       store_orders: {
         Row: {
           amount_cents: number
+          archived_at: string | null
           client_name: string
           client_phone: string
           created_at: string
@@ -853,6 +854,7 @@ export type Database = {
         }
         Insert: {
           amount_cents?: number
+          archived_at?: string | null
           client_name: string
           client_phone?: string
           created_at?: string
@@ -868,6 +870,7 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          archived_at?: string | null
           client_name?: string
           client_phone?: string
           created_at?: string
