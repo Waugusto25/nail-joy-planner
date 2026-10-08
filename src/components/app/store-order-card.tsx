@@ -27,6 +27,7 @@ import {
   needsCollection,
   pendingInstallments,
   removeItemInstallments,
+  undoSettlement,
   type StoreOrderInstallment,
   type StoreOrderWithDetails,
 } from "@/lib/store";
@@ -158,14 +159,41 @@ export function StoreOrderCard({
           },
     );
     if (!ok) return;
+    if (parcel.paid_at) {
+      await revertToPending(parcel);
+      return;
+    }
     const { error } = await supabase
       .from("store_order_installments")
-      .update({ paid_at: parcel.paid_at ? null : new Date().toISOString() })
+      .update({ paid_at: new Date().toISOString(), paid_amount_cents: parcel.amount_cents })
       .eq("id", parcel.id);
     if (error) {
       toast.error("Não foi possível atualizar a parcela.");
       return;
     }
+    await refresh();
+  }
+
+  /** Volta a parcela para pendente estornando troco/falta lançados na parcela seguinte. */
+  async function revertToPending(parcel: StoreOrderInstallment) {
+    const { neighbour } = undoSettlement(order, parcel);
+    if (neighbour) {
+      const { id, ...values } = neighbour;
+      const { error } = await supabase.from("store_order_installments").update(values).eq("id", id);
+      if (error) {
+        toast.error("Não foi possível estornar o ajuste da próxima parcela.");
+        return;
+      }
+    }
+    const { error } = await supabase
+      .from("store_order_installments")
+      .update({ paid_at: null, paid_amount_cents: 0 })
+      .eq("id", parcel.id);
+    if (error) {
+      toast.error("Não foi possível atualizar a parcela.");
+      return;
+    }
+    if (neighbour) toast.info("Parcela pendente; o ajuste na próxima parcela foi desfeito.");
     await refresh();
   }
 
@@ -182,6 +210,11 @@ export function StoreOrderCard({
   }
 
   async function setPaidDate(parcel: StoreOrderInstallment, date: string) {
+    // Apagar a data equivale a voltar para pendente: estorna também o troco/falta.
+    if (!date && parcel.paid_at) {
+      await revertToPending(parcel);
+      return;
+    }
     const { error } = await supabase
       .from("store_order_installments")
       .update({ paid_at: date ? new Date(`${date}T12:00:00`).toISOString() : null })

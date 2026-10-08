@@ -749,3 +749,45 @@ export function lastInstallmentNumber(orders: StoreOrderWithDetails[], clientId:
     .flatMap((o) => o.installments_list.filter((p) => !p.merged_into_order_id))
     .reduce((max, p) => Math.max(max, p.number), 0);
 }
+
+
+/**
+ * Estorno de baixa: quando uma parcela volta para pendente, desfaz o crédito (troco)
+ * ou a falta que a baixa jogou na parcela seguinte e zera o valor pago, para o
+ * sistema nunca presumir que a cliente pagará de novo o mesmo valor.
+ */
+export function undoSettlement(
+  order: StoreOrderWithDetails,
+  parcel: StoreOrderInstallment,
+): { neighbour: { id: string; amount_cents: number; credit_applied_cents: number; carried_in_cents: number } | null } {
+  const diff = parcel.paid_amount_cents > 0 ? parcel.paid_amount_cents - parcel.amount_cents : 0;
+  if (diff === 0) return { neighbour: null };
+  // O troco/falta vai sempre para a próxima parcela em aberto (mesma regra da baixa).
+  const next =
+    order.installments_list
+      .filter((p) => !p.merged_into_order_id && p.number > parcel.number && !p.paid_at)
+      .sort((a, b) => a.number - b.number)[0] ?? null;
+  if (!next) return { neighbour: null };
+  if (diff > 0) {
+    const undo = Math.min(diff, next.credit_applied_cents);
+    if (undo === 0) return { neighbour: null };
+    return {
+      neighbour: {
+        id: next.id,
+        amount_cents: next.amount_cents + undo,
+        credit_applied_cents: next.credit_applied_cents - undo,
+        carried_in_cents: next.carried_in_cents,
+      },
+    };
+  }
+  const undo = Math.min(-diff, next.carried_in_cents);
+  if (undo === 0) return { neighbour: null };
+  return {
+    neighbour: {
+      id: next.id,
+      amount_cents: Math.max(0, next.amount_cents - undo),
+      credit_applied_cents: next.credit_applied_cents,
+      carried_in_cents: next.carried_in_cents - undo,
+    },
+  };
+}
