@@ -12,6 +12,17 @@ import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { fetchActiveCatalogs, fetchStoreClients, type StoreClient } from "@/lib/store";
 import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
+/**
+ * Chave de comparação de telefone: DDD + 8 últimos dígitos. Assim (35) 99271-8433 e
+ * (35) 9271-8433 (sem o 9) são o mesmo número, mas DDDs diferentes não conflitam.
+ */
+function phoneKey(phone: string): string | null {
+  let d = onlyDigits(phone);
+  if (d.length >= 12 && d.startsWith("55")) d = d.slice(2); // remove código do país
+  if (d.length < 10) return null;
+  return `${d.slice(0, 2)}-${d.slice(-8)}`;
+}
+
 type ClientForm = { full_name: string; phone: string; nickname: string; notes: string };
 
 const EMPTY: ClientForm = { full_name: "", phone: "", nickname: "", notes: "" };
@@ -44,9 +55,9 @@ export function StoreClientsTab() {
       return;
     }
     // Regra: telefone já cadastrado em outra cliente gera aviso e bloqueia o duplicado.
-    const digits = onlyDigits(form.phone);
-    const dup = digits
-      ? (clients.data ?? []).find((c) => c.id !== editingId && onlyDigits(c.phone) === digits)
+    const key = phoneKey(form.phone);
+    const dup = key
+      ? (clients.data ?? []).find((c) => c.id !== editingId && phoneKey(c.phone) === key)
       : undefined;
     if (dup) {
       toast.warning(`Este telefone já está cadastrado para ${dup.full_name}. Essa cliente já existe.`);
