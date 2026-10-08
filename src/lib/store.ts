@@ -791,3 +791,27 @@ export function undoSettlement(
     },
   };
 }
+
+/**
+ * Parcelas em aberto da mesma cliente que vencem antes da parcela informada
+ * (no mesmo pedido ou em outros pedidos dela), para avisar antes de dar baixa.
+ */
+export function olderOpenInstallments(
+  orders: StoreOrderWithDetails[],
+  order: StoreOrderWithDetails,
+  parcel: StoreOrderInstallment,
+): { order: StoreOrderWithDetails; parcel: StoreOrderInstallment }[] {
+  const sameClient = (o: StoreOrderWithDetails) =>
+    o.id === order.id ||
+    (order.store_client_id ? o.store_client_id === order.store_client_id : o.client_name === order.client_name);
+  const pool = orders.some((o) => o.id === order.id) ? orders : [order, ...orders];
+  return pool
+    .filter(sameClient)
+    .flatMap((o) => pendingInstallments(o.installments_list).map((p) => ({ order: o, parcel: p })))
+    .filter(({ order: o, parcel: p }) => {
+      if (p.id === parcel.id) return false;
+      if (o.id === order.id && p.number < parcel.number) return true;
+      return Boolean(p.due_date && parcel.due_date && p.due_date < parcel.due_date);
+    })
+    .sort((a, b) => (a.parcel.due_date ?? "").localeCompare(b.parcel.due_date ?? ""));
+}
