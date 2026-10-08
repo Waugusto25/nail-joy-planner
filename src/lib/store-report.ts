@@ -139,6 +139,12 @@ export function drawOrderReport(doc: jsPDF, order: StoreOrderWithDetails): void 
         `Parcela ${p.number}: cobrada ${formatPrice(p.amount_cents)}, recebido ${formatPrice(received)}. Faltaram ${formatPrice(p.amount_cents - received)}${next ? `, somados na parcela ${next.number}` : ""}.`,
       );
     }
+    if (!p.paid_at && received > p.amount_cents) {
+      const next = parcels[i + 1];
+      notes.push(
+        `Parcela ${p.number}: foi registrado um pagamento de ${formatPrice(received)} (cobrada ${formatPrice(p.amount_cents)}) e depois a data de pagamento foi apagada. A sobra de ${formatPrice(received - p.amount_cents)} ficou como crédito${next ? ` na parcela ${next.number}` : ""} — confira se essa parcela foi mesmo paga.`,
+      );
+    }
     if (p.added_extra_cents > 0)
       notes.push(`Parcela ${p.number}: inclui ${formatPrice(p.added_extra_cents)} de produto(s) acrescentado(s) ao pedido.`);
   });
