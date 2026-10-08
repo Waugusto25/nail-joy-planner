@@ -18,7 +18,7 @@ import {
 const iso = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-function presets(): Record<string, ReportRange> {
+function presets(): Record<"Este mês" | "Mês anterior" | "Ano atual", ReportRange> {
   const n = new Date();
   return {
     "Este mês": { from: iso(new Date(n.getFullYear(), n.getMonth(), 1)), to: iso(new Date(n.getFullYear(), n.getMonth() + 1, 0)) },
