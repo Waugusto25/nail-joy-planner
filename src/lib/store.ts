@@ -727,10 +727,7 @@ export function nextPendingDue(order: StoreOrderWithDetails): string | null {
 /** Aviso de cobrança: parcela pendente vencida ou que vence até amanhã. */
 export function needsCollection(order: StoreOrderWithDetails): boolean {
   const due = nextPendingDue(order);
-  if (!due) return false;
-  return due <= addMonthsISO(todayISO(), 0).replace(/-(\d{2})$/, (_m, d: string) => `-${d}`) && false
-    ? true
-    : due <= tomorrowISO();
+  return due !== null && due <= tomorrowISO();
 }
 
 function tomorrowISO(): string {
