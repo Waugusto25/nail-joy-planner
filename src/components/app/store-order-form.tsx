@@ -20,6 +20,7 @@ import {
   addMonthsISO,
   displayName,
   fetchStoreClients,
+  lastInstallmentNumber,
   pendingInstallments,
   type StoreOrderInstallment,
   type StoreOrderWithDetails,
@@ -83,6 +84,7 @@ export function StoreOrderForm({
   const [status, setStatus] = useState("pendente");
   const [notes, setNotes] = useState("");
   const [unify, setUnify] = useState(false);
+  const [continueNumbering, setContinueNumbering] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -118,6 +120,13 @@ export function StoreOrderForm({
     [orders, clientId, selectedClient?.phone, editing?.id],
   );
 
+  // Última parcela já usada pela cliente: permite seguir a numeração (ex.: 5) numa nova venda.
+  const lastNumber = useMemo(
+    () => (clientId && !editing ? lastInstallmentNumber(orders, clientId) : 0),
+    [orders, clientId, editing],
+  );
+  const offset = continueNumbering && lastNumber > 0 ? lastNumber : 0;
+
   function reset() {
     setClientId("");
     setItems([newItem()]);
@@ -127,6 +136,7 @@ export function StoreOrderForm({
     setStatus("pendente");
     setNotes("");
     setUnify(false);
+    setContinueNumbering(false);
   }
 
   async function save() {
@@ -156,6 +166,10 @@ export function StoreOrderForm({
         notes: notes.trim() || null,
       };
 
+      // Edição mantém a numeração atual do pedido.
+      const base = editing
+        ? Math.max(0, (editing.installments_list[0]?.number ?? 1) - 1)
+        : offset;
       let orderId = editing?.id ?? "";
       if (editing) {
         const { error } = await supabase.from("store_orders").update(payload).eq("id", editing.id);
@@ -178,7 +192,7 @@ export function StoreOrderForm({
           unit_price_cents: toCents(i.price),
           sort_order: index,
           // Itens do pedido são cobrados da 1ª parcela até a última.
-          start_installment: 1,
+          start_installment: base + 1,
           installments_count: count,
         })),
       );
@@ -188,7 +202,7 @@ export function StoreOrderForm({
       const paid = new Map(
         (editing?.installments_list ?? [])
           .filter((p) => p.paid_at)
-          .map((p) => [p.number, { paid_at: p.paid_at, due_date: p.due_date }]),
+          .map((p) => [p.number - base, { paid_at: p.paid_at, due_date: p.due_date }]),
       );
       await supabase.from("store_order_installments").delete().eq("order_id", orderId);
       const amounts = splitInstallments(total, count);
@@ -200,7 +214,7 @@ export function StoreOrderForm({
           const monthlyDue = firstDue ? addMonthsISO(firstDue, index) : null;
           return {
             order_id: orderId,
-            number: index + 1,
+            number: base + index + 1,
             amount_cents: amount + extra,
             merged_extra_cents: extra,
             // Cada parcela vence um mês depois da anterior, com ou sem unificação.
@@ -274,6 +288,33 @@ export function StoreOrderForm({
             </span>
           </label>
         </div>
+      ) : null}
+
+      {lastNumber > 0 ? (
+        <fieldset className="space-y-1 rounded-md border p-3 text-sm">
+          <legend className="px-1 text-xs text-muted-foreground">Numeração das parcelas desta nova venda</legend>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="numbering"
+              checked={!continueNumbering}
+              onChange={() => setContinueNumbering(false)}
+            />
+            Começar novo parcelamento (parcela 1)
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="numbering"
+              checked={continueNumbering}
+              onChange={() => setContinueNumbering(true)}
+            />
+            Continuar numeração (parcela {lastNumber + 1})
+          </label>
+          <p className="text-xs text-muted-foreground">
+            É uma venda nova no mesmo cadastro; as parcelas antigas não mudam.
+          </p>
+        </fieldset>
       ) : null}
 
       <div className="space-y-2">

@@ -43,6 +43,15 @@ export function StoreClientsTab() {
       toast.error("Informe o nome do cliente.");
       return;
     }
+    // Regra: telefone já cadastrado em outra cliente gera aviso e bloqueia o duplicado.
+    const digits = onlyDigits(form.phone);
+    const dup = digits
+      ? (clients.data ?? []).find((c) => c.id !== editingId && onlyDigits(c.phone) === digits)
+      : undefined;
+    if (dup) {
+      toast.warning(`Este telefone já está cadastrado para ${dup.full_name}. Essa cliente já existe.`);
+      return;
+    }
     const payload = {
       full_name: form.full_name.trim(),
       phone: onlyDigits(form.phone),
