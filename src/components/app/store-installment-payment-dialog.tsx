@@ -50,7 +50,8 @@ export function StoreInstallmentPaymentDialog({
 
   useEffect(() => {
     if (open && parcel) {
-      setPaid(toInput(parcel.paid_amount_cents || parcel.amount_cents));
+      // Pendente sugere sempre o valor exato da fatura, nunca um pagamento antigo.
+      setPaid(toInput(parcel.paid_at && parcel.paid_amount_cents ? parcel.paid_amount_cents : parcel.amount_cents));
       setDate(parcel.paid_at ? parcel.paid_at.slice(0, 10) : todayISO());
     }
   }, [open, parcel]);
