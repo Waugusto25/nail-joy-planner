@@ -8,6 +8,13 @@
       "when": 1791336300206,
       "tag": "0000_mercado_pago_installment_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791417977200,
+      "tag": "0001_store_orders_archived_at",
+      "breakpoints": true
     }
   ]
 }

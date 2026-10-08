@@ -81,7 +81,7 @@ export function drawInvoice(
   const allocation = allocateItemsToInstallments(order);
   const shares = allocation.byInstallment.get(parcel.number) ?? [];
   const all = invoiceableInstallments(order);
-  const totalCount = all.length || order.installments;
+  const totalCount = Math.max(all.length || order.installments, ...all.map((p) => p.number));
   // "Modelo Boleto Mercado Pago": só quando a cobrança gerada foi boleto.
   const isBoleto = parcel.mp_method === "boleto" && Boolean(parcel.boleto_linha_digitavel);
   const feeCents = isBoleto ? BOLETO_FEE_CENTS : 0;

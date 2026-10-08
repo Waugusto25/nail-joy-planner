@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, FileText, Plus, QrCode, Wallet, X } from "lucide-react";
+import { Archive, Check, ChevronDown, FileText, Plus, QrCode, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,8 @@ import { StoreOrderAddItemsDialog } from "@/components/app/store-order-add-items
 import { cn } from "@/lib/utils";
 import {
   installmentState,
+  isFullyPaid,
+  needsCollection,
   pendingInstallments,
   removeItemInstallments,
   type StoreOrderInstallment,
@@ -206,6 +208,25 @@ export function StoreOrderCard({
     await refresh();
   }
 
+  /** Arquivar só esconde da lista principal; nada é apagado. */
+  async function toggleArchive() {
+    const archiving = !order.archived_at;
+    if (archiving && !isFullyPaid(order)) {
+      toast.error("Só é possível arquivar pedidos sem parcelas em aberto.");
+      return;
+    }
+    const { error } = await supabase
+      .from("store_orders")
+      .update({ archived_at: archiving ? new Date().toISOString() : null })
+      .eq("id", order.id);
+    if (error) {
+      toast.error("Não foi possível atualizar o arquivamento.");
+      return;
+    }
+    toast.success(archiving ? "Pedido arquivado." : "Pedido restaurado para a lista.");
+    await refresh();
+  }
+
   function sendWhatsapp() {
     const amount = nextDue?.amount_cents ?? order.amount_cents;
     const message = orderStatusMessage(order.status, {
@@ -240,6 +261,11 @@ export function StoreOrderCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-display text-lg">
+            {needsCollection(order) ? (
+              <span role="img" aria-label="Cobrança: parcela vencendo ou vencida" title="Fazer cobrança" className="mr-1">
+                ⚠️
+              </span>
+            ) : null}
             {order.client_name}
             {order.nickname ? (
               <span className="text-sm font-normal text-primary"> ({order.nickname})</span>
@@ -483,6 +509,16 @@ export function StoreOrderCard({
               <FileText size={16} /> Exportar Fatura (PDF)
             </Button>
 
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              disabled={!order.archived_at && !isFullyPaid(order)}
+              title={!order.archived_at && !isFullyPaid(order) ? "Quite todas as parcelas para arquivar" : undefined}
+              onClick={() => void toggleArchive()}
+            >
+              <Archive size={16} /> {order.archived_at ? "Desarquivar" : "Arquivar"}
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => void remove()}>
               Excluir
             </Button>
