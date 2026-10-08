@@ -268,7 +268,7 @@ export function drawStatement(
         doc.setFontSize(9.5);
         doc.text(
           order.installments > 1
-            ? `Parcela ${parcel.number}/${order.installments}`
+            ? `Parcela ${parcel.number}/${Math.max(order.installments, ...order.installments_list.map((x) => x.number))}`
             : "Pagamento único",
           MARGIN,
           y,
