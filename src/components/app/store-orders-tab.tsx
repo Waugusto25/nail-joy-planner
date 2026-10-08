@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { ArchiveRestore, ArrowDownAZ, ArrowUpAZ, CalendarClock, Clock, RefreshCw, Search, X } from "lucide-react";
 
 import { StoreOrderCard } from "@/components/app/store-order-card";
+import { StoreGeneralReportDialog } from "@/components/app/store-general-report-dialog";
 import { StoreOrderForm } from "@/components/app/store-order-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,6 +129,7 @@ export function StoreOrdersTab() {
           <ArchiveRestore size={16} />
           {showArchived ? "Voltar aos ativos" : `Arquivados (${archivedCount})`}
         </Button>
+        <StoreGeneralReportDialog orders={rows} />
         <Button
           size="icon"
           variant="outline"
