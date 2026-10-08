@@ -22,6 +22,13 @@
       "when": 1791420324927,
       "tag": "0002_phone_match_key_salon",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791422100773,
+      "tag": "0003_reset_paid_amount_when_pending",
+      "breakpoints": true
     }
   ]
 }
