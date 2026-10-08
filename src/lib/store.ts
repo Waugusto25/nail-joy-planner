@@ -66,6 +66,8 @@ export type StoreOrderWithDetails = {
   id: string;
   store_client_id: string | null;
   created_at: string | null;
+  /** Quando preenchido, o pedido foi arquivado (quitado) e sai da lista principal. */
+  archived_at: string | null;
   client_name: string;
   client_phone: string;
   nickname: string | null;
@@ -643,7 +645,7 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
     .select(
       // O apontamento explícito da chave estrangeira evita ambiguidade: parcelas
       // referenciam store_orders por order_id e por merged_into_order_id.
-      "id, created_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order, start_installment, installments_count), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents, mp_payment_id, mp_method, mp_status, pix_copia_e_cola, pix_qr_code_base64, boleto_linha_digitavel, boleto_pdf_url, boleto_expires_on)",
+      "id, created_at, archived_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order, start_installment, installments_count), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents, mp_payment_id, mp_method, mp_status, pix_copia_e_cola, pix_qr_code_base64, boleto_linha_digitavel, boleto_pdf_url, boleto_expires_on)",
     )
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -653,6 +655,7 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
     return {
       id: row.id,
       created_at: row.created_at ?? null,
+      archived_at: row.archived_at ?? null,
       store_client_id: row.store_client_id,
       client_name: row.client_name,
       client_phone: row.client_phone ?? "",
@@ -709,4 +712,43 @@ export async function fetchActiveCatalogs(): Promise<{ title: string; url: strin
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+
+/** Vencimento pendente mais próximo do pedido (faturas pagas não contam). */
+export function nextPendingDue(order: StoreOrderWithDetails): string | null {
+  const dues = pendingInstallments(order.installments_list)
+    .map((p) => p.due_date)
+    .filter((d): d is string => Boolean(d))
+    .sort();
+  return dues[0] ?? null;
+}
+
+/** Aviso de cobrança: parcela pendente vencida ou que vence até amanhã. */
+export function needsCollection(order: StoreOrderWithDetails): boolean {
+  const due = nextPendingDue(order);
+  if (!due) return false;
+  return due <= addMonthsISO(todayISO(), 0).replace(/-(\d{2})$/, (_m, d: string) => `-${d}`) && false
+    ? true
+    : due <= tomorrowISO();
+}
+
+function tomorrowISO(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Pedido sem nenhuma parcela em aberto (pode ser arquivado). */
+export function isFullyPaid(order: StoreOrderWithDetails): boolean {
+  return pendingInstallments(order.installments_list).length === 0;
+}
+
+/** Maior número de parcela já usado nos pedidos do cliente (para continuar a numeração). */
+export function lastInstallmentNumber(orders: StoreOrderWithDetails[], clientId: string): number {
+  return orders
+    .filter((o) => o.store_client_id === clientId)
+    .flatMap((o) => o.installments_list.filter((p) => !p.merged_into_order_id))
+    .reduce((max, p) => Math.max(max, p.number), 0);
 }
