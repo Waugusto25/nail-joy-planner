@@ -227,6 +227,21 @@ export function StoreOrderCard({
     await refresh();
   }
 
+  async function exportReport() {
+    try {
+      const [{ jsPDF }, { drawOrderReport, reportFileName }] = await Promise.all([
+        import("jspdf"),
+        import("@/lib/store-report"),
+      ]);
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      drawOrderReport(doc, order);
+      doc.save(reportFileName(order.client_name));
+      toast.success("Relatório gerado.");
+    } catch {
+      toast.error("Não foi possível gerar o relatório.");
+    }
+  }
+
   function sendWhatsapp() {
     const amount = nextDue?.amount_cents ?? order.amount_cents;
     const message = orderStatusMessage(order.status, {
@@ -521,6 +536,9 @@ export function StoreOrderCard({
             </Button>
             <Button size="sm" variant="ghost" onClick={() => void remove()}>
               Excluir
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => void exportReport()}>
+              <span aria-hidden>📝</span> Relatório
             </Button>
           </div>
         </div>
