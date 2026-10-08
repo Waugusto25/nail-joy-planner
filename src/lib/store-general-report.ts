@@ -35,7 +35,8 @@ export function computeReport(orders: StoreOrderWithDetails[], range: ReportRang
       if (p.paid_at && inRange(p.paid_at.slice(0, 10), range)) {
         row.paid += p.paid_amount_cents || p.amount_cents;
       } else if (!p.paid_at && inRange(p.due_date, range)) {
-        row.pending += Math.max(0, p.amount_cents - (p.paid_amount_cents || 0));
+        // Sem data de pagamento a parcela está em aberto: deve o valor cheio.
+        row.pending += p.amount_cents;
       }
     }
     if (row.sold || row.paid || row.pending) byClient.set(o.client_name, row);

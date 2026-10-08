@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatPrice } from "@/lib/salon";
 import { supabase } from "@/lib/supabase-client";
+import { confirmOlderInvoices } from "@/components/app/older-invoice-warning";
 import {
   settleInstallment,
   todayISO,
@@ -68,6 +69,7 @@ export function StoreInstallmentPaymentDialog({
       toast.error("Informe o valor efetivamente pago.");
       return;
     }
+    if (!parcel.paid_at && !(await confirmOlderInvoices(queryClient, order, parcel))) return;
     setSaving(true);
     try {
       const { error: targetError } = await supabase

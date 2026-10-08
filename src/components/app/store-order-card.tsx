@@ -33,6 +33,7 @@ import {
 } from "@/lib/store";
 import { StoreInstallmentPaymentDialog } from "@/components/app/store-installment-payment-dialog";
 import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
+import { confirmOlderInvoices } from "@/components/app/older-invoice-warning";
 import { MercadoPagoChargeDialog } from "@/components/app/mercado-pago-charge-dialog";
 
 export type { StoreOrderWithDetails };
@@ -163,6 +164,7 @@ export function StoreOrderCard({
       await revertToPending(parcel);
       return;
     }
+    if (!(await confirmOlderInvoices(queryClient, order, parcel))) return;
     const { error } = await supabase
       .from("store_order_installments")
       .update({ paid_at: new Date().toISOString(), paid_amount_cents: parcel.amount_cents })
