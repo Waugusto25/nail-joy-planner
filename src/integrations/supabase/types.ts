@@ -1016,6 +1016,7 @@ export type Database = {
           registered: boolean
         }[]
       }
+      phone_match_key: { Args: { p_phone: string }; Returns: string }
       phone_taken: { Args: { p_phone: string }; Returns: boolean }
       push_admin_targets: {
         Args: never
