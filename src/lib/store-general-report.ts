@@ -52,7 +52,8 @@ export function computeReport(orders: StoreOrderWithDetails[], range: ReportRang
 /** Divide o período em meses-calendário (cada um recortado ao intervalo escolhido). */
 export function splitByMonth(range: ReportRange): ReportRange[] {
   const out: ReportRange[] = [];
-  let [y, m] = range.from.split("-").map(Number);
+  let y = Number(range.from.slice(0, 4));
+  let m = Number(range.from.slice(5, 7));
   const pad = (n: number) => String(n).padStart(2, "0");
   for (;;) {
     const first = `${y}-${pad(m)}-01`;
@@ -100,15 +101,15 @@ export function drawGeneralReport(doc: jsPDF, totals: ReportTotals, range: Repor
   });
   y += 28;
 
-  const cols = [M, 110, 145, 180];
+  const cols = { c: M, s: 110, p: 145, r: 180 } as const;
   const header = () => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.setTextColor(31, 36, 48);
-    doc.text("Cliente", cols[0], y);
-    doc.text("Vendido", cols[1], y);
-    doc.text("Pago", cols[2], y);
-    doc.text("A receber", cols[3], y);
+    doc.text("Cliente", cols.c, y);
+    doc.text("Vendido", cols.s, y);
+    doc.text("Pago", cols.p, y);
+    doc.text("A receber", cols.r, y);
     y += 2;
     doc.line(M, y, 196, y);
     y += 5;
@@ -122,10 +123,10 @@ export function drawGeneralReport(doc: jsPDF, totals: ReportTotals, range: Repor
       y = M + 2;
       header();
     }
-    doc.text(doc.splitTextToSize(r.client, 92)[0] as string, cols[0], y);
-    doc.text(formatPrice(r.sold), cols[1], y);
-    doc.text(formatPrice(r.paid), cols[2], y);
-    doc.text(formatPrice(r.pending), cols[3], y);
+    doc.text(doc.splitTextToSize(r.client, 92)[0] as string, cols.c, y);
+    doc.text(formatPrice(r.sold), cols.s, y);
+    doc.text(formatPrice(r.paid), cols.p, y);
+    doc.text(formatPrice(r.pending), cols.r, y);
     y += 6;
   }
 
