@@ -801,11 +801,33 @@ function ClientsTab() {
     }
   }
 
+  /** Busca por nome, ID de login ou telefone (com ou sem o 9). */
+  const filteredClients = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const list = clients.data ?? [];
+    if (!term) return list;
+    return list.filter((c) =>
+      `${c.full_name} ${c.login_id ?? ""} ${c.phone}`.toLowerCase().includes(term),
+    );
+  }, [clients.data, search]);
+
   return (
     <>
       <EmailChangeRequests />
       <div className="space-y-3">
-      {(clients.data ?? []).map((c) => {
+      <div className="space-y-1">
+        <Label htmlFor="salao-client-search">Buscar cliente</Label>
+        <Input
+          id="salao-client-search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Nome, ID ou telefone"
+        />
+      </div>
+      {filteredClients.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nenhuma cliente encontrada.</p>
+      ) : null}
+      {filteredClients.map((c) => {
         const isMaster = (adminIds.data ?? []).includes(c.id);
         return (
           <article key={c.id} className="surface-card p-4">
