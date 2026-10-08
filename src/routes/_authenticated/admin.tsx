@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Lock, Trash2 } from "lucide-react";
 
@@ -710,6 +710,7 @@ function ClientsTab() {
   });
   const [editing, setEditing] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
+  const [search, setSearch] = useState("");
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
   const [savingNickname, setSavingNickname] = useState<string | null>(null);
   const [copyingId, setCopyingId] = useState<string | null>(null);
