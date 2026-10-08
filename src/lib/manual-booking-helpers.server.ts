@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { overlaps, timeToMinutes } from "./salon";
+import { overlaps, phoneKey, timeToMinutes } from "./salon";
 import { createAdminClient } from "./supabase-admin.server";
 
 function admin(): SupabaseClient {
@@ -99,13 +99,19 @@ export async function createManualAppointment(input: ManualAppointmentData) {
   let clientLoginId: string | null = null;
 
   // Cliente já cadastrada: a administradora enxerga os perfis pelas policies.
+  // Regra: mesmo DDD + 8 últimos dígitos (com ou sem o 9) é a mesma cliente.
   if (!clientId && input.clientPhone) {
-    const { data: existing } = await db
+    const digits = input.clientPhone.replace(/\D/g, "");
+    const key = phoneKey(digits);
+    const { data: rows } = await db
       .from("profiles")
-      .select("id, login_id")
-      .eq("phone", input.clientPhone.replace(/\D/g, ""))
+      .select("id, login_id, phone, created_at")
       .is("deleted_at", null)
-      .maybeSingle();
+      .order("created_at");
+    const list = rows ?? [];
+    const existing =
+      list.find((p) => String(p.phone) === digits) ??
+      (key ? list.find((p) => phoneKey(String(p.phone)) === key) : undefined);
     if (existing) {
       clientId = String(existing.id);
       clientLoginId = existing.login_id ? String(existing.login_id) : null;
