@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArchiveRestore, ArrowDownAZ, ArrowUpAZ, CalendarClock, Clock, RefreshCw, Search, X } from "lucide-react";
+import { ArchiveRestore, ArrowDownAZ, ArrowUpAZ, CalendarClock, ChevronDown, ChevronUp, Clock, Plus, RefreshCw, Search, X } from "lucide-react";
 
 import { StoreOrderCard } from "@/components/app/store-order-card";
 import { StoreGeneralReportDialog } from "@/components/app/store-general-report-dialog";
@@ -53,6 +53,8 @@ export function StoreOrdersTab() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [showArchived, setShowArchived] = useState(false);
+  // Formulário começa recolhido para a lista de vencimentos ficar visível sem rolar.
+  const [formOpen, setFormOpen] = useState(false);
   const settings = useAppSettings();
   const orders = useQuery({ queryKey: ["admin-store-orders"], queryFn: fetchStoreOrders });
 
@@ -101,7 +103,44 @@ export function StoreOrdersTab() {
 
   return (
     <div className="space-y-4">
-      <StoreOrderForm editing={editing} orders={rows} onDone={() => setEditingId(null)} />
+      {formOpen || editing ? (
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1"
+              aria-expanded
+              onClick={() => {
+                setFormOpen(false);
+                setEditingId(null);
+              }}
+            >
+              Recolher <ChevronUp size={16} />
+            </Button>
+          </div>
+          <StoreOrderForm
+            editing={editing}
+            orders={rows}
+            onDone={() => {
+              setEditingId(null);
+              setFormOpen(false);
+            }}
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          aria-expanded={false}
+          onClick={() => setFormOpen(true)}
+          className="surface-card flex w-full items-center justify-between gap-3 p-4 text-left focus-visible:outline-2 focus-visible:outline-ring"
+        >
+          <span className="font-display text-lg">Novo pedido da loja</span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Plus size={16} /> Abrir <ChevronDown size={16} />
+          </span>
+        </button>
+      )}
 
       <div className="surface-card flex flex-wrap items-center gap-2 p-3">
         {sortBtn(
