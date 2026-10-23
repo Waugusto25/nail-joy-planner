@@ -73,15 +73,6 @@ export function ManualAppointmentDialog() {
     },
   });
 
-  const service = Array.isArray(joined) ? joined[0] : joined;
-        return {
-          start: timeToMinutes(String(r.start_time)),
-          duration: Number((service as { duration_minutes?: number } | null)?.duration_minutes ?? 60),
-        };
-      });
-    },
-  });
-
   const service = (services.data ?? []).find((s) => s.id === serviceId) ?? null;
   const duration = Number(service?.duration_minutes ?? 60);
 

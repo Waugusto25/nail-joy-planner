@@ -79,6 +79,8 @@ export const Route = createFileRoute("/_authenticated/painel")({
       },
       { property: "og:title", content: "Meu painel — Jannah Nails" },
       { property: "og:description", content: "Agendamentos, fidelidade e loja da Jannah Nails." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ClientPanel,
