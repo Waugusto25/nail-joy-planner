@@ -1384,7 +1384,6 @@ function SlotsTab() {
   return (
     <div className="space-y-5">
       <MonthsManager />
-      <SpecialDaysManager />
       <section className="surface-card space-y-3 p-5">
         <h2 className="font-display text-lg">Cadastrar Novo Horário</h2>
         <div className="space-y-1">
@@ -1431,6 +1430,8 @@ function SlotsTab() {
           </Button>
         </div>
       </section>
+
+      <SpecialDaysManager />
 
       <Collapsible asChild>
       <section className="surface-card space-y-3 p-5">
