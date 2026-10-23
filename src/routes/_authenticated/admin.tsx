@@ -2,7 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Lock, Trash2 } from "lucide-react";
+import { ChevronDown, Info, Lock, Trash2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { AppHeader } from "@/components/app/app-header";
 import { Button } from "@/components/ui/button";
@@ -1396,12 +1398,30 @@ function SlotsTab() {
         <Button onClick={() => void add()}>Adicionar horário</Button>
       </section>
 
+      <Collapsible asChild>
       <section className="surface-card space-y-3 p-5">
-        <p className="font-display text-lg">Intervalos (almoço / café)</p>
-        <p className="text-sm text-muted-foreground">
-          Horários dentro do intervalo não aparecem para a cliente, e procedimentos que invadiriam a
-          pausa também são bloqueados.
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-display flex items-center gap-2 text-lg">
+            Intervalos (almoço / café)
+            <Popover>
+              <PopoverTrigger
+                aria-label="Sobre intervalos"
+                className="rounded-full text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Info className="h-4 w-4" aria-hidden />
+              </PopoverTrigger>
+              <PopoverContent className="text-sm">
+                Horários dentro do intervalo não aparecem para a cliente, e procedimentos que
+                invadiriam a pausa também são bloqueados.
+              </PopoverContent>
+            </Popover>
+          </h2>
+          <CollapsibleTrigger className="group flex items-center gap-1 rounded text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            {(breaks.data ?? []).length} cadastrado{(breaks.data ?? []).length === 1 ? "" : "s"}
+            <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" aria-hidden />
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1">
             <Label htmlFor="break-weekday">Dia da semana</Label>
