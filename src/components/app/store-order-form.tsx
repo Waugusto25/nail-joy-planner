@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { StoreClientPicker } from "@/components/app/store-client-picker";
 import { supabase } from "@/lib/supabase-client";
 import {
   ORDER_STATUSES,
@@ -18,7 +19,6 @@ import {
 } from "@/lib/salon";
 import {
   addMonthsISO,
-  displayName,
   fetchStoreClients,
   lastInstallmentNumber,
   pendingInstallments,
@@ -251,19 +251,14 @@ export function StoreOrderForm({
 
       <div className="space-y-1">
         <Label htmlFor="order-client">Cliente da loja</Label>
-        <select
-          id="order-client"
-          className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
+        <StoreClientPicker
+          clients={clients.data ?? []}
           value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
-        >
-          <option value="">Selecione um cliente cadastrado</option>
-          {(clients.data ?? []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {displayName(c)}
-            </option>
-          ))}
-        </select>
+          onChange={setClientId}
+          loading={clients.isPending}
+          error={clients.isError}
+          onRetry={() => void clients.refetch()}
+        />
         <p className="text-xs text-muted-foreground">
           Os clientes vêm da sub-aba Clientes LOJA, com nome, telefone e apelido.
         </p>
