@@ -1142,6 +1142,7 @@ function ServicesTab() {
   const [newDuration, setNewDuration] = useState("60");
   const [newFile, setNewFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editingName, setEditingName] = useState<string | null>(null);
   const services = useQuery({
     queryKey: ["admin-services"],
     queryFn: async () => {
@@ -1154,6 +1155,7 @@ function ServicesTab() {
   async function update(
     id: string,
     patch: {
+      name?: string;
       price_cents?: number;
       duration_minutes?: number;
       active?: boolean;
@@ -1292,68 +1294,100 @@ function ServicesTab() {
       </section>
 
       {(services.data ?? []).map((s) => (
-        <article key={s.id} className="surface-card flex flex-wrap items-end gap-4 p-4">
-          <div className="space-y-2">
+        <article key={s.id} className="surface-card space-y-3 p-4">
+          <div className="flex items-start gap-3">
             <StorageImage
               url={s.image_url}
               alt={s.name}
-              className="h-20 w-20 rounded-xl object-cover"
+              className="h-16 w-16 shrink-0 rounded-xl object-cover"
             />
+            <div className="min-w-0 flex-1 space-y-1">
+              {editingName === s.id ? (
+                <Input
+                  aria-label="Nome do procedimento"
+                  autoFocus
+                  defaultValue={s.name}
+                  maxLength={60}
+                  onBlur={(e) => {
+                    const name = e.target.value.trim();
+                    setEditingName(null);
+                    if (name.length >= 3 && name !== s.name) void update(s.id, { name });
+                    else if (name.length < 3) toast.error("Nome precisa de ao menos 3 letras.");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                    if (e.key === "Escape") setEditingName(null);
+                  }}
+                />
+              ) : (
+                <p className="truncate font-display text-base">{s.name}</p>
+              )}
+              <Badge variant={s.loyalty_eligible ? "secondary" : "outline"}>
+                {s.loyalty_eligible ? "Fidelidade" : "Avulso"}
+              </Badge>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Editar nome de ${s.name}`}
+              onClick={() => setEditingName(editingName === s.id ? null : s.id)}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor={`img-${s.id}`} className="text-xs">
-                {uploading === s.id ? "Enviando foto..." : "Trocar foto"}
-              </Label>
+              <Label htmlFor={`price-${s.id}`}>Preço (R$)</Label>
               <Input
-                id={`img-${s.id}`}
-                type="file"
-                accept="image/*"
-                className="w-52"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void changeImage(s.id, file);
-                }}
+                id={`price-${s.id}`}
+                defaultValue={(s.price_cents / 100).toFixed(2)}
+                onBlur={(e) =>
+                  void update(s.id, {
+                    price_cents:
+                      Math.round(Number(e.target.value.replace(",", ".")) * 100) || s.price_cents,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`dur-${s.id}`}>Duração (min)</Label>
+              <Input
+                id={`dur-${s.id}`}
+                inputMode="numeric"
+                defaultValue={s.duration_minutes}
+                onBlur={(e) =>
+                  void update(s.id, {
+                    duration_minutes: Number(e.target.value) || s.duration_minutes,
+                  })
+                }
               />
             </div>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor={`price-${s.id}`}>{s.name} — preço (R$)</Label>
-            <Input
-              id={`price-${s.id}`}
-              defaultValue={(s.price_cents / 100).toFixed(2)}
-              onBlur={(e) =>
-                void update(s.id, {
-                  price_cents:
-                    Math.round(Number(e.target.value.replace(",", ".")) * 100) || s.price_cents,
-                })
-              }
-              className="w-32"
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Switch
+                id={`active-${s.id}`}
+                checked={s.active}
+                onCheckedChange={(checked) => void update(s.id, { active: checked })}
+              />
+              <Label htmlFor={`active-${s.id}`}>Ativo</Label>
+            </div>
+            <Label
+              htmlFor={`img-${s.id}`}
+              className="cursor-pointer rounded-full border border-border px-3 py-1.5 text-xs"
+            >
+              {uploading === s.id ? "Enviando foto..." : "Trocar foto"}
+            </Label>
+            <input
+              id={`img-${s.id}`}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void changeImage(s.id, file);
+              }}
             />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor={`dur-${s.id}`}>Duração (min)</Label>
-            <Input
-              id={`dur-${s.id}`}
-              defaultValue={s.duration_minutes}
-              onBlur={(e) =>
-                void update(s.id, {
-                  duration_minutes: Number(e.target.value) || s.duration_minutes,
-                })
-              }
-              className="w-24"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id={`active-${s.id}`}
-              checked={s.active}
-              onCheckedChange={(checked) => void update(s.id, { active: checked })}
-            />
-            <Label htmlFor={`active-${s.id}`}>Ativo</Label>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge variant={s.loyalty_eligible ? "secondary" : "outline"}>
-              {s.loyalty_eligible ? "Fidelidade" : "Avulso"}
-            </Badge>
             {!s.loyalty_eligible ? (
               <Button variant="outline" size="sm" onClick={() => void removeService(s.id, s.name)}>
                 Excluir
