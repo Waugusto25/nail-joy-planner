@@ -83,6 +83,8 @@ export const Route = createFileRoute("/_authenticated/admin")({
       },
       { property: "og:title", content: "Painel administrativo — Jannah Nails" },
       { property: "og:description", content: "Gestão completa do studio Jannah Nails." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "robots", content: "noindex" },
     ],
   }),

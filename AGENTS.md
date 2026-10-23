@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep the store-order customer picker separate from order calculations; it only returns a client ID so selection/search changes cannot alter payment history or installment numbering.
+- Keep manual-booking availability in a dedicated picker and pure calculation module, with admin-authorized schedule reads and save-time validation, so exceptional bookings do not bypass collision checks.
