@@ -38,6 +38,7 @@ import { SpecialDaysManager } from "@/components/app/special-days-manager";
 import { FinanceTab } from "@/components/app/finance-tab";
 import { StoreOrdersTab } from "@/components/app/store-orders-tab";
 import { StoreClientsTab } from "@/components/app/store-clients-tab";
+import { ClientAccordionCard } from "@/components/app/client-accordion-card";
 import { StoreDashboardTab } from "@/components/app/store-dashboard-tab";
 import { currentMonthKey, monthKeyOf, monthLabel, monthShortLabel } from "@/lib/months";
 import { cn } from "@/lib/utils";
@@ -922,28 +923,27 @@ function ClientsTab() {
       {filteredClients.map((c) => {
         const isMaster = (adminIds.data ?? []).includes(c.id);
         return (
-          <article key={c.id} className="surface-card p-4">
+          <ClientAccordionCard
+            key={c.id}
+            name={c.full_name}
+            nickname={c.nickname}
+            phoneLabel={formatPhone(c.phone)}
+            whatsappHref={isMaster ? null : whatsappLinkTo(c.phone, "")}
+            badge={
+              isMaster ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                  <Lock className="size-3" /> Administradora
+                </span>
+              ) : null
+            }
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-display text-lg flex items-center gap-2">
-                  {c.full_name}
-                  {isMaster ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                      <Lock className="size-3" /> Administradora
-                    </span>
-                  ) : null}
+              {isMaster ? (
+                <p className="text-sm text-muted-foreground">
+                  Dados de acesso protegidos — troque sua senha na engrenagem (⚙️) do topo.
                 </p>
-                {isMaster ? (
-                  <p className="text-sm text-muted-foreground">
-                    Dados de acesso protegidos — troque sua senha na engrenagem (⚙️) do topo.
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    ID {c.login_id} · {formatPhone(c.phone)}
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-2">
+              ) : null}
+              <div className="flex flex-wrap gap-2">
                 {isMaster ? null : (
                 <Button
                   size="sm"
@@ -1043,7 +1043,7 @@ function ClientsTab() {
                 </Button>
               </div>
             )}
-          </article>
+          </ClientAccordionCard>
         );
       })}
       </div>
