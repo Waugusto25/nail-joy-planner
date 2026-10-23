@@ -20,3 +20,9 @@ export const adminRescheduleInput = z.object({
   day: dayField,
   startTime: timeField,
 });
+
+export const changeServiceInput = z.object({
+  appointmentId: z.string().uuid(),
+  serviceId: z.string().uuid(),
+  acceptDelay: z.boolean(),
+});

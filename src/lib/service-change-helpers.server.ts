@@ -30,19 +30,20 @@ export async function changeAppointmentService(
 
   const { data: others } = await db
     .from("appointments")
-    .select("start_time, services(duration_minutes), profiles(full_name)")
+    .select("start_time, client_id")
     .eq("day", appt.day)
     .neq("id", appointmentId)
     .in("status", ["pendente", "confirmado"]);
-  const rows: BusyRow[] = (others ?? []).map((o) => {
-    const p = (o as { profiles: unknown }).profiles;
-    const prof = (Array.isArray(p) ? p[0] : p) as { full_name?: string } | null;
-    return {
-      start_time: String(o.start_time),
-      duration_minutes: 60,
-      client_name: prof?.full_name ?? "Cliente",
-    };
-  });
+  const ids = Array.from(new Set((others ?? []).map((o) => String(o.client_id))));
+  const { data: profs } = ids.length
+    ? await db.from("profiles").select("id, full_name").in("id", ids)
+    : { data: [] as { id: string; full_name: string | null }[] };
+  const names = new Map((profs ?? []).map((p) => [String(p.id), String(p.full_name ?? "Cliente")]));
+  const rows: BusyRow[] = (others ?? []).map((o) => ({
+    start_time: String(o.start_time),
+    duration_minutes: 60,
+    client_name: names.get(String(o.client_id)) ?? "Cliente",
+  }));
   const conflicts = findDelayConflicts(String(appt.start_time).slice(0, 5), duration, rows);
   if (conflicts.length > 0 && !acceptDelay) {
     return { needsConfirm: true as const, conflicts, duration };
