@@ -1440,9 +1440,9 @@ function SlotsTab() {
             <Popover>
               <PopoverTrigger
                 aria-label="Sobre intervalos"
-                className="rounded-full text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Info className="h-4 w-4" aria-hidden />
+                <Info className="h-3.5 w-3.5" aria-hidden />
               </PopoverTrigger>
               <PopoverContent className="text-sm">
                 Horários dentro do intervalo não aparecem para a cliente, e procedimentos que
