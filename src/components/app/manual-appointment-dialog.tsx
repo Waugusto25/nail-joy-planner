@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { ManualSchedulePicker } from "./manual-schedule-picker";
 import { toast } from "sonner";
 import { CalendarPlus } from "lucide-react";
 
@@ -26,9 +28,6 @@ import {
   formatTimeRange,
   localTodayISO,
   openWhatsappUrl,
-  overlaps,
-  shortTime,
-  timeToMinutes,
   whatsappLinkTo,
 } from "@/lib/salon";
 
@@ -46,6 +45,8 @@ export function ManualAppointmentDialog() {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [special, setSpecial] = useState(false);
+  const createAppointment = useServerFn(createManualAppointmentFn);
 
   const clients = useQuery({
     queryKey: ["manual-clients"],
@@ -72,37 +73,7 @@ export function ManualAppointmentDialog() {
     },
   });
 
-  const weekday = useMemo(() => {
-    const [y, m, d] = day.split("-").map(Number);
-    return new Date(y!, (m ?? 1) - 1, d ?? 1).getDay();
-  }, [day]);
-
-  const slots = useQuery({
-    queryKey: ["manual-slots", weekday],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("schedule_slots")
-        .select("start_time")
-        .eq("weekday", weekday)
-        .eq("active", true)
-        .order("start_time");
-      if (error) throw error;
-      return (data ?? []).map((s) => shortTime(String(s.start_time)));
-    },
-  });
-
-  const busy = useQuery({
-    queryKey: ["manual-busy", day],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("start_time, services(duration_minutes)")
-        .eq("day", day)
-        .in("status", ["pendente", "confirmado", "concluido"]);
-      if (error) throw error;
-      return (data ?? []).map((r) => {
-        const joined = (r as { services: unknown }).services;
-        const service = Array.isArray(joined) ? joined[0] : joined;
+  const service = Array.isArray(joined) ? joined[0] : joined;
         return {
           start: timeToMinutes(String(r.start_time)),
           duration: Number((service as { duration_minutes?: number } | null)?.duration_minutes ?? 60),
@@ -118,15 +89,6 @@ export function ManualAppointmentDialog() {
     String(c.full_name).toLowerCase().includes(search.trim().toLowerCase()),
   );
 
-  const availableTimes = (slots.data ?? []).filter((time) => {
-    const start = timeToMinutes(time);
-    return !(busy.data ?? []).some((b) =>
-      overlaps(start, start + duration, b.start, b.start + b.duration),
-    );
-  });
-
-  const offSchedule = Boolean(startTime) && !(slots.data ?? []).includes(startTime);
-
   function reset() {
     setMode("cadastrada");
     setSearch("");
@@ -138,6 +100,7 @@ export function ManualAppointmentDialog() {
     setStartTime("");
     setPaymentMethod("");
     setNotes("");
+    setSpecial(false);
   }
 
   async function save() {
@@ -155,12 +118,13 @@ export function ManualAppointmentDialog() {
     }
     setSaving(true);
     try {
-      const result = await createManualAppointmentFn({
+      const result = await createAppointment({
         data: {
           ...(mode === "cadastrada" ? { clientId } : { clientName: newName, clientPhone: newPhone }),
           serviceId,
           day,
           startTime,
+          special,
           ...(paymentMethod ? { paymentMethod } : {}),
           ...(notes ? { notes } : {}),
         },
@@ -323,21 +287,13 @@ export function ManualAppointmentDialog() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label htmlFor="manual-dia">Data</Label>
-              <Input
-                id="manual-dia"
-                type="date"
-                value={day}
-                onChange={(e) => {
-                  setDay(e.target.value);
-                }}
-              />
-              <p className="text-xs text-muted-foreground">
-                Qualquer data — passada, hoje ou futura.
-              </p>
-            </div>
+          {service ? <ManualSchedulePicker
+            day={day} time={startTime} duration={duration} special={special}
+            onChange={(nextDay, nextTime) => { setDay(nextDay); setStartTime(nextTime); }}
+            onSpecialChange={setSpecial}
+          /> : null}
+
+          <div>
             <div className="space-y-1">
               <Label>Forma de pagamento (opcional)</Label>
               <div className="flex flex-wrap gap-2">
@@ -355,39 +311,9 @@ export function ManualAppointmentDialog() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Horário</Label>
-            <Input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              aria-label="Horário livre"
-            />
-            {availableTimes.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {availableTimes.map((time) => (
-                  <Button
-                    key={time}
-                    size="sm"
-                    variant={startTime === time ? "default" : "outline"}
-                    onClick={() => setStartTime(time)}
-                  >
-                    {time}
-                  </Button>
-                ))}
-              </div>
-            ) : null}
-            {offSchedule ? (
-              <p className="text-xs text-primary">
-                Fora do expediente padrão — será salvo como Atendimento Especial ✨
-              </p>
-            ) : null}
-            {startTime && service ? (
-              <p className="text-xs text-muted-foreground">
-                {formatTimeRange(startTime, duration)} · {service.name}
-              </p>
-            ) : null}
-          </div>
+          {startTime && service ? <p className="text-xs text-muted-foreground">
+            {formatTimeRange(startTime, duration)} · {service.name} · {formatPrice(Number(service.price_cents))}
+          </p> : null}
 
           <div className="space-y-1">
             <Label htmlFor="manual-obs">Observações (opcional)</Label>
@@ -399,7 +325,7 @@ export function ManualAppointmentDialog() {
             />
           </div>
 
-          <Button className="w-full" disabled={saving} onClick={() => void save()}>
+          <Button className="w-full" disabled={saving || !serviceId || !startTime} onClick={() => void save()}>
             {saving ? "Salvando..." : "Salvar agendamento confirmado"}
           </Button>
         </div>

@@ -15,7 +15,6 @@ type Props = {
   day: string; time: string; duration: number; special: boolean;
   onChange: (day: string, time: string) => void;
   onSpecialChange: (special: boolean) => void;
-  onValidityChange: (valid: boolean) => void;
 };
 
 export function ManualSchedulePicker({ day, time, duration, special, onChange, onSpecialChange }: Props) {
