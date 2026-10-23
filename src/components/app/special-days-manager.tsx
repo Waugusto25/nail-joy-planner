@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Sparkles, Trash2, X } from "lucide-react";
+import { ChevronDown, Info, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/lib/supabase-client";
 import { useSpecialDays } from "@/hooks/useSpecialDays";
 import { formatDayLabel, localTodayISO } from "@/lib/salon";
+import { groupUpcomingByMonth, isPastDay } from "@/lib/special-days-grouping";
+import { cn } from "@/lib/utils";
 import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
 /** Cadastro de dias especiais: data única, horários exclusivos e motivo. */
@@ -17,6 +21,7 @@ export function SpecialDaysManager() {
   const queryClient = useQueryClient();
   const specialDays = useSpecialDays({ includeInactive: true });
   const [open, setOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [day, setDay] = useState("");
   const [reason, setReason] = useState("");
   const [time, setTime] = useState("09:00");
@@ -90,6 +95,22 @@ export function SpecialDaysManager() {
   }
 
   const rows = specialDays.data ?? [];
+  const today = localTodayISO();
+  const groups = groupUpcomingByMonth(rows, today);
+  const upcoming = groups.flatMap((g) => g.rows);
+  const pastIds = rows.filter((r) => isPastDay(r.day, today)).map((r) => r.id).join(",");
+
+  // Datas concluídas saem sozinhas: apaga do banco as que já passaram (não afetam a agenda futura).
+  useEffect(() => {
+    if (!pastIds) return;
+    void supabase
+      .from("special_days")
+      .delete()
+      .in("id", pastIds.split(","))
+      .then(({ error }) => {
+        if (!error) void queryClient.invalidateQueries({ queryKey: ["special-days"] });
+      });
+  }, [pastIds, queryClient]);
 
   return (
     <section className="surface-card space-y-4 p-5">
@@ -98,11 +119,19 @@ export function SpecialDaysManager() {
           <h2 className="font-display flex items-center gap-2 text-lg">
             <Sparkles className="h-4 w-4 text-primary" aria-hidden />
             Dias especiais de atendimento
+            <Popover>
+              <PopoverTrigger
+                aria-label="Sobre dias especiais"
+                className="rounded-full text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Info className="h-4 w-4" aria-hidden />
+              </PopoverTrigger>
+              <PopoverContent className="text-sm">
+                Abre uma data específica com horários exclusivos — sem mexer na agenda semanal e sem
+                repetir nas semanas seguintes. Tem prioridade até sobre folgas e datas bloqueadas.
+              </PopoverContent>
+            </Popover>
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Abre uma data específica com horários exclusivos — sem mexer na agenda semanal e sem
-            repetir nas semanas seguintes. Tem prioridade até sobre folgas e datas bloqueadas.
-          </p>
         </div>
         <Button variant={open ? "outline" : "default"} onClick={() => setOpen((v) => !v)}>
           {open ? "Fechar" : "+ Cadastrar Dia Especial"}
@@ -179,42 +208,62 @@ export function SpecialDaysManager() {
         </div>
       ) : null}
 
-      <ul className="space-y-2">
-        {rows.map((row) => (
-          <li
-            key={row.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
-          >
-            <div>
-              <p className="font-medium capitalize">{formatDayLabel(row.day)}</p>
-              {row.reason ? (
-                <p className="text-xs text-muted-foreground">{row.reason}</p>
-              ) : null}
-              <p className="mt-1 text-sm text-muted-foreground">
-                {row.times.length > 0 ? row.times.join(" · ") : "Sem horários"}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={row.active}
-                aria-label={`Ativar dia especial ${row.day}`}
-                onCheckedChange={(checked) => void toggle(row.id, checked)}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Remover dia especial"
-                onClick={() => void remove(row.id, formatDayLabel(row.day))}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-              </Button>
-            </div>
-          </li>
-        ))}
-        {rows.length === 0 ? (
-          <li className="text-sm text-muted-foreground">Nenhum dia especial cadastrado.</li>
-        ) : null}
-      </ul>
+      <Collapsible open={listOpen} onOpenChange={setListOpen}>
+        <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span>Dias especiais cadastrados ({upcoming.length})</span>
+          <ChevronDown className={cn("h-4 w-4 transition-transform", listOpen && "rotate-180")} aria-hidden />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2 space-y-2">
+          {groups.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum dia especial futuro cadastrado.</p>
+          ) : null}
+          {groups.map((group) => (
+            <Collapsible key={group.month}>
+              <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <span>
+                  {group.label} · {group.rows.length} {group.rows.length === 1 ? "data" : "datas"}
+                </span>
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" aria-hidden />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ul className="mt-2 space-y-2">
+                  {group.rows.map((row) => (
+                    <li
+                      key={row.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+                    >
+                      <div>
+                        <p className="font-medium capitalize">{formatDayLabel(row.day)}</p>
+                        {row.reason ? (
+                          <p className="text-xs text-muted-foreground">{row.reason}</p>
+                        ) : null}
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {row.times.length > 0 ? row.times.join(" · ") : "Sem horários"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={row.active}
+                          aria-label={`Ativar dia especial ${row.day}`}
+                          onCheckedChange={(checked) => void toggle(row.id, checked)}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Remover dia especial"
+                          onClick={() => void remove(row.id, formatDayLabel(row.day))}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </CollapsibleContent>
+            </Collapsible>
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
     </section>
   );
 }
