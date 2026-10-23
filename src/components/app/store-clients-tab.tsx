@@ -12,6 +12,7 @@ import { catalogsGreetingMessage, formatPhone, onlyDigits, whatsappLinkTo } from
 import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { fetchActiveCatalogs, fetchStoreClients, type StoreClient } from "@/lib/store";
 import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
+import { ClientAccordionCard } from "@/components/app/client-accordion-card";
 
 /**
  * Chave de comparação de telefone: DDD + 8 últimos dígitos. Assim (35) 99271-8433 e
@@ -207,18 +208,15 @@ export function StoreClientsTab() {
         <p className="text-sm text-muted-foreground">Nenhum cliente da loja cadastrado ainda.</p>
       ) : (
         rows.map((c) => (
-          <article key={c.id} className="surface-card p-4">
+          <ClientAccordionCard
+            key={c.id}
+            name={c.full_name}
+            nickname={c.nickname}
+            phoneLabel={c.phone ? formatPhone(c.phone) : "Sem telefone"}
+            whatsappHref={whatsappLinkTo(c.phone, catalogsGreetingMessage(catalogs.data ?? []))}
+          >
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="font-display text-lg">{c.full_name}</p>
-                {c.nickname ? (
-                  <p className="text-xs font-medium text-primary">Apelido: {c.nickname}</p>
-                ) : null}
-                <p className="text-sm text-muted-foreground">
-                  {c.phone ? formatPhone(c.phone) : "Sem telefone"}
-                </p>
-                {c.notes ? <p className="mt-1 text-xs text-muted-foreground">{c.notes}</p> : null}
-              </div>
+              {c.notes ? <p className="w-full text-xs text-muted-foreground">{c.notes}</p> : null}
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
@@ -254,7 +252,7 @@ export function StoreClientsTab() {
                 </Button>
               </div>
             </div>
-          </article>
+          </ClientAccordionCard>
         ))
       )}
     </div>
