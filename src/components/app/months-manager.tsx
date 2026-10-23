@@ -51,13 +51,13 @@ export function MonthsManager() {
   const noticeText = drafts[noticeMonth] ?? byMonth.get(noticeMonth)?.message ?? "";
 
   async function saveNotice() {
-    await saveMonth(noticeMonth, { message: noticeText.trim() || null });
+    if (!(await saveMonth(noticeMonth, { message: noticeText.trim() || null }))) return;
     setDrafts((d) => { const { [noticeMonth]: _, ...rest } = d; return rest; });
     toast.success(`Recado de ${monthLabel(noticeMonth)} salvo.`);
   }
 
   async function saveMonth(month: string, patch: { active?: boolean; message?: string | null }) {
-    if (savingMonth || !canChangeScheduleMonth(month, currentMonth)) return;
+    if (savingMonth || !canChangeScheduleMonth(month, currentMonth)) return false;
     const current = byMonth.get(month);
     const row = {
       month,
@@ -69,8 +69,10 @@ export function MonthsManager() {
       const { error } = await supabase.from("schedule_months").upsert(row, { onConflict: "month" });
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ["schedule-months"] });
+      return true;
     } catch {
       toast.error("Não foi possível salvar esse mês.");
+      return false;
     } finally {
       setSavingMonth(null);
     }
