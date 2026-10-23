@@ -41,6 +41,7 @@ import { StoreClientsTab } from "@/components/app/store-clients-tab";
 import { StoreDashboardTab } from "@/components/app/store-dashboard-tab";
 import { currentMonthKey, monthKeyOf, monthLabel, monthShortLabel } from "@/lib/months";
 import { cn } from "@/lib/utils";
+import { groupCompletedAppointments } from "@/lib/completed-groups";
 import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
 
@@ -174,6 +175,8 @@ function AdminPanel() {
 function AgendaTab() {
   const queryClient = useQueryClient();
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [completedLimit, setCompletedLimit] = useState(15);
   const [confirmedMonth, setConfirmedMonth] = useState(currentMonthKey());
 
   const appointments = useQuery({
