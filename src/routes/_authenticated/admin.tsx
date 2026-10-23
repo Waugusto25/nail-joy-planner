@@ -653,8 +653,14 @@ function BlockedDates() {
   }
 
   return (
-    <section className="surface-card p-5">
-      <h2 className="font-display text-lg">Datas indisponíveis</h2>
+    <details className="surface-card group p-5">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-ring">
+        <h2 className="font-display text-lg">Datas indisponíveis</h2>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          {(blocked.data ?? []).length} bloqueadas
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
+        </span>
+      </summary>
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <Label htmlFor="block-day">Data</Label>
@@ -690,7 +696,7 @@ function BlockedDates() {
           </li>
         ))}
       </ul>
-    </section>
+    </details>
   );
 }
 
