@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { overlaps, phoneKey, timeToMinutes } from "./salon";
 import { createAdminClient } from "./supabase-admin.server";
+import { manualAvailableTimes, manualWeekday } from "./manual-availability";
+import { readManualSchedule } from "./manual-availability.server";
 
 function admin(): SupabaseClient {
   return createAdminClient();
@@ -14,6 +16,7 @@ export type ManualAppointmentData = {
   serviceId: string;
   day: string;
   startTime: string;
+  special: boolean;
   paymentMethod?: "pix" | "credito" | "debito" | "dinheiro" | undefined;
   notes?: string | undefined;
 };
@@ -25,10 +28,12 @@ async function assertFreeSlot(
   startTime: string,
   duration: number,
 ) {
-  const { data } = await db.rpc("busy_times", { p_day: day });
+  const { data, error } = await db.rpc("busy_times", { p_day: day });
+  if (error) throw new Error("Não foi possível verificar se o horário está livre.");
 
   const startA = timeToMinutes(startTime);
   const endA = startA + duration;
+  if (endA > 1440) throw new Error("O atendimento precisa terminar antes da meia-noite.");
   for (const row of (data ?? []) as { start_time: string; duration_minutes: number }[]) {
     const otherStart = timeToMinutes(String(row.start_time));
     const otherEnd = otherStart + Number(row.duration_minutes ?? 60);
@@ -44,8 +49,7 @@ async function assertFreeSlot(
  * "Atendimento Especial" com aquele horário, sem mexer na regra semanal.
  */
 async function ensureSpecialDay(db: SupabaseClient, day: string, startTime: string) {
-  const [y, m, d] = day.split("-").map(Number);
-  const weekday = new Date(y!, (m ?? 1) - 1, d ?? 1).getDay();
+  const weekday = manualWeekday(day);
 
   const { data: blocked } = await db.from("blocked_dates").select("id").eq("day", day).maybeSingle();
   const { data: slot } = await db
@@ -76,8 +80,10 @@ async function ensureSpecialDay(db: SupabaseClient, day: string, startTime: stri
     reason: special?.reason ?? "Atendimento especial",
     active: true,
   };
-  if (special) await db.from("special_days").update(payload).eq("id", special.id);
-  else await db.from("special_days").insert(payload);
+  const result = special
+    ? await db.from("special_days").update(payload).eq("id", special.id)
+    : await db.from("special_days").insert(payload);
+  if (result.error) throw new Error("Não foi possível registrar o atendimento especial.");
   return true;
 }
 
@@ -91,6 +97,13 @@ export async function createManualAppointment(input: ManualAppointmentData) {
     .eq("id", input.serviceId)
     .maybeSingle();
   if (!service) throw new Error("Procedimento não encontrado.");
+
+  if (!input.special) {
+    const schedule = await readManualSchedule(db, input.day.slice(0, 7));
+    if (!manualAvailableTimes(schedule, input.day, Number(service.duration_minutes ?? 60), input.day, -1).includes(input.startTime)) {
+      throw new Error("Este horário não está disponível. Atualize a agenda ou escolha Atendimento especial.");
+    }
+  }
 
   await assertFreeSlot(db, input.day, input.startTime, Number(service.duration_minutes ?? 60));
 

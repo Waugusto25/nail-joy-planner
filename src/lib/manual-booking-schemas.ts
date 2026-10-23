@@ -13,7 +13,8 @@ export const manualAppointmentInput = z
       .transform((v) => (v ? v.replace(/\D/g, "") : "")),
     serviceId: z.string().uuid("Escolha o procedimento"),
     day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Escolha a data"),
-    startTime: z.string().regex(/^\d{2}:\d{2}$/, "Escolha o horário"),
+    startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Escolha um horário válido"),
+    special: z.boolean().default(false),
     paymentMethod: z.enum(["pix", "credito", "debito", "dinheiro"]).optional(),
     notes: z.string().trim().max(300).optional(),
   })
