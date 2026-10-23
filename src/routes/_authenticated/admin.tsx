@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Info, Lock, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Info, Lock, Plus, Trash2, X } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -1281,7 +1281,7 @@ function SlotsTab() {
   const queryClient = useQueryClient();
   const [weekdays, setWeekdays] = useState<number[]>([1]);
   const [time, setTime] = useState("09:00");
-  const [breakWeekday, setBreakWeekday] = useState(1);
+  const [breakWeekdays, setBreakWeekdays] = useState<number[]>([1]);
   const [breakStart, setBreakStart] = useState("12:00");
   const [breakEnd, setBreakEnd] = useState("13:00");
   const [breakLabel, setBreakLabel] = useState("Almoço");
@@ -1312,21 +1312,29 @@ function SlotsTab() {
   });
 
   async function addBreak() {
+    if (breakWeekdays.length === 0) {
+      toast.error("Selecione ao menos um dia.");
+      return;
+    }
     if (breakEnd <= breakStart) {
       toast.error("O fim do intervalo deve ser depois do início.");
       return;
     }
-    const { error } = await supabase.from("schedule_breaks").insert({
-      weekday: breakWeekday,
-      start_time: `${breakStart}:00`,
-      end_time: `${breakEnd}:00`,
-      label: breakLabel.trim() || null,
-    });
-    if (error) {
-      toast.error("Não foi possível salvar o intervalo.");
-      return;
-    }
-    toast.success("Intervalo salvo.");
+    // One insert per day so a failure on one day doesn't block the others.
+    const results = await Promise.all(
+      breakWeekdays.map((weekday) =>
+        supabase.from("schedule_breaks").insert({
+          weekday,
+          start_time: `${breakStart}:00`,
+          end_time: `${breakEnd}:00`,
+          label: breakLabel.trim() || null,
+        }),
+      ),
+    );
+    const created = results.filter((r) => !r.error).length;
+    const failed = results.length - created;
+    if (created > 0) toast.success(`${created} intervalo(s) salvo(s).`);
+    if (failed > 0) toast.error(`${failed} dia(s) não puderam ser salvos.`);
     await queryClient.invalidateQueries();
   }
 
@@ -1432,9 +1440,9 @@ function SlotsTab() {
             <Popover>
               <PopoverTrigger
                 aria-label="Sobre intervalos"
-                className="rounded-full text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Info className="h-4 w-4" aria-hidden />
+                <Info className="h-3.5 w-3.5" aria-hidden />
               </PopoverTrigger>
               <PopoverContent className="text-sm">
                 Horários dentro do intervalo não aparecem para a cliente, e procedimentos que
@@ -1448,41 +1456,46 @@ function SlotsTab() {
           </CollapsibleTrigger>
         </div>
         <CollapsibleContent className="space-y-3">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="break-weekday">Dia da semana</Label>
-            <select
-              id="break-weekday"
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-              value={breakWeekday}
-              onChange={(e) => setBreakWeekday(Number(e.target.value))}
-            >
-              {WEEKDAYS.map((label, index) => (
-                <option key={label} value={index}>
-                  {label}
-                </option>
-              ))}
-            </select>
+        <div className="space-y-1">
+          <span className="text-sm font-medium">Dias da semana</span>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Dias do intervalo">
+            {[1, 2, 3, 4, 5, 6, 0].map((index) => {
+              const active = breakWeekdays.includes(index);
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() =>
+                    setBreakWeekdays((prev) =>
+                      prev.includes(index) ? prev.filter((d) => d !== index) : [...prev, index],
+                    )
+                  }
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  {WEEKDAYS[index]?.slice(0, 3)}
+                </button>
+              );
+            })}
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
             <Label htmlFor="break-start">Início</Label>
-            <Input
-              id="break-start"
-              type="time"
-              value={breakStart}
-              onChange={(e) => setBreakStart(e.target.value)}
-            />
+            <Input id="break-start" type="time" value={breakStart} onChange={(e) => setBreakStart(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="break-end">Fim</Label>
-            <Input
-              id="break-end"
-              type="time"
-              value={breakEnd}
-              onChange={(e) => setBreakEnd(e.target.value)}
-            />
+            <Input id="break-end" type="time" value={breakEnd} onChange={(e) => setBreakEnd(e.target.value)} />
           </div>
-          <div className="space-y-1">
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="flex-1 space-y-1">
             <Label htmlFor="break-label">Nome</Label>
             <Input
               id="break-label"
@@ -1491,23 +1504,38 @@ function SlotsTab() {
               onChange={(e) => setBreakLabel(e.target.value)}
             />
           </div>
-          <Button onClick={() => void addBreak()}>Adicionar intervalo</Button>
+          <Button className="rounded-full" onClick={() => void addBreak()}>
+            <Plus className="h-4 w-4" aria-hidden /> Adicionar
+          </Button>
         </div>
         {(breaks.data ?? []).length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum intervalo cadastrado.</p>
         ) : (
-          <ul className="space-y-1 text-sm">
-            {(breaks.data ?? []).map((b) => (
-              <li key={b.id} className="flex items-center justify-between">
-                <span>
-                  {WEEKDAYS[b.weekday]} · {shortTime(b.start_time)} às {shortTime(b.end_time)}
-                  {b.label ? ` · ${b.label}` : ""}
-                </span>
-                <Button variant="outline" size="sm" onClick={() => void removeBreak(b.id)}>
-                  Remover
-                </Button>
-              </li>
-            ))}
+          <ul className="flex flex-wrap gap-1.5" aria-label="Intervalos cadastrados">
+            {[1, 2, 3, 4, 5, 6, 0].flatMap((day) =>
+              (breaks.data ?? [])
+                .filter((b) => b.weekday === day)
+                .map((b) => (
+                  <li
+                    key={b.id}
+                    className="flex items-center gap-1 rounded-full border border-border bg-muted/50 py-0.5 pl-2.5 pr-1 text-xs"
+                  >
+                    <span>
+                      <span className="font-medium">{WEEKDAYS[b.weekday]?.slice(0, 3)}:</span>{" "}
+                      {shortTime(b.start_time)} às {shortTime(b.end_time)}
+                      {b.label ? ` · ${b.label}` : ""}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Remover intervalo de ${WEEKDAYS[b.weekday]} ${shortTime(b.start_time)}`}
+                      onClick={() => void removeBreak(b.id)}
+                      className="rounded-full p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <X className="h-3 w-3" aria-hidden />
+                    </button>
+                  </li>
+                )),
+            )}
           </ul>
         )}
         </CollapsibleContent>
