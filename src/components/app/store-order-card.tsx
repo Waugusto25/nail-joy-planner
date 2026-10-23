@@ -61,6 +61,7 @@ export function StoreOrderCard({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [deliveryAsk, setDeliveryAsk] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [settling, setSettling] = useState<StoreOrderInstallment | null>(null);
@@ -618,6 +619,12 @@ export function StoreOrderCard({
         onOpenChange={(v) => {
           if (!v) setSettling(null);
         }}
+      />
+      <StoreDeliveryDateDialog
+        open={deliveryAsk}
+        clientName={order.client_name}
+        onCancel={() => setDeliveryAsk(false)}
+        onConfirm={(date) => void saveStatus("entregue", date)}
       />
     </article>
   );
