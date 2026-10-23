@@ -25,6 +25,7 @@ import {
 import { clearCancelledForAdminFn, hideCancelledForAdminFn } from "@/lib/cancel.functions";
 import { ManualAppointmentDialog } from "@/components/app/manual-appointment-dialog";
 import { AdminRescheduleDialog } from "@/components/app/admin-reschedule-dialog";
+import { AdminEditServiceDialog } from "@/components/app/admin-edit-service-dialog";
 import { RescheduleRequests } from "@/components/app/reschedule-requests";
 import { CatalogEditDialog } from "@/components/app/catalog-edit-dialog";
 import { ProductCategoryPicker } from "@/components/app/product-category-picker";
@@ -438,6 +439,19 @@ function AgendaTab() {
                 day: a.day,
                 start_time: a.start_time,
                 serviceName: service?.name ?? "Procedimento",
+                clientName: client?.full_name ?? "Cliente",
+              }}
+            />
+          ) : null}
+          {a.status === "confirmado" || a.status === "pendente" ? (
+            <AdminEditServiceDialog
+              appointment={{
+                id: a.id,
+                start_time: a.start_time,
+                serviceId: String(a.service_id),
+                serviceName: service?.name ?? "Procedimento",
+                durationMinutes: Number(service?.duration_minutes ?? 60),
+                priceCents: Number(a.price_cents ?? 0),
                 clientName: client?.full_name ?? "Cliente",
               }}
             />

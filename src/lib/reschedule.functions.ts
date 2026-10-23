@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireServerSupabaseAuth } from "./supabase-auth-middleware";
 import {
   adminRescheduleInput,
+  changeServiceInput,
   decideRescheduleInput,
   requestRescheduleInput,
 } from "./reschedule-schemas";
@@ -48,4 +49,13 @@ export const adminRescheduleFn = createServerFn({ method: "POST" })
     await assertAdmin(context as never);
     const { adminReschedule } = await import("./reschedule-helpers.server");
     return adminReschedule(data.appointmentId, data.day, data.startTime);
+  });
+/** Administradora troca o procedimento (valor e duração) de um agendamento. */
+export const changeAppointmentServiceFn = createServerFn({ method: "POST" })
+  .middleware([requireServerSupabaseAuth])
+  .inputValidator((data: unknown) => changeServiceInput.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { changeAppointmentService } = await import("./service-change-helpers.server");
+    return changeAppointmentService(data.appointmentId, data.serviceId, data.acceptDelay);
   });
