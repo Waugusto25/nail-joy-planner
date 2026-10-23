@@ -1401,7 +1401,7 @@ function SlotsTab() {
                       : "border-border bg-background text-muted-foreground hover:bg-muted",
                   )}
                 >
-                  {WEEKDAYS[index].slice(0, 3)}
+                  {WEEKDAYS[index]?.slice(0, 3)}
                 </button>
               );
             })}
