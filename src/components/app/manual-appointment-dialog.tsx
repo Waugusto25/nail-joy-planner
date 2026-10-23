@@ -31,16 +31,35 @@ import {
   whatsappLinkTo,
 } from "@/lib/salon";
 
-export function ManualAppointmentDialog() {
+interface ManualAppointmentDialogProps {
+  /** Controle externo (ex.: calendário). Sem estas props o comportamento é o original. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialDay?: string;
+  hideTrigger?: boolean;
+}
+
+export function ManualAppointmentDialog({
+  open: controlledOpen,
+  onOpenChange,
+  initialDay,
+  hideTrigger = false,
+}: ManualAppointmentDialogProps = {}) {
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (value: boolean) => {
+    if (value && initialDay) setDay(initialDay);
+    setInternalOpen(value);
+    onOpenChange?.(value);
+  };
   const [mode, setMode] = useState<"cadastrada" | "nova">("cadastrada");
   const [search, setSearch] = useState("");
   const [clientId, setClientId] = useState("");
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [serviceId, setServiceId] = useState("");
-  const [day, setDay] = useState(localTodayISO());
+  const [day, setDay] = useState(initialDay ?? localTodayISO());
   const [startTime, setStartTime] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [notes, setNotes] = useState("");
@@ -171,11 +190,13 @@ export function ManualAppointmentDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <CalendarPlus size={16} /> Novo agendamento manual
-        </Button>
-      </DialogTrigger>
+      {hideTrigger ? null : (
+        <DialogTrigger asChild>
+          <Button size="sm">
+            <CalendarPlus size={16} /> Novo agendamento manual
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo agendamento manual</DialogTitle>
