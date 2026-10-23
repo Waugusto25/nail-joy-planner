@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { localTodayISO } from "@/lib/salon";
-import { buildMonthGrid, groupByDay, shiftMonth } from "@/lib/agenda-calendar";
+import { buildMonthGrid, firstName, groupByDay, nameWithNickname, shiftMonth } from "@/lib/agenda-calendar";
 import { ManualAppointmentDialog } from "./manual-appointment-dialog";
 
 export interface CalendarAppointment {
@@ -13,7 +13,9 @@ export interface CalendarAppointment {
   day: string;
   start_time: string;
   status: string;
+  /** Nome principal completo; a grade mostra só o primeiro nome. */
   clientName: string;
+  nickname?: string | null;
   serviceName: string;
 }
 
@@ -97,7 +99,7 @@ export function AgendaCalendarDialog({ appointments }: { appointments: CalendarA
                   )}>{cell.day}</span>
                   {items.slice(0, 3).map((a) => (
                     <span key={a.id} className={cn("truncate rounded px-1 text-[10px] leading-4", STATUS_STYLE[a.status] ?? "bg-muted")}>
-                      {a.start_time.slice(0, 5)} {a.clientName}
+                      {a.start_time.slice(0, 5)} {firstName(a.clientName)}
                     </span>
                   ))}
                   {items.length > 3 ? <span className="px-1 text-[10px] text-muted-foreground">+{items.length - 3}</span> : null}
@@ -124,7 +126,7 @@ export function AgendaCalendarDialog({ appointments }: { appointments: CalendarA
                     <li key={a.id} className="flex items-center gap-3 rounded-md border border-border px-2 py-1.5 text-sm">
                       <span className="w-12 font-semibold text-primary">{a.start_time.slice(0, 5)}</span>
                       <span className="min-w-0 flex-1 truncate">
-                        <span className="font-medium">{a.clientName}</span>
+                        <span className="font-medium">{nameWithNickname(a.clientName, a.nickname)}</span>
                         <span className="text-muted-foreground"> — {a.serviceName}</span>
                       </span>
                       <span className={cn("rounded-full px-2 text-[10px]", STATUS_STYLE[a.status] ?? "bg-muted")}>{statusLabel(a.status)}</span>

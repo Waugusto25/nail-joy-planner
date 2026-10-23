@@ -519,7 +519,8 @@ function AgendaTab() {
               day: a.day,
               start_time: a.start_time,
               status: a.status,
-              clientName: c?.nickname || c?.full_name || a.guest_name || "Cliente",
+              clientName: c?.full_name || a.guest_name || c?.nickname || "Cliente",
+              nickname: c?.nickname ?? null,
               serviceName: a.services?.name ?? "Procedimento",
             };
           })}
