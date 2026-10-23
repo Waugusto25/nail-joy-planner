@@ -1466,27 +1466,49 @@ function SlotsTab() {
         )}
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {WEEKDAYS.map((label, index) => {
           const rows = (slots.data ?? []).filter((s) => s.weekday === index);
+          if (rows.length === 0) {
+            // Dias sem atendimento viram uma linha discreta para não ocupar espaço.
+            return (
+              <div
+                key={label}
+                className="flex items-center justify-between rounded-md border border-dashed border-border px-3 py-1.5 text-xs text-muted-foreground"
+              >
+                <span className="font-medium">{label}</span>
+                <span>Sem atendimento</span>
+              </div>
+            );
+          }
           return (
-            <section key={label} className="surface-card p-4">
-              <p className="font-display text-lg">{label}</p>
-              {rows.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">Sem atendimento.</p>
-              ) : (
-                <ul className="mt-2 space-y-1 text-sm">
-                  {rows.map((s) => (
-                    <li key={s.id} className="flex items-center justify-between">
-                      <span>{shortTime(s.start_time)}</span>
-                      <Button variant="outline" size="sm" onClick={() => void remove(s.id)}>
-                        Remover
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+            <details key={label} className="surface-card group px-3 py-2" open>
+              <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
+                <span>{label}</span>
+                <span className="text-xs text-muted-foreground">
+                  {rows.length} {rows.length === 1 ? "horário" : "horários"}
+                  <span className="ml-1 inline-block transition-transform group-open:rotate-180">▾</span>
+                </span>
+              </summary>
+              <ul className="mt-2 flex flex-wrap gap-1.5">
+                {rows.map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-xs"
+                  >
+                    <span>{shortTime(s.start_time)}</span>
+                    <button
+                      type="button"
+                      aria-label={`Remover horário ${shortTime(s.start_time)} de ${label}`}
+                      className="rounded-full px-1 leading-none text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() => void remove(s.id)}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
           );
         })}
       </div>
