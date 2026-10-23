@@ -13,7 +13,9 @@ export interface CalendarAppointment {
   day: string;
   start_time: string;
   status: string;
+  /** Nome principal completo; a grade mostra só o primeiro nome. */
   clientName: string;
+  nickname?: string | null;
   serviceName: string;
 }
 

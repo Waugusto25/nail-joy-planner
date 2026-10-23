@@ -35,6 +35,19 @@ export function shiftMonth(year: number, month: number, delta: number): { year: 
   return { year: Math.floor(idx / 12), month: (idx % 12) + 1 };
 }
 
+/** Primeiro nome do nome principal; apelido não entra para manter a grade legível. */
+export function firstName(fullName: string | null | undefined, fallback = "Cliente"): string {
+  const first = (fullName ?? "").trim().split(/\s+/)[0];
+  return first || fallback;
+}
+
+/** Nome do detalhe do dia: "Maria (Sogra)" ou só "Maria". */
+export function nameWithNickname(fullName: string | null | undefined, nickname: string | null | undefined): string {
+  const base = firstName(fullName);
+  const nick = (nickname ?? "").trim();
+  return nick && nick.toLowerCase() !== base.toLowerCase() ? `${base} (${nick})` : base;
+}
+
 /** Agrupa itens por dia, ordenados por horário de início. */
 export function groupByDay<T extends { day: string; start_time: string }>(items: T[]): Map<string, T[]> {
   const map = new Map<string, T[]>();
