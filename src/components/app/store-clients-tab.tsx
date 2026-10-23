@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { ChevronUp, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,8 @@ export function StoreClientsTab() {
   const [form, setForm] = useState<ClientForm>(EMPTY);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  // Formulário começa recolhido para a lista de clientes ficar visível sem rolar.
+  const [formOpen, setFormOpen] = useState(false);
 
   const clients = useQuery({ queryKey: ["store-clients"], queryFn: fetchStoreClients });
   const catalogs = useQuery({ queryKey: ["store-catalog-links"], queryFn: fetchActiveCatalogs });
@@ -79,6 +82,7 @@ export function StoreClientsTab() {
     toast.success(editingId ? "Cliente atualizado." : "Cliente cadastrado na loja.");
     setForm(EMPTY);
     setEditingId(null);
+    setFormOpen(false);
     await queryClient.invalidateQueries({ queryKey: ["store-clients"] });
   }
 
@@ -112,10 +116,17 @@ export function StoreClientsTab() {
 
   return (
     <div className="space-y-4">
+      {formOpen ? (
       <section className="surface-card space-y-3 p-5">
-        <h3 className="font-display text-lg">
-          {editingId ? "Editar cliente da loja" : "Novo cliente da loja"}
-        </h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-display text-lg">
+            {editingId ? "Editar cliente da loja" : "Novo cliente da loja"}
+          </h3>
+          <Button size="sm" variant="ghost" className="gap-1" aria-expanded
+            onClick={() => { setFormOpen(false); setEditingId(null); setForm(EMPTY); }}>
+            Recolher <ChevronUp size={16} />
+          </Button>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <Label htmlFor="sc-name">Nome</Label>
@@ -161,19 +172,26 @@ export function StoreClientsTab() {
           <Button onClick={() => void save()}>
             {editingId ? "Salvar alterações" : "Cadastrar cliente"}
           </Button>
-          {editingId ? (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setEditingId(null);
-                setForm(EMPTY);
-              }}
-            >
-              Cancelar edição
-            </Button>
-          ) : null}
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setEditingId(null);
+              setForm(EMPTY);
+              setFormOpen(false);
+            }}
+          >
+            {editingId ? "Cancelar edição" : "Cancelar"}
+          </Button>
         </div>
       </section>
+      ) : (
+        <section className="surface-card flex items-center justify-between gap-3 px-5 py-3">
+          <h3 className="font-display text-base">Novo cliente da loja</h3>
+          <Button size="sm" className="gap-1" aria-expanded={false} onClick={() => setFormOpen(true)}>
+            <Plus size={16} /> Novo
+          </Button>
+        </section>
+      )}
 
       <div className="space-y-1">
         <Label htmlFor="sc-search">Buscar cliente</Label>
@@ -219,6 +237,8 @@ export function StoreClientsTab() {
                   variant="secondary"
                   onClick={() => {
                     setEditingId(c.id);
+                    setFormOpen(true);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                     setForm({
                       full_name: c.full_name,
                       phone: c.phone ?? "",
