@@ -5,12 +5,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase-client";
 import { useAppSettings } from "@/hooks/useSettings";
 import { useScheduleMonths } from "@/hooks/useScheduleMonths";
-import { monthKeysFrom, monthLabel } from "@/lib/months";
+import { monthLabel } from "@/lib/months";
+import { ScheduleMonthCalendar } from "./schedule-month-calendar";
+import { canChangeScheduleMonth, scheduleCalendarMonths, scheduleCalendarYears, scheduleCurrentMonth } from "@/lib/schedule-month-calendar";
 
 /** Gerenciamento de meses ativos, recados de recesso e antecedência máxima. */
 export function MonthsManager() {
@@ -19,31 +20,47 @@ export function MonthsManager() {
   const settings = useAppSettings();
   const [advance, setAdvance] = useState("2");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [currentMonth, setCurrentMonth] = useState(() => scheduleCurrentMonth());
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [savingMonth, setSavingMonth] = useState<string | null>(null);
+
+  useEffect(() => {
+    const refresh = () => setCurrentMonth(scheduleCurrentMonth());
+    const timer = window.setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+    refresh();
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); };
+  }, []);
 
   useEffect(() => {
     if (settings.data) setAdvance(String(settings.data.max_advance_months));
   }, [settings.data?.max_advance_months]);
 
-  // Mostra o mês atual e os próximos 11, cobrindo o ano vigente e o seguinte.
-  const keys = useMemo(() => monthKeysFrom(12), []);
+  const years = scheduleCalendarYears(currentMonth);
+  const year = selectedYear !== null && years.includes(selectedYear) ? selectedYear : years[0];
   const byMonth = useMemo(
     () => new Map((months.data ?? []).map((m) => [m.month, m])),
     [months.data],
   );
 
   async function saveMonth(month: string, patch: { active?: boolean; message?: string | null }) {
+    if (savingMonth || !canChangeScheduleMonth(month, currentMonth)) return;
     const current = byMonth.get(month);
     const row = {
       month,
       active: patch.active ?? current?.active ?? true,
       message: patch.message !== undefined ? patch.message : (current?.message ?? null),
     };
-    const { error } = await supabase.from("schedule_months").upsert(row, { onConflict: "month" });
-    if (error) {
+    setSavingMonth(month);
+    try {
+      const { error } = await supabase.from("schedule_months").upsert(row, { onConflict: "month" });
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["schedule-months"] });
+    } catch {
       toast.error("Não foi possível salvar esse mês.");
-      return;
+    } finally {
+      setSavingMonth(null);
     }
-    await queryClient.invalidateQueries({ queryKey: ["schedule-months"] });
   }
 
   async function saveAdvance() {
@@ -64,10 +81,6 @@ export function MonthsManager() {
     <section className="surface-card space-y-4 p-5">
       <div>
         <h2 className="font-display text-lg">Gerenciamento de meses e disponibilidade</h2>
-        <p className="text-sm text-muted-foreground">
-          Desligue um mês para bloquear novos agendamentos nele (férias, reforma) e deixe um recado
-          para as clientes. As folgas por dia da semana e as datas bloqueadas continuam valendo.
-        </p>
       </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-lg bg-muted/40 p-3">
@@ -91,27 +104,23 @@ export function MonthsManager() {
         </p>
       </div>
 
-      <ul className="space-y-3">
-        {keys.map((key) => {
+      {months.isPending ? <p role="status" className="text-sm text-muted-foreground">Carregando meses…</p> : null}
+      {months.isError ? <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+        Não foi possível carregar os meses.
+        <Button variant="outline" onClick={() => void months.refetch()}>Tentar novamente</Button>
+      </div> : null}
+      <ScheduleMonthCalendar currentMonth={currentMonth} year={year} activeMonths={byMonth}
+        savingMonth={savingMonth} disabled={months.isPending || months.isError}
+        onYearChange={setSelectedYear} onToggle={(key, active) => void saveMonth(key, { active })} />
+      <details className="border-t border-border pt-3">
+        <summary className="cursor-pointer text-sm font-medium">Recados de férias / recesso</summary>
+        <ul className="mt-3 space-y-3">
+        {scheduleCalendarMonths(year, currentMonth).filter(({ key, past }) => !past && byMonth.get(key)?.active === false).map(({ key }) => {
           const row = byMonth.get(key);
-          const active = row?.active ?? true;
           const message = drafts[key] ?? row?.message ?? "";
           return (
             <li key={key} className="rounded-lg border border-border p-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-medium">{monthLabel(key)}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {active ? "Atendendo" : "Fechado"}
-                  </span>
-                  <Switch
-                    checked={active}
-                    aria-label={`Atendimento em ${monthLabel(key)}`}
-                    onCheckedChange={(checked) => void saveMonth(key, { active: checked })}
-                  />
-                </div>
-              </div>
-              {!active ? (
+              <span className="font-medium">{monthLabel(key)}</span>
                 <div className="mt-3 space-y-2">
                   <Label htmlFor={`msg-${key}`} className="text-xs">
                     Recado de férias / recesso
@@ -127,16 +136,17 @@ export function MonthsManager() {
                   <Button
                     size="sm"
                     variant="outline"
+                    disabled={savingMonth !== null || months.isPending || months.isError}
                     onClick={() => void saveMonth(key, { message: message.trim() || null })}
                   >
                     Salvar recado
                   </Button>
                 </div>
-              ) : null}
             </li>
           );
         })}
       </ul>
+      </details>
     </section>
   );
 }
