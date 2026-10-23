@@ -27,6 +27,7 @@ import {
 } from "@/lib/calendar.functions";
 import { clearCancelledForAdminFn, hideCancelledForAdminFn } from "@/lib/cancel.functions";
 import { ManualAppointmentDialog } from "@/components/app/manual-appointment-dialog";
+import { AgendaCalendarDialog } from "@/components/app/agenda-calendar-dialog";
 import { AdminRescheduleDialog } from "@/components/app/admin-reschedule-dialog";
 import { AdminEditServiceDialog } from "@/components/app/admin-edit-service-dialog";
 import { RescheduleRequests } from "@/components/app/reschedule-requests";
@@ -509,7 +510,20 @@ function AgendaTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        <AgendaCalendarDialog
+          appointments={rows.map((a) => {
+            const c = (clients.data ?? []).find((p) => p.id === a.client_id);
+            return {
+              id: a.id,
+              day: a.day,
+              start_time: a.start_time,
+              status: a.status,
+              clientName: c?.nickname || c?.full_name || a.guest_name || "Cliente",
+              serviceName: a.services?.name ?? "Procedimento",
+            };
+          })}
+        />
         <ManualAppointmentDialog />
       </div>
       <Tabs defaultValue="pendentes">
