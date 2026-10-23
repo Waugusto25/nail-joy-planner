@@ -129,7 +129,7 @@ function AdminPanel() {
             <TabsTrigger value="horarios">Horários</TabsTrigger>
             <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
             <TabsTrigger value="loja">Loja</TabsTrigger>
-            <TabsTrigger value="servicos">Serviços</TabsTrigger>
+            <TabsTrigger value="servicos">Procedimentos</TabsTrigger>
             <TabsTrigger value="eventos">Eventos</TabsTrigger>
             <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger>
             <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
