@@ -25,8 +25,7 @@ export function buildMonthGrid(year: number, month: number): CalendarCell[] {
   const cells: CalendarCell[] = [];
   for (let i = 0; i < 42; i++) {
     const iso = toISO(year, month, 1 - firstWeekday + i);
-    const [, m, d] = iso.split("-").map(Number);
-    cells.push({ iso, day: d, inMonth: m === month });
+    cells.push({ iso, day: Number(iso.slice(8, 10)), inMonth: Number(iso.slice(5, 7)) === month });
   }
   return cells;
 }

@@ -5,7 +5,7 @@ describe("agenda-calendar", () => {
   it("outubro/2026 começa na quinta e tem 42 células", () => {
     const grid = buildMonthGrid(2026, 10);
     expect(grid).toHaveLength(42);
-    expect(grid[0].iso).toBe("2026-09-27");
+    expect(grid[0]?.iso).toBe("2026-09-27");
     expect(grid[4]).toEqual({ iso: "2026-10-01", day: 1, inMonth: true });
   });
 

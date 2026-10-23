@@ -33,7 +33,8 @@ function statusLabel(s: string): string {
 /** Visão mensal estilo Google Agenda: somente leitura + atalho de agendamento no dia. */
 export function AgendaCalendarDialog({ appointments }: { appointments: CalendarAppointment[] }) {
   const today = localTodayISO();
-  const [ty, tm] = today.split("-").map(Number);
+  const ty = Number(today.slice(0, 4));
+  const tm = Number(today.slice(5, 7));
   const [ym, setYm] = useState({ year: ty, month: tm });
   const [selected, setSelected] = useState<string | null>(null);
   const [bookDay, setBookDay] = useState<string | null>(null);
