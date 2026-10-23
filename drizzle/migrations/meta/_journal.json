@@ -29,6 +29,13 @@
       "when": 1791422100773,
       "tag": "0003_reset_paid_amount_when_pending",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792722378896,
+      "tag": "0004_store_orders_delivered_on",
+      "breakpoints": true
     }
   ]
 }

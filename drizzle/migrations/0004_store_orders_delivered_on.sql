@@ -1,0 +1,1 @@
+ALTER TABLE public.store_orders ADD COLUMN IF NOT EXISTS delivered_on date;
