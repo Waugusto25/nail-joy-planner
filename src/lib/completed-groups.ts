@@ -34,11 +34,12 @@ export function groupCompletedAppointments<T extends CompletedAppointmentLike>(
     const items = list
       .slice()
       .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
+    const first = items[0] as T;
     return {
       key,
-      clientId: items[0].client_id,
-      day: items[0].day,
-      firstStart: items[0].start_time,
+      clientId: first.client_id,
+      day: first.day,
+      firstStart: first.start_time,
       totalCents: items.reduce((s, i) => s + Number(i.price_cents ?? 0), 0),
       serviceNames: [...new Set(items.map((i) => i.serviceName))],
       items,
