@@ -482,6 +482,12 @@ function AgendaTab() {
     .filter((a) => a.status === "concluido")
     .slice()
     .sort((a, b) => b.day.localeCompare(a.day));
+  const completedGroups = groupCompletedAppointments(
+    concluidos.map((a) => ({
+      ...a,
+      serviceName: (a.services as { name: string } | null)?.name ?? "Procedimento",
+    })),
+  );
   const cancelados = rows
     .filter((a) => a.status === "cancelado" && !a.admin_hidden_at)
     .slice()
@@ -567,11 +573,69 @@ function AgendaTab() {
         </TabsContent>
 
 
-        <TabsContent value="concluidos" className="space-y-3 pt-4">
-          {concluidos.length === 0 ? (
+        <TabsContent value="concluidos" className="space-y-2 pt-4">
+          {completedGroups.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum atendimento concluído.</p>
           ) : (
-            concluidos.map((a) => renderCard(a, "outro"))
+            <>
+              {completedGroups.slice(0, completedLimit).map((g) => {
+                const client = (clients.data ?? []).find((c) => c.id === g.clientId) ?? null;
+                const open = openGroup === g.key;
+                return (
+                  <article key={g.key} className="surface-card overflow-hidden">
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      onClick={() => setOpenGroup(open ? null : g.key)}
+                      className="flex w-full items-center gap-3 p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="truncate font-display text-base">
+                            {client?.full_name ?? "Cliente"}
+                          </p>
+                          <p className="shrink-0 text-sm font-semibold">
+                            {formatPrice(g.totalCents)}
+                          </p>
+                        </div>
+                        <p className="text-xs capitalize text-muted-foreground">
+                          {formatDayLabel(g.day)} · {shortTime(g.firstStart)}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {g.serviceNames.map((s) => (
+                            <span key={s} className="chip px-2 py-0.5 text-[11px]">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <ChevronDown
+                        size={18}
+                        className={cn(
+                          "shrink-0 text-muted-foreground transition-transform",
+                          open && "rotate-180",
+                        )}
+                      />
+                    </button>
+                    {open ? (
+                      <div className="space-y-2 border-t border-border p-2">
+                        {g.items.map((a) => renderCard(a, "outro"))}
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+              {completedGroups.length > completedLimit ? (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setCompletedLimit((n) => n + 15)}
+                >
+                  Carregar mais ({Math.min(completedLimit, completedGroups.length)} de{" "}
+                  {completedGroups.length})
+                </Button>
+              ) : null}
+            </>
           )}
         </TabsContent>
 
