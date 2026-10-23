@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Info, Lock, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, Copy, Info, Lock, Plus, Trash2, X } from "lucide-react";
+import { CopySlotsDialog } from "@/components/app/copy-slots-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -1287,6 +1288,7 @@ function SlotsTab() {
   const queryClient = useQueryClient();
   const [weekdays, setWeekdays] = useState<number[]>([1]);
   const [time, setTime] = useState("09:00");
+  const [copyFrom, setCopyFrom] = useState<number | null>(null);
   const [breakWeekdays, setBreakWeekdays] = useState<number[]>([1]);
   const [breakStart, setBreakStart] = useState("12:00");
   const [breakEnd, setBreakEnd] = useState("13:00");
@@ -1549,6 +1551,12 @@ function SlotsTab() {
       </section>
       </Collapsible>
 
+      <CopySlotsDialog
+        sourceDay={copyFrom}
+        rows={slots.data ?? []}
+        onClose={() => setCopyFrom(null)}
+        onDone={() => queryClient.invalidateQueries({ queryKey: ["admin-slots"] })}
+      />
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {WEEKDAYS.map((label, index) => {
           const rows = (slots.data ?? []).filter((s) => s.weekday === index);
@@ -1568,9 +1576,24 @@ function SlotsTab() {
             <details key={label} className="surface-card group px-3 py-2" open>
               <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
                 <span>{label}</span>
-                <span className="text-xs text-muted-foreground">
-                  {rows.length} {rows.length === 1 ? "horário" : "horários"}
-                  <span className="ml-1 inline-block transition-transform group-open:rotate-180">▾</span>
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <button
+                    type="button"
+                    aria-label={`Copiar horários de ${label} para outros dias`}
+                    className="flex items-center gap-1 rounded-full px-1.5 py-0.5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setCopyFrom(index);
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" aria-hidden />
+                    Copiar para...
+                  </button>
+                  <span>
+                    {rows.length} {rows.length === 1 ? "horário" : "horários"}
+                    <span className="ml-1 inline-block transition-transform group-open:rotate-180">▾</span>
+                  </span>
                 </span>
               </summary>
               <ul className="mt-2 flex flex-wrap gap-1.5">
