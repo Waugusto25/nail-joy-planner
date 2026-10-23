@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Info, Lock, Trash2 } from "lucide-react";
+import { ChevronDown, Info, Lock, Plus, Trash2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -1279,7 +1279,7 @@ function ServicesTab() {
 
 function SlotsTab() {
   const queryClient = useQueryClient();
-  const [weekday, setWeekday] = useState(1);
+  const [weekdays, setWeekdays] = useState<number[]>([1]);
   const [time, setTime] = useState("09:00");
   const [breakWeekday, setBreakWeekday] = useState(1);
   const [breakStart, setBreakStart] = useState("12:00");
@@ -1344,13 +1344,20 @@ function SlotsTab() {
   }
 
   async function add() {
-    const { error } = await supabase
-      .from("schedule_slots")
-      .insert({ weekday, start_time: `${time}:00` });
-    if (error) {
-      toast.error("Esse horário já existe.");
+    if (weekdays.length === 0) {
+      toast.error("Selecione ao menos um dia.");
       return;
     }
+    // One insert per day so an existing duplicate doesn't block the other days.
+    const results = await Promise.all(
+      weekdays.map((weekday) =>
+        supabase.from("schedule_slots").insert({ weekday, start_time: `${time}:00` }),
+      ),
+    );
+    const created = results.filter((r) => !r.error).length;
+    const skipped = results.length - created;
+    if (created > 0) toast.success(`${created} horário(s) adicionado(s).`);
+    if (skipped > 0) toast.error(`${skipped} dia(s) já tinham esse horário.`);
     await queryClient.invalidateQueries();
   }
 
@@ -1370,32 +1377,51 @@ function SlotsTab() {
     <div className="space-y-5">
       <MonthsManager />
       <SpecialDaysManager />
-      <section className="surface-card flex flex-wrap items-end gap-3 p-5">
+      <section className="surface-card space-y-3 p-5">
+        <h2 className="font-display text-lg">Cadastrar Novo Horário</h2>
         <div className="space-y-1">
-          <Label htmlFor="slot-weekday">Dia da semana</Label>
-          <select
-            id="slot-weekday"
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            value={weekday}
-            onChange={(e) => setWeekday(Number(e.target.value))}
-          >
-            {WEEKDAYS.map((label, index) => (
-              <option key={label} value={index}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <span className="text-sm font-medium">Dias da semana</span>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Dias da semana">
+            {[1, 2, 3, 4, 5, 6, 0].map((index) => {
+              const active = weekdays.includes(index);
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() =>
+                    setWeekdays((prev) =>
+                      prev.includes(index) ? prev.filter((d) => d !== index) : [...prev, index],
+                    )
+                  }
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  {WEEKDAYS[index]?.slice(0, 3)}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="slot-time">Horário</Label>
-          <Input
-            id="slot-time"
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-          />
+        <div className="flex items-end gap-2">
+          <div className="space-y-1">
+            <Label htmlFor="slot-time">Horário</Label>
+            <Input
+              id="slot-time"
+              type="time"
+              className="w-32"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
+          <Button className="rounded-full" onClick={() => void add()}>
+            <Plus className="h-4 w-4" aria-hidden /> Adicionar horário
+          </Button>
         </div>
-        <Button onClick={() => void add()}>Adicionar horário</Button>
       </section>
 
       <Collapsible asChild>
