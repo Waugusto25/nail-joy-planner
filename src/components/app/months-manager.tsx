@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,9 @@ export function MonthsManager() {
   const [pickedNotice, setNoticeMonth] = useState<string>("");
   const noticeMonth = noticeOptions.includes(pickedNotice) ? pickedNotice : (noticeOptions[0] ?? "");
   const noticeText = drafts[noticeMonth] ?? byMonth.get(noticeMonth)?.message ?? "";
+  // Recados ficam recolhidos por padrão: configurados raramente, não precisam ocupar a tela.
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const noticeCount = noticeOptions.filter((k) => byMonth.get(k)?.message).length;
 
   async function saveNotice() {
     if (!(await saveMonth(noticeMonth, { message: noticeText.trim() || null }))) return;
@@ -128,7 +132,19 @@ export function MonthsManager() {
         savingMonth={savingMonth} disabled={months.isPending || months.isError}
         onYearChange={setSelectedYear} onToggle={(key, active) => void saveMonth(key, { active })} />
       <div className="space-y-2 border-t border-border pt-3">
-        <h3 className="text-sm font-medium">Recados de férias / recesso</h3>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-expanded={noticeOpen}
+          onClick={() => setNoticeOpen((o) => !o)}
+        >
+          <h3 className="text-sm font-medium">Recados de férias / recesso</h3>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            {noticeCount} configurado{noticeCount === 1 ? "" : "s"}
+            <ChevronDown size={14} className={noticeOpen ? "rotate-180 transition-transform" : "transition-transform"} />
+          </span>
+        </button>
+        {noticeOpen ? (<>
         <Label htmlFor="notice-month" className="text-xs">Mês do recado</Label>
         <select
           id="notice-month"
@@ -158,6 +174,7 @@ export function MonthsManager() {
         >
           Salvar recado
         </Button>
+        </>) : null}
       </div>
     </section>
   );
