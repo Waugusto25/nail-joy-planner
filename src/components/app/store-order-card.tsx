@@ -17,6 +17,7 @@ import {
   orderStatusMessage,
   whatsappLinkTo,
 } from "@/lib/salon";
+import { StoreDeliveryDateDialog } from "@/components/app/store-delivery-date-dialog";
 import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { StoreInvoiceExportDialog } from "@/components/app/store-invoice-export-dialog";
 import { StoreOrderAddItemsDialog } from "@/components/app/store-order-add-items-dialog";
@@ -60,6 +61,7 @@ export function StoreOrderCard({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [deliveryAsk, setDeliveryAsk] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [settling, setSettling] = useState<StoreOrderInstallment | null>(null);
@@ -130,7 +132,20 @@ export function StoreOrderCard({
   }
 
   async function updateStatus(status: string) {
-    const { error } = await supabase.from("store_orders").update({ status }).eq("id", order.id);
+    // Entrega exige confirmar o dia real; a data fica registrada no pedido.
+    if (status === "entregue" && order.status !== "entregue") {
+      setDeliveryAsk(true);
+      return;
+    }
+    await saveStatus(status, null);
+  }
+
+  async function saveStatus(status: string, deliveredOn: string | null) {
+    setDeliveryAsk(false);
+    const { error } = await supabase
+      .from("store_orders")
+      .update({ status, delivered_on: status === "entregue" ? deliveredOn ?? order.delivered_on : null })
+      .eq("id", order.id);
     if (error) {
       toast.error("Não foi possível atualizar o status.");
       return;
@@ -322,8 +337,9 @@ export function StoreOrderCard({
             ) : null}
           </p>
           <p className="text-xs text-muted-foreground">
-            {order.client_phone ? `${formatPhone(order.client_phone)} · ` : ""}Entrega prevista:{" "}
-            {order.delivery_date ? formatISODate(order.delivery_date) : "a definir"}
+            {order.client_phone ? `${formatPhone(order.client_phone)} · ` : ""}{order.status === "entregue" && order.delivered_on
+              ? `Entregue: ${formatISODate(order.delivered_on)}`
+              : "Aguardando entrega"}
           </p>
         </div>
         <Badge variant="secondary">{ORDER_STATUS_LABELS[order.status] ?? order.status}</Badge>
@@ -603,6 +619,12 @@ export function StoreOrderCard({
         onOpenChange={(v) => {
           if (!v) setSettling(null);
         }}
+      />
+      <StoreDeliveryDateDialog
+        open={deliveryAsk}
+        clientName={order.client_name}
+        onCancel={() => setDeliveryAsk(false)}
+        onConfirm={(date) => void saveStatus("entregue", date)}
       />
     </article>
   );

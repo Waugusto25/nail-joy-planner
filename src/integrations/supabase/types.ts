@@ -842,6 +842,7 @@ export type Database = {
           client_name: string
           client_phone: string
           created_at: string
+          delivered_on: string | null
           delivery_date: string | null
           id: string
           installments: number
@@ -858,6 +859,7 @@ export type Database = {
           client_name: string
           client_phone?: string
           created_at?: string
+          delivered_on?: string | null
           delivery_date?: string | null
           id?: string
           installments?: number
@@ -874,6 +876,7 @@ export type Database = {
           client_name?: string
           client_phone?: string
           created_at?: string
+          delivered_on?: string | null
           delivery_date?: string | null
           id?: string
           installments?: number
