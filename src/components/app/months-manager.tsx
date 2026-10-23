@@ -42,9 +42,22 @@ export function MonthsManager() {
     () => new Map((months.data ?? []).map((m) => [m.month, m])),
     [months.data],
   );
+  // Recados: meses não passados dos dois anos exibidos; independente do clique liga/desliga.
+  const noticeOptions = years.flatMap((y) =>
+    scheduleCalendarMonths(y, currentMonth).filter((m) => !m.past).map((m) => m.key),
+  );
+  const [pickedNotice, setNoticeMonth] = useState<string>("");
+  const noticeMonth = noticeOptions.includes(pickedNotice) ? pickedNotice : (noticeOptions[0] ?? "");
+  const noticeText = drafts[noticeMonth] ?? byMonth.get(noticeMonth)?.message ?? "";
+
+  async function saveNotice() {
+    if (!(await saveMonth(noticeMonth, { message: noticeText.trim() || null }))) return;
+    setDrafts((d) => { const { [noticeMonth]: _, ...rest } = d; return rest; });
+    toast.success(`Recado de ${monthLabel(noticeMonth)} salvo.`);
+  }
 
   async function saveMonth(month: string, patch: { active?: boolean; message?: string | null }) {
-    if (savingMonth || !canChangeScheduleMonth(month, currentMonth)) return;
+    if (savingMonth || !canChangeScheduleMonth(month, currentMonth)) return false;
     const current = byMonth.get(month);
     const row = {
       month,
@@ -56,8 +69,10 @@ export function MonthsManager() {
       const { error } = await supabase.from("schedule_months").upsert(row, { onConflict: "month" });
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ["schedule-months"] });
+      return true;
     } catch {
       toast.error("Não foi possível salvar esse mês.");
+      return false;
     } finally {
       setSavingMonth(null);
     }
@@ -112,41 +127,38 @@ export function MonthsManager() {
       <ScheduleMonthCalendar currentMonth={currentMonth} year={year} activeMonths={byMonth}
         savingMonth={savingMonth} disabled={months.isPending || months.isError}
         onYearChange={setSelectedYear} onToggle={(key, active) => void saveMonth(key, { active })} />
-      <details className="border-t border-border pt-3">
-        <summary className="cursor-pointer text-sm font-medium">Recados de férias / recesso</summary>
-        <ul className="mt-3 space-y-3">
-        {scheduleCalendarMonths(year, currentMonth).filter(({ key, past }) => !past && byMonth.get(key)?.active === false).map(({ key }) => {
-          const row = byMonth.get(key);
-          const message = drafts[key] ?? row?.message ?? "";
-          return (
-            <li key={key} className="rounded-lg border border-border p-3">
-              <span className="font-medium">{monthLabel(key)}</span>
-                <div className="mt-3 space-y-2">
-                  <Label htmlFor={`msg-${key}`} className="text-xs">
-                    Recado de férias / recesso
-                  </Label>
-                  <Textarea
-                    id={`msg-${key}`}
-                    rows={2}
-                    maxLength={200}
-                    value={message}
-                    placeholder="Estaremos em recesso de 01/01 a 15/01. Voltamos em breve!"
-                    onChange={(e) => setDrafts((d) => ({ ...d, [key]: e.target.value }))}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={savingMonth !== null || months.isPending || months.isError}
-                    onClick={() => void saveMonth(key, { message: message.trim() || null })}
-                  >
-                    Salvar recado
-                  </Button>
-                </div>
-            </li>
-          );
-        })}
-      </ul>
-      </details>
+      <div className="space-y-2 border-t border-border pt-3">
+        <h3 className="text-sm font-medium">Recados de férias / recesso</h3>
+        <Label htmlFor="notice-month" className="text-xs">Mês do recado</Label>
+        <select
+          id="notice-month"
+          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+          value={noticeMonth}
+          onChange={(e) => setNoticeMonth(e.target.value)}
+        >
+          {noticeOptions.map((key) => (
+            <option key={key} value={key}>
+              {monthLabel(key)}{byMonth.get(key)?.message ? " • com recado" : ""}
+            </option>
+          ))}
+        </select>
+        <Textarea
+          aria-label="Recado de férias / recesso"
+          rows={2}
+          maxLength={200}
+          value={noticeText}
+          placeholder="Estaremos em recesso de 01/01 a 15/01. Voltamos em breve!"
+          onChange={(e) => setDrafts((d) => ({ ...d, [noticeMonth]: e.target.value }))}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!noticeMonth || savingMonth !== null || months.isPending || months.isError}
+          onClick={() => void saveNotice()}
+        >
+          Salvar recado
+        </Button>
+      </div>
     </section>
   );
 }
