@@ -70,9 +70,17 @@
   --color-input-foreground: var(--input-foreground);
   --color-input-placeholder: var(--input-placeholder);
   --color-card-accent: var(--card-border-accent);
+  --color-schedule-enabled: var(--schedule-enabled);
+  --color-schedule-enabled-foreground: var(--schedule-enabled-foreground);
+  --color-schedule-past: var(--schedule-past);
+  --color-schedule-past-foreground: var(--schedule-past-foreground);
 }
 
 :root {
+  --schedule-enabled: oklch(0.88 0.075 350);
+  --schedule-enabled-foreground: oklch(0.27 0.075 350);
+  --schedule-past: oklch(0.93 0 0);
+  --schedule-past-foreground: oklch(0.5 0 0);
   --radius: 1rem;
   --background: oklch(0.972 0.016 350);
   --foreground: oklch(0.27 0.075 350);
@@ -121,6 +129,10 @@
 }
 
 .dark {
+  --schedule-enabled: oklch(0.42 0.09 350);
+  --schedule-enabled-foreground: oklch(0.97 0.015 350);
+  --schedule-past: oklch(0.28 0 0);
+  --schedule-past-foreground: oklch(0.72 0 0);
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
