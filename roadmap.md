@@ -1,7 +1,8 @@
 # Calendário de meses — Horários
-- [ ] Substituir lista por grade anual, preservar configurações e recados.
-- [ ] Aplicar dois anos móveis e bloquear meses passados no horário de Brasília.
-- [ ] Verificar regras com testes e calendário na interface.
+- [x] Substituir lista por grade anual, preservar configurações e recados.
+- [x] Aplicar dois anos móveis e bloquear meses passados no horário de Brasília.
+- [x] Verificar regras com 12 testes aprovados e calendário isolado na interface.
+- [ ] Validar gravação no painel autenticado: conta solicitante sem usuário correspondente no app; precisa entrar como administradora no preview.
 
 # Agendamento Manual
 - [x] Integrar seleção visual de meses, datas e vagas por duração do procedimento.

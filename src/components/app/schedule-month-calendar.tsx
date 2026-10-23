@@ -36,7 +36,7 @@ export function ScheduleMonthCalendar({ currentMonth, year, activeMonths, saving
               disabled={past || disabled || savingMonth !== null}
               onClick={() => onToggle(key, !active)}
               className={cn("h-24 min-w-0 flex-col gap-1 rounded-lg px-1 shadow-none disabled:opacity-100",
-                past ? "border-border bg-muted text-muted-foreground" : active
+                past ? "border-border bg-schedule-past text-schedule-past-foreground" : active
                   ? "border-schedule-enabled bg-schedule-enabled text-schedule-enabled-foreground hover:bg-schedule-enabled/90 hover:text-schedule-enabled-foreground"
                   : "bg-card text-card-foreground")}
             >
