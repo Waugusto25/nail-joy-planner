@@ -118,46 +118,46 @@ function AdminPanel() {
         <Tabs defaultValue="agenda">
           <TabsList className="-mx-4 flex h-auto w-[calc(100%+2rem)] max-w-none flex-nowrap justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-4 py-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:w-full sm:rounded-lg sm:bg-muted sm:px-1 [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
-            <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
             <TabsTrigger value="clientes">Clientes</TabsTrigger>
-            <TabsTrigger value="servicos">Serviços</TabsTrigger>
-            <TabsTrigger value="horarios">Horários</TabsTrigger>
-            <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger>
-            <TabsTrigger value="eventos">Eventos</TabsTrigger>
-            <TabsTrigger value="loja">Loja</TabsTrigger>
             <TabsTrigger value="pedidos">Pedidos da Loja</TabsTrigger>
+            <TabsTrigger value="horarios">Horários</TabsTrigger>
             <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
+            <TabsTrigger value="loja">Loja</TabsTrigger>
+            <TabsTrigger value="servicos">Serviços</TabsTrigger>
+            <TabsTrigger value="eventos">Eventos</TabsTrigger>
+            <TabsTrigger value="fidelidade">Fidelidade</TabsTrigger>
+            <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           </TabsList>
           <TabsContent value="agenda" className="pt-6">
             <AgendaTab />
           </TabsContent>
-          <TabsContent value="financeiro" className="pt-6">
-            <FinanceTab />
-          </TabsContent>
           <TabsContent value="clientes" className="pt-6">
             <ClientsTabs />
-          </TabsContent>
-          <TabsContent value="servicos" className="pt-6">
-            <ServicesTab />
-          </TabsContent>
-          <TabsContent value="horarios" className="pt-6">
-            <SlotsTab />
-          </TabsContent>
-          <TabsContent value="fidelidade" className="pt-6">
-            <LoyaltyTab />
-          </TabsContent>
-          <TabsContent value="eventos" className="pt-6">
-            <EventsTab />
-          </TabsContent>
-          <TabsContent value="loja" className="pt-6">
-            <ProductsTab />
           </TabsContent>
           <TabsContent value="pedidos" className="pt-6">
             <StoreOrdersTab />
           </TabsContent>
+          <TabsContent value="horarios" className="pt-6">
+            <SlotsTab />
+          </TabsContent>
           <TabsContent value="catalogos" className="pt-6">
             <CatalogsTab />
+          </TabsContent>
+          <TabsContent value="loja" className="pt-6">
+            <ProductsTab />
+          </TabsContent>
+          <TabsContent value="servicos" className="pt-6">
+            <ServicesTab />
+          </TabsContent>
+          <TabsContent value="eventos" className="pt-6">
+            <EventsTab />
+          </TabsContent>
+          <TabsContent value="fidelidade" className="pt-6">
+            <LoyaltyTab />
+          </TabsContent>
+          <TabsContent value="financeiro" className="pt-6">
+            <FinanceTab />
           </TabsContent>
           <TabsContent value="dashboard" className="pt-6">
             <StoreDashboardTab />
