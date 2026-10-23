@@ -411,7 +411,7 @@ export function StoreOrderForm({
           ) : null}
         </div>
         <div className="space-y-1">
-          <Label htmlFor="order-delivery">Data prevista de entrega</Label>
+          <Label htmlFor="order-delivery">Data de Pagamento</Label>
           <Input
             id="order-delivery"
             type="date"

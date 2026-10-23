@@ -76,6 +76,8 @@ export type StoreOrderWithDetails = {
   payment_method: string | null;
   installments: number;
   delivery_date: string | null;
+  /** Dia em que a loja entregou a encomenda à cliente. */
+  delivered_on: string | null;
   status: string;
   notes: string | null;
   items: StoreOrderItem[];
@@ -645,7 +647,7 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
     .select(
       // O apontamento explícito da chave estrangeira evita ambiguidade: parcelas
       // referenciam store_orders por order_id e por merged_into_order_id.
-      "id, created_at, archived_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order, start_installment, installments_count), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents, mp_payment_id, mp_method, mp_status, pix_copia_e_cola, pix_qr_code_base64, boleto_linha_digitavel, boleto_pdf_url, boleto_expires_on)",
+      "id, created_at, archived_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, delivered_on, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order, start_installment, installments_count), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents, mp_payment_id, mp_method, mp_status, pix_copia_e_cola, pix_qr_code_base64, boleto_linha_digitavel, boleto_pdf_url, boleto_expires_on)",
     )
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -665,6 +667,7 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
       payment_method: row.payment_method,
       installments: Number(row.installments ?? 1),
       delivery_date: row.delivery_date,
+      delivered_on: row.delivered_on ?? null,
       status: row.status,
       notes: row.notes,
       items: [...(row.store_order_items ?? [])]
