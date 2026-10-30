@@ -2,7 +2,7 @@
 - [x] Criar envio seguro, configurações e teste administrativo; painel autenticado e bloqueio HTTP conferidos.
 - [x] Conectar mensagens do salão e somente vencimento/recebimento na Loja; outbox, gatilhos e rotina às 11h30 aplicados.
 - [x] Preservar baixa automática Mercado Pago e baixa manual; quatro testes aprovados e endpoint sem autorização bloqueado.
-- [ ] Ativar e verificar envio real: depende de endereço HTTPS da Evolution e publicação autorizada; nenhum envio real ou Pix novo testado.
+- [ ] Direcionar gatilho e novas tentativas ao servidor Vercel, liberar mensagens pendentes e conferir resultado do envio autorizado.
 
 # Calendário de meses — Horários
 - [x] Substituir lista por grade anual, preservar configurações e recados.
