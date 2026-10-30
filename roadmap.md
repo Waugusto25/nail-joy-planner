@@ -2,7 +2,8 @@
 - [x] Criar envio seguro, configurações e teste administrativo; painel autenticado e bloqueio HTTP conferidos.
 - [x] Conectar mensagens do salão e somente vencimento/recebimento na Loja; outbox, gatilhos e rotina às 11h30 aplicados.
 - [x] Preservar baixa automática Mercado Pago e baixa manual; quatro testes aprovados e endpoint sem autorização bloqueado.
-- [ ] Direcionar gatilho e novas tentativas ao servidor Vercel, liberar mensagens pendentes e conferir resultado do envio autorizado.
+- [x] Direcionar gatilho e novas tentativas ao servidor Vercel e liberar as dez mensagens pendentes; chamada 715 respondeu HTTP 200.
+- [ ] Confirmar entrega real: a execução ignorou cinco pré-agendamentos cancelados e cinco cancelamentos retornaram à fila com erro de envio na Vercel; falta identificar o erro específico do servidor de produção.
 
 # Calendário de meses — Horários
 - [x] Substituir lista por grade anual, preservar configurações e recados.
