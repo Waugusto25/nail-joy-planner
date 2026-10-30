@@ -71,6 +71,13 @@
       "when": 1793321351402,
       "tag": "0009_whatsapp_recovery_and_stale_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793327342997,
+      "tag": "0010_whatsapp_vercel_delivery_endpoint",
+      "breakpoints": true
     }
   ]
 }
