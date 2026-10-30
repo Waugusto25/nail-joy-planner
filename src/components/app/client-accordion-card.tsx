@@ -8,7 +8,7 @@ interface ClientAccordionCardProps {
   phoneLabel: string;
   /** Link do WhatsApp; null esconde o atalho (ex.: sem telefone). */
   whatsappHref: string | null;
-  onWhatsappClick?: () => Promise<boolean>;
+  onWhatsappClick?: (() => Promise<boolean>) | undefined;
   badge?: ReactNode;
   children: ReactNode;
 }
