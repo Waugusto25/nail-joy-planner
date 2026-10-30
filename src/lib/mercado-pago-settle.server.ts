@@ -34,10 +34,10 @@ export async function settleFromMpPayment(
   const { data, error } = await db.rpc("settle_verified_mp", {
     p_token: token,
     p_payment_id: String(payment.id),
-    p_reference: reference,
+    ...(reference ? { p_reference: reference } : {}),
     p_status: payment.status,
     p_amount_cents: Math.round(payment.transaction_amount * 100),
-    p_approved_at: payment.date_approved,
+    ...(payment.date_approved ? { p_approved_at: payment.date_approved } : {}),
   });
   if (error) throw new Error(error.message);
   return z.enum(["paid", "already_paid", "pending", "not_found"]).parse(data);
