@@ -101,7 +101,16 @@ async function clientTargets(db: SupabaseClient, clientId: string) {
 }
 
 /** Avisa a administradora sobre um novo pré-agendamento. */
-export async function notifyAdminsNewAppointment(appointmentId: string) {
+export async function notifyAdminsNewAppointment(appointmentId: string): Promise<{ sent: number }> {
+  try {
+    return await notifyAdminsNewAppointmentUnsafe(appointmentId);
+  } catch (error) {
+    console.error("Falha na notificação push (ignorada)", error);
+    return { sent: 0 };
+  }
+}
+
+async function notifyAdminsNewAppointmentUnsafe(appointmentId: string) {
   const db = admin();
   const { data: appt } = await db
     .from("appointments")
@@ -142,6 +151,18 @@ export async function notifyAdminsNewAppointment(appointmentId: string) {
 
 /** Envia lembretes para atendimentos confirmados que começam em ~24h. */
 export async function notifyClientStatusChange(
+  appointmentId: string,
+  kind: "confirmado" | "cancelado",
+): Promise<{ sent: number }> {
+  try {
+    return await notifyClientStatusChangeUnsafe(appointmentId, kind);
+  } catch (error) {
+    console.error("Falha na notificação push (ignorada)", error);
+    return { sent: 0 };
+  }
+}
+
+async function notifyClientStatusChangeUnsafe(
   appointmentId: string,
   kind: "confirmado" | "cancelado",
 ) {
