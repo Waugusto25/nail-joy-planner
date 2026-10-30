@@ -16,10 +16,11 @@ export function admin(): SupabaseClient {
   return createAdminClient();
 }
 
+// Push é opcional: sem chaves, retorna null para nunca interromper agendamento/WhatsApp.
 function vapid() {
   const publicKey = process.env["VAPID_PUBLIC_KEY"];
   const privateKey = process.env["VAPID_PRIVATE_KEY"];
-  if (!publicKey || !privateKey) throw new Error("Chaves de notificação não configuradas.");
+  if (!publicKey || !privateKey) return null;
   return {
     subject: process.env["VAPID_SUBJECT"] ?? "mailto:jannahsilva.oliveira@gmail.com",
     publicKey,
@@ -30,10 +31,23 @@ function vapid() {
 type Row = { id: string; endpoint: string; p256dh: string; auth: string };
 export type Notice = { title: string; body: string; url?: string; tag?: string };
 
-/** Envia a notificação para todos os dispositivos informados, limpando inscrições mortas. */
+/** Envia a notificação para todos os dispositivos informados, limpando inscrições mortas. Nunca lança erro. */
 export async function sendToSubscriptions(db: SupabaseClient, rows: Row[], notice: Notice) {
+  try {
+    return await deliver(db, rows, notice);
+  } catch (error) {
+    console.error("Falha nas notificações push (ignorada)", error);
+    return { sent: 0, removed: 0 };
+  }
+}
+
+async function deliver(db: SupabaseClient, rows: Row[], notice: Notice) {
   if (rows.length === 0) return { sent: 0, removed: 0 };
   const keys = vapid();
+  if (!keys) {
+    console.error("Chaves VAPID não configuradas. Notificação push ignorada.");
+    return { sent: 0, removed: 0 };
+  }
   let sent = 0;
   const dead: string[] = [];
 
@@ -87,7 +101,16 @@ async function clientTargets(db: SupabaseClient, clientId: string) {
 }
 
 /** Avisa a administradora sobre um novo pré-agendamento. */
-export async function notifyAdminsNewAppointment(appointmentId: string) {
+export async function notifyAdminsNewAppointment(appointmentId: string): Promise<{ sent: number }> {
+  try {
+    return await notifyAdminsNewAppointmentUnsafe(appointmentId);
+  } catch (error) {
+    console.error("Falha na notificação push (ignorada)", error);
+    return { sent: 0 };
+  }
+}
+
+async function notifyAdminsNewAppointmentUnsafe(appointmentId: string) {
   const db = admin();
   const { data: appt } = await db
     .from("appointments")
@@ -128,6 +151,18 @@ export async function notifyAdminsNewAppointment(appointmentId: string) {
 
 /** Envia lembretes para atendimentos confirmados que começam em ~24h. */
 export async function notifyClientStatusChange(
+  appointmentId: string,
+  kind: "confirmado" | "cancelado",
+): Promise<{ sent: number }> {
+  try {
+    return await notifyClientStatusChangeUnsafe(appointmentId, kind);
+  } catch (error) {
+    console.error("Falha na notificação push (ignorada)", error);
+    return { sent: 0 };
+  }
+}
+
+async function notifyClientStatusChangeUnsafe(
   appointmentId: string,
   kind: "confirmado" | "cancelado",
 ) {
