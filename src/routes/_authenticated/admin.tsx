@@ -28,6 +28,7 @@ import {
 import { clearCancelledForAdminFn, hideCancelledForAdminFn } from "@/lib/cancel.functions";
 import { ManualAppointmentDialog } from "@/components/app/manual-appointment-dialog";
 import { AgendaCalendarDialog } from "@/components/app/agenda-calendar-dialog";
+import { WhatsappAutomationDialog } from "@/components/app/whatsapp-automation-dialog";
 import { AdminRescheduleDialog } from "@/components/app/admin-reschedule-dialog";
 import { AdminEditServiceDialog } from "@/components/app/admin-edit-service-dialog";
 import { RescheduleRequests } from "@/components/app/reschedule-requests";
@@ -511,6 +512,7 @@ function AgendaTab() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap justify-end gap-2">
+        <WhatsappAutomationDialog />
         <AgendaCalendarDialog
           appointments={rows.map((a) => {
             const c = (clients.data ?? []).find((p) => p.id === a.client_id);
