@@ -1,3 +1,9 @@
+# Automação WhatsApp — Evolution
+- [ ] Criar envio seguro, configurações e teste administrativo.
+- [ ] Conectar mensagens do salão e somente vencimento/recebimento na Loja.
+- [ ] Preservar baixa automática Mercado Pago e baixa manual; testar regras e segurança.
+- [ ] Ativar envio real após configurar API e verificar conexão/publicação.
+
 # Calendário de meses — Horários
 - [x] Substituir lista por grade anual, preservar configurações e recados.
 - [x] Aplicar dois anos móveis e bloquear meses passados no horário de Brasília.
