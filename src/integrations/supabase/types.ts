@@ -1114,11 +1114,11 @@ export type Database = {
       resolve_login_id: { Args: { p_identifier: string }; Returns: string }
       settle_verified_mp: {
         Args: {
-          p_amount_cents: number
-          p_approved_at: string
+          p_amount_cents?: number
+          p_approved_at?: string
           p_payment_id: string
-          p_reference: string
-          p_status: string
+          p_reference?: string
+          p_status?: string
           p_token: string
         }
         Returns: string
@@ -1134,6 +1134,7 @@ export type Database = {
         Args: { p_kind: string; p_payload: Json; p_token: string }
         Returns: boolean
       }
+      whatsapp_enabled: { Args: never; Returns: boolean }
       whatsapp_enqueue: {
         Args: { p_key: string; p_kind: string; p_payload: Json }
         Returns: undefined
