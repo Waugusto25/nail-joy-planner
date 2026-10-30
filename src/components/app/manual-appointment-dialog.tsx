@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase-client";
 import { createManualAppointmentFn } from "@/lib/manual-booking.functions";
+import { whatsappAutomationEnabled } from "@/lib/whatsapp-client";
 import {
   PAYMENT_METHODS,
   adminWelcomeMessage,
@@ -151,6 +152,11 @@ export function ManualAppointmentDialog({
           .join(" "),
       );
 
+      if (await whatsappAutomationEnabled()) {
+        reset();
+        setOpen(false);
+        return;
+      }
       const clientPhone = String(result.client.phone ?? "");
       const digits = clientPhone.replace(/\D/g, "");
       const message = result.createdClient

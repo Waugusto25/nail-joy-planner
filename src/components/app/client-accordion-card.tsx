@@ -8,6 +8,7 @@ interface ClientAccordionCardProps {
   phoneLabel: string;
   /** Link do WhatsApp; null esconde o atalho (ex.: sem telefone). */
   whatsappHref: string | null;
+  onWhatsappClick?: (() => Promise<boolean>) | undefined;
   badge?: ReactNode;
   children: ReactNode;
 }
@@ -21,6 +22,7 @@ export function ClientAccordionCard({
   nickname,
   phoneLabel,
   whatsappHref,
+  onWhatsappClick,
   badge,
   children,
 }: ClientAccordionCardProps) {
@@ -46,7 +48,14 @@ export function ClientAccordionCard({
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Abrir WhatsApp de ${name}`}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!onWhatsappClick) return;
+              e.preventDefault();
+              void onWhatsappClick().then((handled) => {
+                if (!handled) window.open(whatsappHref, "_blank", "noopener");
+              });
+            }}
             onKeyDown={(e) => e.stopPropagation()}
             className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-green-600 text-white hover:bg-green-700"
           >

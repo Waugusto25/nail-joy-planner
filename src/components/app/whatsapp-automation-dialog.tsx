@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { saveWhatsappSettingsFn, testWhatsappFn, whatsappSettingsFn } from "@/lib/whatsapp.functions";
+import { whatsappConfigSchema } from "@/lib/whatsapp-rules";
 
 export function WhatsappAutomationDialog() {
   const [open, setOpen] = useState(false);
@@ -34,6 +35,11 @@ function WhatsappForm({ initial }: { initial: Awaited<ReturnType<typeof whatsapp
     setBusy(true);
     try {
       const data = { api_url: url, instance_name: instance, enabled };
+      const validation = whatsappConfigSchema.safeParse(data);
+      if (!validation.success) {
+        toast.error(validation.error.issues[0]?.message || "Confira o endereço e a instância.");
+        return;
+      }
       if (testing) await test({ data: { ...data, phone } }); else await save({ data });
       toast.success(testing ? "Mensagem de teste enviada." : "Configuração salva.");
       await qc.invalidateQueries({ queryKey: ["whatsapp-automation"] });

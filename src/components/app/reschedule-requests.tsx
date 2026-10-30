@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase-client";
 import { decideRescheduleFn } from "@/lib/reschedule.functions";
+import { whatsappAutomationEnabled } from "@/lib/whatsapp-client";
 import { formatDayLabel, rescheduleMessage, shortTime, whatsappLinkTo } from "@/lib/salon";
 
 /** Pedidos de reagendamento das clientes, destacados na aba de pendências. */
@@ -50,7 +51,7 @@ export function RescheduleRequests() {
             durationMinutes: result.moved.durationMinutes,
           }),
         );
-        if (link) window.open(link, "_blank", "noopener");
+        if (link && !(await whatsappAutomationEnabled())) window.open(link, "_blank", "noopener");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível decidir agora.");

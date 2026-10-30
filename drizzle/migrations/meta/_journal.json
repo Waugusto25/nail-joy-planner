@@ -50,6 +50,27 @@
       "when": 1793321090868,
       "tag": "0006_whatsapp_delivery_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793321233990,
+      "tag": "0007_whatsapp_reminder_payloads",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793321253009,
+      "tag": "0008_whatsapp_reminder_service_duration",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793321351402,
+      "tag": "0009_whatsapp_recovery_and_stale_guards",
+      "breakpoints": true
     }
   ]
 }
