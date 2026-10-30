@@ -159,6 +159,11 @@ export async function createManualAppointment(input: ManualAppointmentData) {
     .maybeSingle();
   if (error || !created) throw new Error("Não foi possível salvar o agendamento.");
 
+  if (createdClient && clientId) {
+    const welcome = await db.rpc("whatsapp_admin_enqueue", { p_kind: "welcome", p_id: clientId });
+    if (welcome.error) console.error("Não foi possível registrar boas-vindas automáticas.");
+  }
+
   let calendar: "ok" | "falhou" = "ok";
   try {
     const { syncAppointmentToCalendar } = await import("./calendar-helpers.server");

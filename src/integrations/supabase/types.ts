@@ -945,6 +945,78 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_messages: {
+        Row: {
+          attempts: number
+          available_at: string
+          created_at: string
+          event_key: string
+          id: string
+          kind: string
+          last_error: string | null
+          payload: Json
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          available_at?: string
+          created_at?: string
+          event_key: string
+          id?: string
+          kind: string
+          last_error?: string | null
+          payload: Json
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          available_at?: string
+          created_at?: string
+          event_key?: string
+          id?: string
+          kind?: string
+          last_error?: string | null
+          payload?: Json
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_settings: {
+        Row: {
+          activated_at: string | null
+          api_url: string
+          created_at: string
+          enabled: boolean
+          id: boolean
+          instance_name: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          api_url?: string
+          created_at?: string
+          enabled?: boolean
+          id?: boolean
+          instance_name?: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          api_url?: string
+          created_at?: string
+          enabled?: boolean
+          id?: boolean
+          instance_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1040,7 +1112,43 @@ export type Database = {
         }[]
       }
       resolve_login_id: { Args: { p_identifier: string }; Returns: string }
+      settle_verified_mp: {
+        Args: {
+          p_amount_cents?: number
+          p_approved_at?: string
+          p_payment_id: string
+          p_reference?: string
+          p_status?: string
+          p_token: string
+        }
+        Returns: string
+      }
       sync_my_access_key: { Args: { p_key: string }; Returns: undefined }
+      whatsapp_admin_enqueue: {
+        Args: { p_id: string; p_kind: string }
+        Returns: undefined
+      }
+      whatsapp_authorize: { Args: { p_token: string }; Returns: undefined }
+      whatsapp_claim: { Args: { p_token: string }; Returns: Json }
+      whatsapp_delivery_valid: {
+        Args: { p_kind: string; p_payload: Json; p_token: string }
+        Returns: boolean
+      }
+      whatsapp_enabled: { Args: never; Returns: boolean }
+      whatsapp_enqueue: {
+        Args: { p_key: string; p_kind: string; p_payload: Json }
+        Returns: undefined
+      }
+      whatsapp_finish: {
+        Args: {
+          p_error?: string
+          p_id: string
+          p_status: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      whatsapp_prepare_reminders: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "client"

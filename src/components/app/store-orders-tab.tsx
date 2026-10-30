@@ -56,7 +56,7 @@ export function StoreOrdersTab() {
   // Formulário começa recolhido para a lista de vencimentos ficar visível sem rolar.
   const [formOpen, setFormOpen] = useState(false);
   const settings = useAppSettings();
-  const orders = useQuery({ queryKey: ["admin-store-orders"], queryFn: fetchStoreOrders });
+  const orders = useQuery({ queryKey: ["admin-store-orders"], queryFn: fetchStoreOrders, refetchInterval: 60000, refetchOnWindowFocus: true });
 
   const rows = orders.data ?? [];
   const editing = rows.find((o) => o.id === editingId) ?? null;

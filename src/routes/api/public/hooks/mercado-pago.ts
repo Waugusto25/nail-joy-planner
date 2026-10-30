@@ -35,11 +35,11 @@ export const Route = createFileRoute("/api/public/hooks/mercado-pago")({
         try {
           const { fetchMpPayment, settleFromMpPayment } = await import("@/lib/mercado-pago-settle.server");
           const payment = await fetchMpPayment(id, token);
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          const result = await settleFromMpPayment(supabaseAdmin, payment);
+          const { createPublicClient } = await import("@/lib/supabase-public.server");
+          const result = await settleFromMpPayment(createPublicClient(), payment);
           return Response.json({ ok: true, result });
         } catch (e) {
-          console.error("MP webhook", e);
+          console.error("Falha ao validar pagamento Mercado Pago.");
           return new Response("error", { status: 500 });
         }
       },

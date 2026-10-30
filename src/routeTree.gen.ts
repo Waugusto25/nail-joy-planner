@@ -16,6 +16,7 @@ import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated
 import { Route as ApiPublicHooksCalendarSyncRouteImport } from './routes/api/public/hooks/calendar-sync'
 import { Route as ApiPublicHooksMercadoPagoRouteImport } from './routes/api/public/hooks/mercado-pago'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
+import { Route as ApiPublicHooksWhatsappRouteImport } from './routes/api/public/hooks/whatsapp'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -54,6 +55,11 @@ const ApiPublicHooksSendRemindersRoute =
     path: '/api/public/hooks/send-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksWhatsappRoute = ApiPublicHooksWhatsappRouteImport.update({
+  id: '/api/public/hooks/whatsapp',
+  path: '/api/public/hooks/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -62,6 +68,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/calendar-sync': typeof ApiPublicHooksCalendarSyncRoute
   '/api/public/hooks/mercado-pago': typeof ApiPublicHooksMercadoPagoRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
+  '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/calendar-sync': typeof ApiPublicHooksCalendarSyncRoute
   '/api/public/hooks/mercado-pago': typeof ApiPublicHooksMercadoPagoRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
+  '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   '/api/public/hooks/calendar-sync': typeof ApiPublicHooksCalendarSyncRoute
   '/api/public/hooks/mercado-pago': typeof ApiPublicHooksMercadoPagoRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
+  '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/calendar-sync'
     | '/api/public/hooks/mercado-pago'
     | '/api/public/hooks/send-reminders'
+    | '/api/public/hooks/whatsapp'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/calendar-sync'
     | '/api/public/hooks/mercado-pago'
     | '/api/public/hooks/send-reminders'
+    | '/api/public/hooks/whatsapp'
   id:
     | '__root__'
     | '/'
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/calendar-sync'
     | '/api/public/hooks/mercado-pago'
     | '/api/public/hooks/send-reminders'
+    | '/api/public/hooks/whatsapp'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   ApiPublicHooksCalendarSyncRoute: typeof ApiPublicHooksCalendarSyncRoute
   ApiPublicHooksMercadoPagoRoute: typeof ApiPublicHooksMercadoPagoRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
+  ApiPublicHooksWhatsappRoute: typeof ApiPublicHooksWhatsappRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -168,6 +181,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSendRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/whatsapp': {
+      id: '/api/public/hooks/whatsapp'
+      path: '/api/public/hooks/whatsapp'
+      fullPath: '/api/public/hooks/whatsapp'
+      preLoaderRoute: typeof ApiPublicHooksWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -190,6 +210,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksCalendarSyncRoute: ApiPublicHooksCalendarSyncRoute,
   ApiPublicHooksMercadoPagoRoute: ApiPublicHooksMercadoPagoRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
+  ApiPublicHooksWhatsappRoute: ApiPublicHooksWhatsappRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
