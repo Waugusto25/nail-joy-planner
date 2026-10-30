@@ -1,8 +1,8 @@
 # Automação WhatsApp — Evolution
-- [ ] Criar envio seguro, configurações e teste administrativo.
-- [ ] Conectar mensagens do salão e somente vencimento/recebimento na Loja.
-- [ ] Preservar baixa automática Mercado Pago e baixa manual; testar regras e segurança.
-- [ ] Ativar envio real após configurar API e verificar conexão/publicação.
+- [x] Criar envio seguro, configurações e teste administrativo; painel autenticado e bloqueio HTTP conferidos.
+- [x] Conectar mensagens do salão e somente vencimento/recebimento na Loja; outbox, gatilhos e rotina às 11h30 aplicados.
+- [x] Preservar baixa automática Mercado Pago e baixa manual; quatro testes aprovados e endpoint sem autorização bloqueado.
+- [ ] Ativar e verificar envio real: depende de endereço HTTPS da Evolution e publicação autorizada; nenhum envio real ou Pix novo testado.
 
 # Calendário de meses — Horários
 - [x] Substituir lista por grade anual, preservar configurações e recados.
