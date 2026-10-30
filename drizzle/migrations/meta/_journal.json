@@ -36,6 +36,13 @@
       "when": 1792722378896,
       "tag": "0004_store_orders_delivered_on",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793320959618,
+      "tag": "0005_whatsapp_evolution_outbox",
+      "breakpoints": true
     }
   ]
 }
