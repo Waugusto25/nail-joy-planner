@@ -3,7 +3,7 @@
 // assim uma notificação forjada não consegue marcar parcela como paga.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { BOLETO_FEE_CENTS } from "./mercado-pago-fees";
+import { z } from "zod";
 
 export type MpPayment = {
   id: number;
@@ -18,7 +18,7 @@ export async function fetchMpPayment(paymentId: string, token: string): Promise<
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`Mercado Pago respondeu ${res.status}.`);
-  return (await res.json()) as MpPayment;
+  return z.object({ id: z.number().int().positive(), status: z.string().max(80), external_reference: z.string().nullable(), transaction_amount: z.number().finite().positive(), date_approved: z.string().nullable() }).parse(await res.json());
 }
 
 export type SettleResult = "paid" | "already_paid" | "pending" | "not_found";
@@ -28,33 +28,17 @@ export async function settleFromMpPayment(
   db: SupabaseClient<Database>,
   payment: MpPayment,
 ): Promise<SettleResult> {
-  const { data: parcel } = await db
-    .from("store_order_installments")
-    .select("id, paid_at, paid_amount_cents, mp_payment_id, mp_method")
-    .or(`mp_payment_id.eq.${payment.id}${payment.external_reference ? `,id.eq.${payment.external_reference}` : ""}`)
-    .maybeSingle();
-  if (!parcel) return "not_found";
-
-  if (payment.status !== "approved") {
-    await db.from("store_order_installments").update({ mp_status: payment.status }).eq("id", parcel.id);
-    return "pending";
-  }
-  if (parcel.paid_at) {
-    await db.from("store_order_installments").update({ mp_status: "approved" }).eq("id", parcel.id);
-    return "already_paid";
-  }
-  // A taxa do boleto é receita de repasse, não abatimento da dívida: não vira crédito.
-  const fee = parcel.mp_method === "boleto" ? BOLETO_FEE_CENTS : 0;
-  const cents = Math.max(0, Math.round(payment.transaction_amount * 100) - fee);
-  const { error } = await db
-    .from("store_order_installments")
-    .update({
-      mp_status: "approved",
-      paid_at: payment.date_approved ?? new Date().toISOString(),
-      paid_amount_cents: (parcel.paid_amount_cents ?? 0) + cents,
-    })
-    .eq("id", parcel.id)
-    .is("paid_at", null);
+  const token = process.env["REMINDERS_SERVICE_TOKEN"];
+  if (!token) throw new Error("Autorização da baixa automática não configurada.");
+  const reference = z.string().uuid().nullable().parse(payment.external_reference);
+  const { data, error } = await db.rpc("settle_verified_mp", {
+    p_token: token,
+    p_payment_id: String(payment.id),
+    p_reference: reference,
+    p_status: payment.status,
+    p_amount_cents: Math.round(payment.transaction_amount * 100),
+    p_approved_at: payment.date_approved,
+  });
   if (error) throw new Error(error.message);
-  return "paid";
+  return z.enum(["paid", "already_paid", "pending", "not_found"]).parse(data);
 }
