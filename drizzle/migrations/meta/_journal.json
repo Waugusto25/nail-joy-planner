@@ -57,6 +57,13 @@
       "when": 1793321233990,
       "tag": "0007_whatsapp_reminder_payloads",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793321253009,
+      "tag": "0008_whatsapp_reminder_service_duration",
+      "breakpoints": true
     }
   ]
 }
