@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase-client";
 import { useSpecialDays } from "@/hooks/useSpecialDays";
 import { busyTimesFn } from "@/lib/booking.functions";
 import { requestRescheduleFn } from "@/lib/reschedule.functions";
+import { whatsappAutomationEnabled } from "@/lib/whatsapp-client";
 import {
   RESCHEDULE_MIN_HOURS,
   adminRescheduleRequestAlert,
@@ -173,7 +174,7 @@ export function RescheduleRequestDialog({
         newStart: result.startTime,
         reason: result.reason,
       });
-      window.open(whatsappLink(message), "_blank", "noopener");
+      if (!(await whatsappAutomationEnabled())) window.open(whatsappLink(message), "_blank", "noopener");
       onOpenChange(false);
       setDay(null);
       setTime(null);

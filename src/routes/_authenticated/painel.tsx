@@ -32,6 +32,7 @@ import { consumeReferralFn, spendLoyaltyPointsFn } from "@/lib/loyalty.functions
 import { useLoyaltyWallet } from "@/hooks/useLoyaltyWallet";
 import { claimEventPrizeFn } from "@/lib/account.functions";
 import { notifyNewAppointmentFn } from "@/lib/push.functions";
+import { whatsappAutomationEnabled } from "@/lib/whatsapp-client";
 import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 
 import {
@@ -520,8 +521,9 @@ function BookingFlow({
             "",
             "Pode confirmar para mim?",
           ].join("\n");
-      window.open(whatsappLink(message), "_blank", "noopener");
-      toast.success("Pré-reserva criada! Confirme pelo WhatsApp.");
+      const automatic = await whatsappAutomationEnabled();
+      if (!automatic) window.open(whatsappLink(message), "_blank", "noopener");
+      toast.success(automatic ? "Pré-reserva criada! Aguarde a confirmação da Janaina." : "Pré-reserva criada! Confirme pelo WhatsApp.");
       setServiceId(null);
       setDay(null);
       setTime(null);
@@ -818,7 +820,7 @@ function MyAppointments({ clientId }: { clientId?: string | undefined }) {
       const result = await clientCancelAppointmentFn({ data: { appointmentId: id } });
       await queryClient.invalidateQueries();
       toast.success(clientCancelConfirmation(result.day, result.start), { duration: 9000 });
-      if (result.adminAlert) {
+      if (result.adminAlert && !(await whatsappAutomationEnabled())) {
         const link = whatsappLink(result.adminAlert.message);
         window.open(link, "_blank", "noopener");
       }

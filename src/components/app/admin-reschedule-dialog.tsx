@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase-client";
 import { useSpecialDays } from "@/hooks/useSpecialDays";
 import { adminRescheduleFn } from "@/lib/reschedule.functions";
+import { whatsappAutomationEnabled } from "@/lib/whatsapp-client";
 import { formatDayLabel, rescheduleMessage, shortTime, whatsappLinkTo } from "@/lib/salon";
 
 function weekdayOf(day: string) {
@@ -95,7 +96,7 @@ export function AdminRescheduleDialog({
           durationMinutes: result.durationMinutes,
         }),
       );
-      if (link) window.open(link, "_blank", "noopener");
+      if (link && !(await whatsappAutomationEnabled())) window.open(link, "_blank", "noopener");
       setOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível realocar.");

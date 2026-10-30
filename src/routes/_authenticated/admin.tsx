@@ -29,6 +29,8 @@ import { clearCancelledForAdminFn, hideCancelledForAdminFn } from "@/lib/cancel.
 import { ManualAppointmentDialog } from "@/components/app/manual-appointment-dialog";
 import { AgendaCalendarDialog } from "@/components/app/agenda-calendar-dialog";
 import { WhatsappAutomationDialog } from "@/components/app/whatsapp-automation-dialog";
+import { whatsappAutomationEnabled } from "@/lib/whatsapp-client";
+import { whatsappContactFn } from "@/lib/whatsapp.functions";
 import { AdminRescheduleDialog } from "@/components/app/admin-reschedule-dialog";
 import { AdminEditServiceDialog } from "@/components/app/admin-edit-service-dialog";
 import { RescheduleRequests } from "@/components/app/reschedule-requests";
@@ -216,6 +218,7 @@ function AgendaTab() {
       setPayingId(null);
       await queryClient.invalidateQueries();
       toast.success("Atendimento concluído e registrado no caixa.");
+      if (await whatsappAutomationEnabled()) return;
       for (const n of notifications) {
         const message =
           n.kind === "indicacao"
@@ -267,11 +270,11 @@ function AgendaTab() {
               : "Confirmado. Não foi possível criar o evento na Google Agenda.",
           );
         }
-        openClientWhatsapp(notice);
+        if (!(await whatsappAutomationEnabled())) openClientWhatsapp(notice);
       } else if (status === "cancelado") {
         await cancelAppointmentFn({ data: { appointmentId: id } });
         toast.success("Atendimento cancelado.");
-        openClientWhatsapp(notice);
+        if (!(await whatsappAutomationEnabled())) openClientWhatsapp(notice);
       } else {
         await setAppointmentPendingFn({ data: { appointmentId: id } });
         toast.success("Agendamento atualizado.");
@@ -946,6 +949,14 @@ function ClientsTab() {
             nickname={c.nickname}
             phoneLabel={formatPhone(c.phone)}
             whatsappHref={isMaster ? null : whatsappLinkTo(c.phone, "")}
+            onWhatsappClick={isMaster ? undefined : async () => {
+              if (!(await whatsappAutomationEnabled())) return false;
+              try {
+                await whatsappContactFn({ data: { clientId: c.id } });
+                toast.success("Saudação registrada para envio automático.");
+              } catch (e) { toast.error(e instanceof Error ? e.message : "Falha ao enviar."); }
+              return true;
+            }}
             badge={
               isMaster ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
@@ -2240,7 +2251,7 @@ function EventsTab() {
         result.winnerPhone,
         `Parabéns, ${result.winnerName}! Você foi sorteada no evento da Jannah Nails. Vamos combinar a entrega do seu prêmio! — Jannah Nails`,
       );
-      if (link) window.open(link, "_blank", "noopener");
+      if (link && !(await whatsappAutomationEnabled())) window.open(link, "_blank", "noopener");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível sortear.");
     }
