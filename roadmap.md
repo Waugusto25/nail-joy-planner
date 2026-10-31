@@ -1,3 +1,9 @@
+# Adiantamentos da Loja
+- [ ] Botão e janela entre Dar baixa e PDF, valor/data e bloqueio acima do saldo.
+- [ ] Gravação atômica, histórico persistente, saldo no próprio mês e baixa pelo restante.
+- [ ] Recibo WhatsApp próprio e valores/histórico em faturas, extratos e relatórios.
+- [ ] Testes das regras e fluxo autenticado com leitura após salvar.
+
 # Vencimento nos pedidos da Loja
 - [x] Substituída entrega junto ao telefone por vencimento DD/MM/AA, atrasos em vermelho e Quitado em verde; controles de entrega preservados, seis testes aprovados e lista autenticada conferida no celular.
 
