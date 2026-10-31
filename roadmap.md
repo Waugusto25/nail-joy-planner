@@ -1,8 +1,9 @@
 # Adiantamentos da Loja
-- [ ] Botão e janela entre Dar baixa e PDF, valor/data e bloqueio acima do saldo.
-- [ ] Gravação atômica, histórico persistente, saldo no próprio mês e baixa pelo restante.
-- [ ] Recibo WhatsApp próprio e valores/histórico em faturas, extratos e relatórios.
-- [ ] Testes das regras e fluxo autenticado com leitura após salvar.
+- [x] Botão e janela entre Dar baixa e PDF, valor/data e bloqueio acima do saldo; conferidos no celular e desktop.
+- [x] Gravação atômica record_store_advance, histórico persistente e saldo no mês; teste real de 50 + 50 quitou 100 sem alterar a próxima parcela.
+- [x] Recibo próprio conectado ao outbox e histórico em fatura/extrato/relatórios; PDF gerado e texto extraído com 50 adiantados e 50 restantes.
+- [x] Dez testes novos e onze regressões aprovados; pedido temporário removido, sem alterar vendas reais.
+- [ ] Entrega da nova mensagem WhatsApp na Vercel depende de atualizar a versão publicada lá; conteúdo e payload conferidos, sem enviar a uma cliente real.
 
 # Vencimento nos pedidos da Loja
 - [x] Substituída entrega junto ao telefone por vencimento DD/MM/AA, atrasos em vermelho e Quitado em verde; controles de entrega preservados, seis testes aprovados e lista autenticada conferida no celular.
