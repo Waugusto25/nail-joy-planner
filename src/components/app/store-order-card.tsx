@@ -231,23 +231,6 @@ export function StoreOrderCard({
     await refresh();
   }
 
-  async function setPaidDate(parcel: StoreOrderInstallment, date: string) {
-    // Apagar a data equivale a voltar para pendente: estorna também o troco/falta.
-    if (!date && parcel.paid_at) {
-      await revertToPending(parcel);
-      return;
-    }
-    const { error } = await supabase
-      .from("store_order_installments")
-      .update({ paid_at: date ? new Date(`${date}T12:00:00`).toISOString() : null })
-      .eq("id", parcel.id);
-    if (error) {
-      toast.error("Não foi possível salvar a data do pagamento.");
-      return;
-    }
-    await refresh();
-  }
-
   async function remove() {
     const ok = await confirmDestructive({
       title: "Excluir pedido da loja?",
@@ -466,15 +449,6 @@ export function StoreOrderCard({
                         className="h-9"
                         value={p.due_date ?? ""}
                         onChange={(e) => void setDue(p, e.target.value)}
-                      />
-                    </label>
-                    <label className="text-xs text-muted-foreground">
-                      Pagamento
-                      <Input
-                        type="date"
-                        className="h-9"
-                        value={p.paid_at ? p.paid_at.slice(0, 10) : ""}
-                        onChange={(e) => void setPaidDate(p, e.target.value)}
                       />
                     </label>
                     <Button
