@@ -2,6 +2,7 @@ import type { jsPDF } from "jspdf";
 
 import { formatISODate, formatPhone, formatPrice } from "@/lib/salon";
 import { installmentState, type StoreOrderWithDetails } from "@/lib/store";
+import { advancedCents, receivedCents, remainingCents } from "./store-advance";
 
 const M = 14;
 const W = 210 - M * 2;
@@ -62,11 +63,11 @@ export function drawOrderReport(doc: jsPDF, order: StoreOrderWithDetails): void 
     .filter((p) => !p.merged_into_order_id)
     .sort((a, b) => a.number - b.number);
   const paidCents = parcels.reduce(
-    (s, p) => s + (p.paid_at ? p.paid_amount_cents || p.amount_cents : 0),
+    (s, p) => s + receivedCents(p),
     0,
   );
   const pendingCents = parcels.reduce((s, p) => {
-    if (!p.paid_at) return s + p.amount_cents;
+    if (!p.paid_at) return s + remainingCents(p);
     return p.paid_amount_cents > 0 ? s + Math.max(0, p.amount_cents - p.paid_amount_cents) : s;
   }, 0);
 
@@ -119,10 +120,14 @@ export function drawOrderReport(doc: jsPDF, order: StoreOrderWithDetails): void 
     if (p.credit_applied_cents > 0)
       line(`- ${formatPrice(p.credit_applied_cents)} de crédito (troco) de pagamento anterior`, { indent: 3, color: [21, 105, 57] });
     line(`= Valor cobrado: ${formatPrice(p.amount_cents)}`, { indent: 3, bold: true });
+    for (const entry of p.advances ?? []) {
+      line(`Adiantamento em ${formatISODate(entry.paid_on)}: ${formatPrice(entry.amount_cents)}`, { indent: 3 });
+    }
+    if (advancedCents(p) > 0) line(`Restante deste mês: ${formatPrice(remainingCents(p))}`, { indent: 3, bold: true });
     if (p.paid_at) {
-      const received = p.paid_amount_cents || p.amount_cents;
+      const received = Math.max(0, receivedCents(p) - advancedCents(p));
       line(`Pago em ${dateOf(p.paid_at)}: ${formatPrice(received)}${p.mp_status === "approved" ? " (Mercado Pago)" : ""}`, { indent: 3 });
-    } else if (p.paid_amount_cents > 0) {
+    } else if (p.paid_amount_cents > 0 && advancedCents(p) === 0) {
       line(`Valor registrado sem data de pagamento: ${formatPrice(p.paid_amount_cents)}`, { indent: 3, color: [146, 89, 8] });
     }
 

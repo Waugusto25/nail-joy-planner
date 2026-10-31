@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StoreClientPicker } from "@/components/app/store-client-picker";
 import { supabase } from "@/lib/supabase-client";
 import { cn } from "@/lib/utils";
+import { advancedCents } from "@/lib/store-advance";
 import {
   ORDER_STATUSES,
   PAYMENT_METHODS,
@@ -149,6 +150,17 @@ export function StoreOrderForm({
       return;
     }
     const validItems = items.filter((i) => i.name.trim());
+    if (editing?.installments_list.some((p) => advancedCents(p) > 0) && Number(installments) !== editing.installments) {
+      toast.error("Este pedido possui adiantamentos; preserve a quantidade de parcelas para manter o histórico.");
+      return;
+    }
+    if (editing) {
+      const newAmounts = splitInstallments(total, Math.max(1, Number(installments) || 1));
+      if (editing.installments_list.some((p, i) => advancedCents(p) > (newAmounts[i] ?? 0))) {
+        toast.error("O novo valor não pode ser menor que o adiantamento já recebido.");
+        return;
+      }
+    }
     if (validItems.length === 0) {
       toast.error("Adicione pelo menos um item ao pedido.");
       return;
@@ -207,15 +219,18 @@ export function StoreOrderForm({
           .filter((p) => p.paid_at)
           .map((p) => [p.number - base, { paid_at: p.paid_at, due_date: p.due_date }]),
       );
-      await supabase.from("store_order_installments").delete().eq("order_id", orderId);
       const amounts = splitInstallments(total, count);
       const merging = unify && carryOver ? carryOver : null;
       const firstDue = merging?.due_date ?? (deliveryDate || null);
-      const { error: parcelsError } = await supabase.from("store_order_installments").insert(
+      const { error: parcelsError } = await supabase.from("store_order_installments").upsert(
         amounts.map((amount, index) => {
+          const existing = editing?.installments_list.find((p) => p.number === base + index + 1);
           const extra = merging && index === 0 ? merging.amount_cents : 0;
           const monthlyDue = firstDue ? addMonthsISO(firstDue, index) : null;
           return {
+            ...(existing ? { id: existing.id, paid_amount_cents: existing.paid_amount_cents,
+              credit_applied_cents: existing.credit_applied_cents, carried_in_cents: existing.carried_in_cents,
+              added_extra_cents: existing.added_extra_cents } : {}),
             order_id: orderId,
             number: base + index + 1,
             amount_cents: amount + extra,
@@ -227,6 +242,11 @@ export function StoreOrderForm({
         }),
       );
       if (parcelsError) throw new Error(parcelsError.message);
+      const obsolete = (editing?.installments_list ?? []).filter((p) => p.number > base + count);
+      if (obsolete.length) {
+        const { error } = await supabase.from("store_order_installments").delete().in("id", obsolete.map((p) => p.id));
+        if (error) throw new Error(error.message);
+      }
 
       // A parcela antiga somada sai da cobrança, evitando duplicidade.
       if (merging) {
