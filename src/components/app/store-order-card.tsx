@@ -22,6 +22,7 @@ import { StoreInvoiceExportDialog } from "@/components/app/store-invoice-export-
 import { StoreOrderAddItemsDialog } from "@/components/app/store-order-add-items-dialog";
 import { cn } from "@/lib/utils";
 import { compactDueDate, storeOrderDueState } from "@/lib/store-order-due-status";
+import { installmentDateField } from "@/lib/store-installment-date";
 import {
   installmentState,
   isFullyPaid,
@@ -220,6 +221,7 @@ export function StoreOrderCard({
   }
 
   async function setDue(parcel: StoreOrderInstallment, due: string) {
+    if (installmentDateField(parcel).readOnly) return;
     const { error } = await supabase
       .from("store_order_installments")
       .update({ due_date: due || null })
@@ -391,6 +393,7 @@ export function StoreOrderCard({
           <ul className="space-y-2">
             {order.installments_list.map((p) => {
               const state = installmentState(p);
+              const dateField = installmentDateField(p);
               return (
               <li
                 key={p.id}
@@ -443,12 +446,15 @@ export function StoreOrderCard({
                 {p.merged_into_order_id ? null : (
                   <>
                     <label className="text-xs text-muted-foreground">
-                      Vencimento
+                      {dateField.kind === "payment" ? "Pagamento" : "Vencimento"}
                       <Input
                         type="date"
-                        className="h-9"
-                        value={p.due_date ?? ""}
-                        onChange={(e) => void setDue(p, e.target.value)}
+                        className="h-9 w-36"
+                        value={dateField.value}
+                        readOnly={dateField.readOnly}
+                        aria-label={`${dateField.kind === "payment" ? "Pagamento" : "Vencimento"} da parcela ${p.number}`}
+                        title={dateField.readOnly ? "Data registrada do pagamento — não pode ser alterada" : undefined}
+                        onChange={dateField.readOnly ? undefined : (e) => void setDue(p, e.target.value)}
                       />
                     </label>
                     <Button
