@@ -34,6 +34,8 @@ import {
   type StoreOrderWithDetails,
 } from "@/lib/store";
 import { StoreInstallmentPaymentDialog } from "@/components/app/store-installment-payment-dialog";
+import { StoreInstallmentAdvanceDialog } from "@/components/app/store-installment-advance-dialog";
+import { advancedCents, remainingCents } from "@/lib/store-advance";
 import { confirmDestructive } from "@/components/app/confirm-destructive-dialog";
 import { confirmOlderInvoices } from "@/components/app/older-invoice-warning";
 import { MercadoPagoChargeDialog } from "@/components/app/mercado-pago-charge-dialog";
@@ -66,6 +68,7 @@ export function StoreOrderCard({
   const [addOpen, setAddOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [settling, setSettling] = useState<StoreOrderInstallment | null>(null);
+  const [advancing, setAdvancing] = useState<StoreOrderInstallment | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [invoiceParcel, setInvoiceParcel] = useState<number | null>(null);
   const [mpParcel, setMpParcel] = useState<StoreOrderInstallment | null>(null);
@@ -418,6 +421,12 @@ export function StoreOrderCard({
                   {order.installments > 1 ? `Parcela ${p.number}` : "Pagamento"}
                   <br />
                   {formatPrice(p.amount_cents)}
+                  {advancedCents(p) > 0 && (
+                    <span className="block text-xs font-normal text-payment-settled">
+                      Adiantado: {formatPrice(advancedCents(p))}
+                      <span className="block text-foreground">Restante deste mês: {formatPrice(remainingCents(p))}</span>
+                    </span>
+                  )}
                   {state === "parcial" ? (
                     <span className="block text-xs font-normal text-amber-600">
                       Parcialmente paga (Pago: {formatPrice(p.paid_amount_cents)})
@@ -477,6 +486,11 @@ export function StoreOrderCard({
                     >
                       <Wallet size={16} /> Dar baixa
                     </Button>
+                    {!p.paid_at && (
+                      <Button size="sm" variant="outline" className="gap-1" onClick={() => setAdvancing(p)}>
+                        <Plus size={16} /> Adiantamento
+                      </Button>
+                    )}
                     <Button
                       size="icon"
                       variant="outline"
@@ -605,6 +619,7 @@ export function StoreOrderCard({
       </div>
 
       <StoreOrderAddItemsDialog order={order} open={addOpen} onOpenChange={setAddOpen} />
+      {advancing && <StoreInstallmentAdvanceDialog key={advancing.id} parcel={advancing} onClose={() => setAdvancing(null)} />}
       <StoreInvoiceExportDialog
         order={order}
         pixKey={pixKey}

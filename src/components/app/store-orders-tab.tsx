@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAppSettings } from "@/hooks/useSettings";
 import { formatPrice } from "@/lib/salon";
+import { remainingCents } from "@/lib/store-advance";
 import {
   fetchStoreOrders,
   nextPendingDue,
@@ -73,7 +74,7 @@ export function StoreOrdersTab() {
 
   const receivable = filtered.reduce(
     (sum, o) =>
-      sum + pendingInstallments(o.installments_list).reduce((s, p) => s + p.amount_cents, 0),
+      sum + pendingInstallments(o.installments_list).reduce((s, p) => s + remainingCents(p), 0),
     0,
   );
 
