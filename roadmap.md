@@ -1,5 +1,6 @@
 # Automação WhatsApp — Evolution
-- [ ] Corrigir edição de pedidos em janela no celular e recibo parcial com saldo restante e Obrigada; validar sem alterar vendas existentes.
+- [x] Edição em janela limitada à tela, recibo parcial com valor recebido, saldo restante e Obrigada; função whatsapp_event atualizada por migration sem alterar vendas existentes.
+- [ ] Validar edição autenticada e entrega do novo recibo na Vercel: sem sessão administrativa correspondente ao solicitante; código de envio precisa do próximo deploy Vercel.
 - [x] Criar envio seguro, configurações e teste administrativo; painel autenticado e bloqueio HTTP conferidos.
 - [x] Conectar mensagens do salão e somente vencimento/recebimento na Loja; outbox, gatilhos e rotina às 11h30 aplicados.
 - [x] Preservar baixa automática Mercado Pago e baixa manual; quatro testes aprovados e endpoint sem autorização bloqueado.
