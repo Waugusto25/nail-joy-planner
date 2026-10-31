@@ -15,3 +15,5 @@
 - WhatsApp delivery uses a transactional database outbox, token-authorized claims, wake-on-enqueue and bounded retries; only the server calls Evolution over HTTPS to protect credentials and preserve business writes on delivery failure.
 - WhatsApp wake and retry callbacks must target the active Vercel production endpoint together; changing only one leaves immediate delivery and recovery on different deployments.
 - Mercado Pago settlement is serialized in a token-authorized database function after fetching the official payment; payment ID, reference and amount must match the stored installment before settlement.
+- Store-order editing opens the existing form in a bounded scrollable dialog, separate from new-order creation, so actions remain visible on mobile without changing calculation logic.
+- Store receipts use payment deltas and remaining installment balance from the transactional outbox, never paid_at alone, to distinguish partial payment from settlement.
