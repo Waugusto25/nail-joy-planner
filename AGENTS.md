@@ -20,3 +20,4 @@
 - Store receipts use payment deltas and remaining installment balance from the transactional outbox, never paid_at alone; verify the live whatsapp_installments trigger targets whatsapp_receipt_event before changing receipt logic, because the generic event function is not the active installment handler.
 - Store advances are append-only dated entries on the installment, saved by an admin-authorized row-locking RPC; pending payment totals preserve those entries, and edits preserve installment IDs so receipts and monthly balances remain auditable without changing legacy settlement behavior.
 - Mount the invoice export dialog only while open so mode and installment selection reset on reopening without effects tied to newly allocated arrays.
+- Store installment date controls derive read-only payment dates from persisted paid_at in São Paulo time; never overwrite due_date when presenting paid history, so manual reversal restores the original due date.
