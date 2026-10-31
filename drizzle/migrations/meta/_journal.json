@@ -78,6 +78,13 @@
       "when": 1793327342997,
       "tag": "0010_whatsapp_vercel_delivery_endpoint",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793405893822,
+      "tag": "0011_correct_partial_store_receipts",
+      "breakpoints": true
     }
   ]
 }
