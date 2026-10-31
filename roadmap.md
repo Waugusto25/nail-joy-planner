@@ -1,4 +1,5 @@
 # Automação WhatsApp — Evolution
+- [x] Corrigida whatsapp_receipt_event realmente ligada às parcelas; vínculo conferido no banco e caso Wellington verificado: R$ 57,98 menos R$ 7,98 = R$ 50,00; sete testes aprovados, sem alterar pagamento nem reenviar recibo antigo.
 - [x] Edição em janela limitada à tela, recibo parcial com valor recebido, saldo restante e Obrigada; função whatsapp_event atualizada por migration sem alterar vendas existentes.
 - [ ] Validar edição autenticada e entrega do novo recibo na Vercel: sem sessão administrativa correspondente ao solicitante; código de envio precisa do próximo deploy Vercel.
 - [x] Criar envio seguro, configurações e teste administrativo; painel autenticado e bloqueio HTTP conferidos.

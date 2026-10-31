@@ -85,6 +85,13 @@
       "when": 1793405893822,
       "tag": "0011_correct_partial_store_receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793406510092,
+      "tag": "0012_fix_active_whatsapp_receipt_trigger",
+      "breakpoints": true
     }
   ]
 }
