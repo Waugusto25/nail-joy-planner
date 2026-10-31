@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StoreClientPicker } from "@/components/app/store-client-picker";
 import { supabase } from "@/lib/supabase-client";
+import { cn } from "@/lib/utils";
 import {
   ORDER_STATUSES,
   PAYMENT_METHODS,
@@ -68,10 +69,12 @@ export function StoreOrderForm({
   editing,
   orders,
   onDone,
+  embedded = false,
 }: {
   editing: StoreOrderWithDetails | null;
   orders: StoreOrderWithDetails[];
   onDone: () => void;
+  embedded?: boolean;
 }) {
   const queryClient = useQueryClient();
   const clients = useQuery({ queryKey: ["store-clients"], queryFn: fetchStoreClients });
@@ -246,8 +249,8 @@ export function StoreOrderForm({
   }
 
   return (
-    <section className="surface-card space-y-4 p-5">
-      <h3 className="font-display text-lg">{editing ? "Editar pedido" : "Novo pedido da loja"}</h3>
+    <section className={cn("space-y-4", !embedded && "surface-card p-5")}>
+      {!embedded && <h3 className="font-display text-lg">{editing ? "Editar pedido" : "Novo pedido da loja"}</h3>}
 
       <div className="space-y-1">
         <Label htmlFor="order-client">Cliente da loja</Label>
@@ -316,7 +319,7 @@ export function StoreOrderForm({
         <Label>Itens do pedido</Label>
         {items.map((item, index) => (
           <div key={item.key} className="flex items-end gap-2">
-            <div className="flex-1 space-y-1">
+            <div className="min-w-0 flex-1 space-y-1">
               <Input
                 aria-label={`Nome do item ${index + 1}`}
                 value={item.name}
@@ -328,7 +331,7 @@ export function StoreOrderForm({
                 placeholder="Ex: Esmalte gel rosa"
               />
             </div>
-            <div className="w-32 space-y-1">
+            <div className="w-24 shrink-0 space-y-1 sm:w-32">
               <Input
                 aria-label={`Valor do item ${index + 1}`}
                 inputMode="decimal"

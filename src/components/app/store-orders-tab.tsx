@@ -7,6 +7,7 @@ import { StoreGeneralReportDialog } from "@/components/app/store-general-report-
 import { StoreOrderForm } from "@/components/app/store-order-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAppSettings } from "@/hooks/useSettings";
 import { formatPrice } from "@/lib/salon";
 import {
@@ -103,7 +104,13 @@ export function StoreOrdersTab() {
 
   return (
     <div className="space-y-4">
-      {formOpen || editing ? (
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditingId(null); }}>
+        <DialogContent className="max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto" aria-describedby={undefined}>
+          <DialogHeader><DialogTitle>Editar pedido</DialogTitle></DialogHeader>
+          {editing && <StoreOrderForm key={editing.id} editing={editing} orders={rows} embedded onDone={() => setEditingId(null)} />}
+        </DialogContent>
+      </Dialog>
+      {formOpen ? (
         <div className="space-y-2">
           <div className="flex justify-end">
             <Button
@@ -120,7 +127,7 @@ export function StoreOrdersTab() {
             </Button>
           </div>
           <StoreOrderForm
-            editing={editing}
+            editing={null}
             orders={rows}
             onDone={() => {
               setEditingId(null);
