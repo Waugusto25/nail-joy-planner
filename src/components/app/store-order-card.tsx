@@ -11,7 +11,6 @@ import {
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
-  formatISODate,
   formatPhone,
   formatPrice,
   orderStatusMessage,
