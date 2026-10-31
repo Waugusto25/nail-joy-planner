@@ -1,6 +1,6 @@
 # Datas das parcelas da Loja
-- [ ] Pendentes exibem Vencimento editável; pagas exibem Pagamento bloqueado com data registrada em São Paulo, sem apagar vencimento original.
-- [ ] Validar mudança de estado e preservação das datas com testes e painel autenticado.
+- [x] Pendentes exibem Vencimento editável; pagas exibem Pagamento bloqueado derivado de paid_at em São Paulo, sem apagar vencimento original — store-order-card.tsx e store-installment-date.ts.
+- [x] Cinco testes de datas e doze regressões aprovados; pedido real da Marry conferido autenticado no celular e computador, com duas datas de pagamento bloqueadas e vencimento pendente editável; compilação OK. Nenhum pagamento real alterado.
 
 # Barra de parcelas da Loja
 - [x] Removido o campo de data Pagamento e seu manipulador em store-order-card.tsx; Vencimento e ações de pagamento preservados. Painel autenticado conferido em 393×852 e Dar baixa abriu sem alterar dados.
