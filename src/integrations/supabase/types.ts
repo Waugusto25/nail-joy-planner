@@ -701,6 +701,47 @@ export type Database = {
         }
         Relationships: []
       }
+      store_installment_advances: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          created_by: string
+          id: string
+          installment_id: string
+          paid_on: string
+          request_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          created_by: string
+          id?: string
+          installment_id: string
+          paid_on: string
+          request_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          installment_id?: string
+          paid_on?: string
+          request_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_installment_advances_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "store_order_installments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_order_installments: {
         Row: {
           added_extra_cents: number
@@ -1110,6 +1151,15 @@ export type Database = {
           id: string
           p256dh: string
         }[]
+      }
+      record_store_advance: {
+        Args: {
+          p_amount_cents: number
+          p_installment_id: string
+          p_paid_on: string
+          p_request_id: string
+        }
+        Returns: string
       }
       resolve_login_id: { Args: { p_identifier: string }; Returns: string }
       settle_verified_mp: {
