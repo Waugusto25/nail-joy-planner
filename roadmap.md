@@ -1,3 +1,6 @@
+# Barra de parcelas da Loja
+- [x] Removido o campo de data Pagamento e seu manipulador em store-order-card.tsx; Vencimento e ações de pagamento preservados. Painel autenticado conferido em 393×852 e Dar baixa abriu sem alterar dados.
+
 # Exportação de faturas da Loja
 - [x] Exportação concentrada junto ao extrato, atalho por parcela removido; escolha mês/total e downloads dos dois PDFs verificados no painel autenticado no celular, com seleção da segunda parcela preservada. Compilação OK e dez testes de pagamentos/recibos aprovados.
 
