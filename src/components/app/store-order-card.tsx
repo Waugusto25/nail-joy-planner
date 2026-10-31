@@ -22,10 +22,12 @@ import { StoreStatementButton } from "@/components/app/store-statement-button";
 import { StoreInvoiceExportDialog } from "@/components/app/store-invoice-export-dialog";
 import { StoreOrderAddItemsDialog } from "@/components/app/store-order-add-items-dialog";
 import { cn } from "@/lib/utils";
+import { compactDueDate, storeOrderDueState } from "@/lib/store-order-due-status";
 import {
   installmentState,
   isFullyPaid,
   needsCollection,
+  nextPendingDue,
   pendingInstallments,
   removeItemInstallments,
   undoSettlement,
@@ -70,6 +72,8 @@ export function StoreOrderCard({
   const [mpParcel, setMpParcel] = useState<StoreOrderInstallment | null>(null);
   const pending = pendingInstallments(order.installments_list);
   const nextDue = pending[0];
+  const dueDate = nextPendingDue(order);
+  const dueState = storeOrderDueState(isFullyPaid(order), dueDate);
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
@@ -337,9 +341,15 @@ export function StoreOrderCard({
             ) : null}
           </p>
           <p className="text-xs text-muted-foreground">
-            {order.client_phone ? `${formatPhone(order.client_phone)} · ` : ""}{order.status === "entregue" && order.delivered_on
-              ? `Entregue: ${formatISODate(order.delivered_on)}`
-              : "Aguardando entrega"}
+            {order.client_phone ? `${formatPhone(order.client_phone)} · ` : ""}
+            <span className={cn(
+              dueState === "overdue" && "font-semibold text-destructive",
+              dueState === "paid" && "font-semibold text-payment-settled",
+            )}>
+              {dueState === "paid" ? "Quitado" : dueDate
+                ? `${dueState === "overdue" ? "Vencido" : "Vencimento"}: ${compactDueDate(dueDate)}`
+                : "Vencimento não definido"}
+            </span>
           </p>
         </div>
         <Badge variant="secondary">{ORDER_STATUS_LABELS[order.status] ?? order.status}</Badge>

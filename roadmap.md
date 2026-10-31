@@ -1,3 +1,6 @@
+# Vencimento nos pedidos da Loja
+- [ ] Substituir entrega junto ao telefone por vencimento compacto, atrasos em vermelho e Quitado em verde; preservar controles de entrega e verificar regras.
+
 # Automação WhatsApp — Evolution
 - [x] Corrigida whatsapp_receipt_event realmente ligada às parcelas; vínculo conferido no banco e caso Wellington verificado: R$ 57,98 menos R$ 7,98 = R$ 50,00; sete testes aprovados, sem alterar pagamento nem reenviar recibo antigo.
 - [x] Edição em janela limitada à tela, recibo parcial com valor recebido, saldo restante e Obrigada; função whatsapp_event atualizada por migration sem alterar vendas existentes.
