@@ -9,8 +9,8 @@ const payloadSchema = z.object({
   serviceName: z.string().nullish(), durationMinutes: z.number().nullish(), priceCents: z.number().optional(),
   discountPercent: z.number().nullish(), benefitType: z.string().nullish(), oldDay: z.string().optional(), oldStart: z.string().optional(),
   newDay: z.string().optional(), newStart: z.string().optional(), reason: z.string().nullish(),
-  amountCents: z.number().optional(), remainingCents: z.number().optional(), number: z.number().optional(), partial: z.boolean().optional(),
-  dueDate: z.string().optional(), title: z.string().optional(), prize: z.string().optional(), loginId: z.string().optional(),
+  amountCents: z.number().optional(), remainingCents: z.number().optional(), number: z.number().optional(), partial: z.boolean().optional(), advance: z.boolean().optional(),
+  dueDate: z.string().nullish(), title: z.string().optional(), prize: z.string().optional(), loginId: z.string().optional(),
 }).passthrough();
 const batchSchema = z.object({ enabled: z.boolean(), settings: whatsappConfigSchema.optional(), adminPhone: z.string().nullish(), pixKey: z.string().nullish(), messages: z.array(z.object({ id: z.string().uuid(), kind: z.string(), payload: payloadSchema })) });
 type Payload = z.infer<typeof payloadSchema>;
@@ -32,6 +32,10 @@ function messageText(kind: string, p: Payload, pixKey: string): string {
     case "contact": return `Olá, ${n.name}! Aqui é a Janaina da Jannah Nails. 💖`;
     case "receipt": {
       const receipt = receiptPaymentDetails(p);
+      if (p.advance) {
+        const due = (p.dueDate || "").split("-");
+        return `Olá! Confirmamos o seu adiantamento de ${formatPrice(receipt.receivedCents)} referente à parcela ${p.number}. Restante a pagar deste mês (vencimento ${due.length === 3 ? `${due[2]}/${due[1]}` : "a definir"}): ${formatPrice(receipt.remainingCents)}. Obrigada! 🛍️✨`;
+      }
       return receipt.partial
         ? `Olá! Seu pagamento parcial de ${formatPrice(receipt.receivedCents)} referente à parcela ${p.number} foi confirmado. Valor restante: ${formatPrice(receipt.remainingCents)}. Obrigada! 🛍️✨`
         : `Olá! Seu pagamento de ${formatPrice(receipt.receivedCents)} referente à parcela ${p.number} foi confirmado. Parcela quitada. Obrigada! 🛍️✨`;

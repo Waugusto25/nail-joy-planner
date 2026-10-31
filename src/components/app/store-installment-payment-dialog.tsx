@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { formatPrice } from "@/lib/salon";
 import { supabase } from "@/lib/supabase-client";
 import { confirmOlderInvoices } from "@/components/app/older-invoice-warning";
+import { remainingCents } from "@/lib/store-advance";
 import {
   settleInstallment,
   todayISO,
@@ -52,7 +53,7 @@ export function StoreInstallmentPaymentDialog({
   useEffect(() => {
     if (open && parcel) {
       // Pendente sugere sempre o valor exato da fatura, nunca um pagamento antigo.
-      setPaid(toInput(parcel.paid_at && parcel.paid_amount_cents ? parcel.paid_amount_cents : parcel.amount_cents));
+      setPaid(toInput(parcel.paid_at && parcel.paid_amount_cents ? parcel.paid_amount_cents : remainingCents(parcel)));
       setDate(parcel.paid_at ? parcel.paid_at.slice(0, 10) : todayISO());
     }
   }, [open, parcel]);
@@ -147,7 +148,7 @@ export function StoreInstallmentPaymentDialog({
           <div className="space-y-3">
             <p className="text-sm">
               Valor da parcela (a cobrar):{" "}
-              <strong className="font-semibold">{formatPrice(parcel.amount_cents)}</strong>
+              <strong className="font-semibold">{formatPrice(remainingCents(parcel))}</strong>
             </p>
 
             <div className="space-y-1">
@@ -164,7 +165,7 @@ export function StoreInstallmentPaymentDialog({
                   type="button"
                   variant="secondary"
                   size="sm"
-                  onClick={() => setPaid(toInput(parcel.amount_cents))}
+                  onClick={() => setPaid(toInput(remainingCents(parcel)))}
                 >
                   Valor exato
                 </Button>

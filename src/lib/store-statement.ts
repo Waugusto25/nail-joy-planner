@@ -6,6 +6,7 @@ import {
   type StoreOrderWithDetails,
 } from "@/lib/store";
 import { ORDER_STATUS_LABELS, formatISODate, formatPhone, formatPrice } from "@/lib/salon";
+import { advancedCents, receivedCents, remainingCents } from "./store-advance";
 
 export type StatementTotals = {
   totalCents: number;
@@ -20,7 +21,7 @@ export function statementTotals(orders: StoreOrderWithDetails[]): StatementTotal
   for (const order of orders) {
     totalCents += order.amount_cents;
     for (const parcel of order.installments_list) {
-      if (parcel.paid_at) paidCents += parcel.paid_amount_cents || parcel.amount_cents;
+      paidCents += receivedCents(parcel);
     }
   }
   let pendingCents = 0;
@@ -28,7 +29,7 @@ export function statementTotals(orders: StoreOrderWithDetails[]): StatementTotal
     for (const parcel of order.installments_list) {
       // Parcelas unificadas em outro pedido não são cobradas novamente.
       if (!parcel.paid_at && !parcel.merged_into_order_id) {
-        pendingCents += parcel.amount_cents;
+        pendingCents += remainingCents(parcel);
       } else if (parcel.paid_at && !parcel.merged_into_order_id && parcel.paid_amount_cents > 0) {
         // Pagamento parcial: o que faltou continua em aberto.
         pendingCents += Math.max(0, parcel.amount_cents - parcel.paid_amount_cents);
@@ -290,6 +291,19 @@ export function drawStatement(
         doc.setFontSize(9.5);
         y += 5.5;
 
+        if (advancedCents(parcel) > 0) {
+          const history = [
+            ...(parcel.advances ?? []).map((entry) => `Adiantamento em ${formatISODate(entry.paid_on)}: ${formatPrice(entry.amount_cents)}`),
+            `Restante deste mês: ${formatPrice(remainingCents(parcel))}`,
+          ];
+          for (const text of history) {
+            ensureSpace(6);
+            doc.setFontSize(8);
+            setInk(PALETTE.soft);
+            doc.text(text, MARGIN + 4, y);
+            y += 4.5;
+          }
+        }
         // Itens cobrados neste mês
         const shares = allocation.byInstallment.get(parcel.number) ?? [];
         if (shares.length > 0 && !parcel.merged_into_order_id) {

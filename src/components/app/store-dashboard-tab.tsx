@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchStoreOrders } from "@/components/app/store-orders-tab";
 import { ORDER_STATUS_LABELS, formatISODate, formatPrice } from "@/lib/salon";
+import { computeReport } from "@/lib/store-general-report";
+import { remainingCents } from "@/lib/store-advance";
 
 /** Primeiro e último dia do mês atual em "YYYY-MM-DD", sempre no fuso local. */
 function monthBounds(): { from: string; to: string } {
@@ -47,12 +49,9 @@ export function StoreDashboardTab() {
   // Comparação direta de strings "YYYY-MM-DD": sem Date, sem deslocamento de fuso.
   const inRange = (day: string | null) => Boolean(day && day >= range.from && day <= range.to);
 
-  const toReceive = parcels
-    .filter((p) => !p.paid_at && inRange(p.due_date))
-    .reduce((s, p) => s + p.amount_cents, 0);
-  const received = parcels
-    .filter((p) => p.paid_at && inRange(p.paid_at.slice(0, 10)))
-    .reduce((s, p) => s + (p.paid_amount_cents || p.amount_cents), 0);
+  const totals = computeReport(rows, range);
+  const toReceive = totals.pending;
+  const received = totals.paid;
   const periodTotal = toReceive + received;
 
   const upcoming = parcels
@@ -148,7 +147,7 @@ export function StoreDashboardTab() {
               </span>
               <span className="flex items-center gap-2">
                 <Badge variant="secondary">{ORDER_STATUS_LABELS[p.status] ?? p.status}</Badge>
-                <strong>{formatPrice(p.amount_cents)}</strong>
+                <strong>{formatPrice(remainingCents(p))}</strong>
               </span>
             </li>
           ))}

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase-client";
+import { advancedCents, type StoreAdvance } from "./store-advance";
 
 export type StoreClient = {
   id: string;
@@ -23,6 +24,7 @@ export type StoreOrderItem = {
 
 
 export type StoreOrderInstallment = {
+  advances?: StoreAdvance[];
   id: string;
   order_id: string;
   number: number;
@@ -379,7 +381,8 @@ export function settleInstallment(
   paidDateISO: string,
 ): SettlementPlan {
   const active = order.installments_list.filter((p) => !p.merged_into_order_id);
-  const paid = Math.max(0, Math.round(paidCents));
+  // A new settlement receives only the remainder; previous advances stay paid.
+  const paid = Math.max(0, Math.round(paidCents)) + (parcel.paid_at ? 0 : advancedCents(parcel));
   const diff = paid - parcel.amount_cents;
 
   const sorted = [...active].sort((a, b) => a.number - b.number);
@@ -647,7 +650,7 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
     .select(
       // O apontamento explícito da chave estrangeira evita ambiguidade: parcelas
       // referenciam store_orders por order_id e por merged_into_order_id.
-      "id, created_at, archived_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, delivered_on, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order, start_installment, installments_count), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents, mp_payment_id, mp_method, mp_status, pix_copia_e_cola, pix_qr_code_base64, boleto_linha_digitavel, boleto_pdf_url, boleto_expires_on)",
+      "id, created_at, archived_at, store_client_id, client_name, client_phone, item_name, amount_cents, payment_method, installments, delivery_date, delivered_on, status, notes, store_clients(nickname), store_order_items(id, order_id, name, unit_price_cents, sort_order, start_installment, installments_count), store_order_installments!store_order_installments_order_id_fkey(id, order_id, number, amount_cents, due_date, paid_at, merged_into_order_id, merged_extra_cents, added_extra_cents, paid_amount_cents, credit_applied_cents, carried_in_cents, mp_payment_id, mp_method, mp_status, pix_copia_e_cola, pix_qr_code_base64, boleto_linha_digitavel, boleto_pdf_url, boleto_expires_on, store_installment_advances(id, amount_cents, paid_on, created_at))",
     )
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -677,7 +680,10 @@ export async function fetchStoreOrders(): Promise<StoreOrderWithDetails[]> {
           start_installment: i.start_installment ?? null,
           installments_count: i.installments_count ?? null,
         })),
-      installments_list: [...(row.store_order_installments ?? [])].sort(
+      installments_list: [...(row.store_order_installments ?? [])].map((parcel) => ({
+        ...parcel,
+        advances: [...(parcel.store_installment_advances ?? [])].sort((a, b) => a.paid_on.localeCompare(b.paid_on) || a.created_at.localeCompare(b.created_at)),
+      })).sort(
         (a, b) => a.number - b.number,
       ),
     };

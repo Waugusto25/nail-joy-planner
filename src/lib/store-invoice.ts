@@ -8,6 +8,7 @@ import {
 } from "@/lib/store";
 import { formatISODate, formatPhone, formatPrice } from "@/lib/salon";
 import { BOLETO_FEE_CENTS, BOLETO_FEE_NOTICE } from "@/lib/mercado-pago-fees";
+import { advancedCents, remainingCents } from "./store-advance";
 
 const PAGE_W = 210;
 const PAGE_H = 297;
@@ -128,7 +129,7 @@ export function drawInvoice(
   // Métricas do mês
   const cardW = (CONTENT_W - 8) / 3;
   const cards: [string, string][] = [
-    [isBoleto ? "Valor do boleto" : "Valor da fatura", formatPrice(parcel.amount_cents + feeCents)],
+    [isBoleto ? "Valor do boleto" : "Valor da fatura", formatPrice((isBoleto ? remainingCents(parcel) : parcel.amount_cents) + feeCents)],
     [
       isBoleto ? "Vencimento do boleto" : "Vencimento",
       formatISODate(isBoleto && parcel.boleto_expires_on ? parcel.boleto_expires_on : parcel.due_date),
@@ -196,7 +197,7 @@ export function drawInvoice(
   setInk(INK);
   doc.text(isBoleto ? "Total do boleto" : "Total da fatura", MARGIN, y);
   doc.text(
-    formatPrice((shares.length ? itemsTotal : parcel.amount_cents) + feeCents),
+    formatPrice((isBoleto ? remainingCents(parcel) : shares.length ? itemsTotal : parcel.amount_cents) + feeCents),
     PAGE_W - MARGIN,
     y,
     { align: "right" },
@@ -226,13 +227,17 @@ export function drawInvoice(
 
   // Ajustes que compõem o valor do mês
   const notes: string[] = [];
+  if (advancedCents(parcel) > 0) {
+    notes.push(...(parcel.advances ?? []).map((entry) => `Adiantamento em ${formatISODate(entry.paid_on)}: ${formatPrice(entry.amount_cents)}.`));
+    notes.push(`Total adiantado: ${formatPrice(advancedCents(parcel))}. Restante deste mês: ${formatPrice(remainingCents(parcel))}.`);
+  }
   if (parcel.credit_applied_cents > 0)
     notes.push(`Abatido ${formatPrice(parcel.credit_applied_cents)} de crédito anterior.`);
   if (parcel.carried_in_cents > 0)
     notes.push(`Inclui ${formatPrice(parcel.carried_in_cents)} de pendência do mês anterior.`);
   if (parcel.merged_extra_cents > 0)
     notes.push(`Inclui ${formatPrice(parcel.merged_extra_cents)} do pedido anterior.`);
-  if (parcel.paid_amount_cents > 0 && !parcel.paid_at)
+  if (parcel.paid_amount_cents > 0 && !parcel.paid_at && advancedCents(parcel) === 0)
     notes.push(`Pago parcialmente: ${formatPrice(parcel.paid_amount_cents)}.`);
   // Quando a soma dos produtos não fecha com o valor cobrado (ajustes manuais,
   // pedidos antigos sem vínculo), a diferença é declarada em vez de escondida.
@@ -257,7 +262,7 @@ export function drawInvoice(
     ? upcoming
         .map(
           (p) =>
-            `Parcela ${p.number}/${totalCount} em ${formatISODate(p.due_date)} — ${formatPrice(p.amount_cents)}`,
+            `Parcela ${p.number}/${totalCount} em ${formatISODate(p.due_date)} — ${formatPrice(remainingCents(p))}`,
         )
         .join("  |  ")
     : "Nenhuma parcela vencida após esta.";

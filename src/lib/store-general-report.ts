@@ -2,6 +2,7 @@ import type { jsPDF } from "jspdf";
 
 import { formatISODate, formatPrice } from "@/lib/salon";
 import type { StoreOrderWithDetails } from "@/lib/store";
+import { advancedCents, receivedCents, remainingCents } from "./store-advance";
 
 const M = 14;
 const PAGE_H = 297;
@@ -32,11 +33,14 @@ export function computeReport(orders: StoreOrderWithDetails[], range: ReportRang
     if (inRange(o.created_at?.slice(0, 10), range)) row.sold += o.amount_cents;
     for (const p of o.installments_list) {
       if (p.merged_into_order_id) continue;
+      for (const advance of p.advances ?? []) {
+        if (inRange(advance.paid_on, range)) row.paid += advance.amount_cents;
+      }
       if (p.paid_at && inRange(p.paid_at.slice(0, 10), range)) {
-        row.paid += p.paid_amount_cents || p.amount_cents;
-      } else if (!p.paid_at && inRange(p.due_date, range)) {
-        // Sem data de pagamento a parcela está em aberto: deve o valor cheio.
-        row.pending += p.amount_cents;
+        row.paid += Math.max(0, receivedCents(p) - advancedCents(p));
+      }
+      if (!p.paid_at && inRange(p.due_date, range)) {
+        row.pending += remainingCents(p);
       }
     }
     if (row.sold || row.paid || row.pending) byClient.set(o.client_name, row);
