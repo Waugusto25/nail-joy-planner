@@ -7,7 +7,10 @@ export const recordStoreAdvanceFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({
     installmentId: z.string().uuid(),
     amountCents: z.number().int().positive(),
-    paidOn: z.iso.date(),
+    paidOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((day) => {
+      const date = new Date(`${day}T12:00:00Z`);
+      return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === day;
+    }, "Data inválida"),
     requestId: z.string().uuid(),
   }).parse(data))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
