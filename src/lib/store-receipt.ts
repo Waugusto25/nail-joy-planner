@@ -1,4 +1,4 @@
-export type ReceiptPayment = { amountCents?: number; remainingCents?: number; partial?: boolean };
+export type ReceiptPayment = { amountCents?: number | undefined; remainingCents?: number | undefined; partial?: boolean | undefined };
 
 /** The outbox carries this payment's delta, not the accumulated paid amount. */
 export function receiptPaymentDetails(payment: ReceiptPayment): { receivedCents: number; remainingCents: number; partial: boolean } {
