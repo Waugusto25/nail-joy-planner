@@ -10,7 +10,7 @@ const payloadSchema = z.object({
   discountPercent: z.number().nullish(), benefitType: z.string().nullish(), oldDay: z.string().optional(), oldStart: z.string().optional(),
   newDay: z.string().optional(), newStart: z.string().optional(), reason: z.string().nullish(),
   amountCents: z.number().optional(), remainingCents: z.number().optional(), number: z.number().optional(), partial: z.boolean().optional(), advance: z.boolean().optional(),
-  dueDate: z.string().optional(), title: z.string().optional(), prize: z.string().optional(), loginId: z.string().optional(),
+  dueDate: z.string().nullish(), title: z.string().optional(), prize: z.string().optional(), loginId: z.string().optional(),
 }).passthrough();
 const batchSchema = z.object({ enabled: z.boolean(), settings: whatsappConfigSchema.optional(), adminPhone: z.string().nullish(), pixKey: z.string().nullish(), messages: z.array(z.object({ id: z.string().uuid(), kind: z.string(), payload: payloadSchema })) });
 type Payload = z.infer<typeof payloadSchema>;

@@ -15,6 +15,7 @@ import { installmentState, type StoreOrderWithDetails } from "@/lib/store";
 import { drawStatement, statementFileName } from "@/lib/store-statement";
 import { drawInvoice, invoiceFileName, invoiceableInstallments } from "@/lib/store-invoice";
 import { cn } from "@/lib/utils";
+import { advancedCents, remainingCents } from "@/lib/store-advance";
 
 type Mode = "total" | "mes";
 
@@ -137,8 +138,9 @@ export function StoreInvoiceExportDialog({
                         selected === p.number ? "border-primary bg-primary/5" : "border-border",
                       )}
                     >
-                      <span>
+                      <span className="min-w-0">
                         Parcela {p.number}/{parcels.length} · {formatISODate(p.due_date)}
+                        {advancedCents(p) > 0 && <span className="block text-xs text-muted-foreground">Adiantado: {formatPrice(advancedCents(p))} · Restante: {formatPrice(remainingCents(p))}</span>}
                       </span>
                       <span className="text-muted-foreground text-xs">
                         {formatPrice(p.amount_cents)} ·{" "}
