@@ -1,3 +1,6 @@
+# Exportação de faturas da Loja
+- [ ] Concentrar exportação no botão junto ao extrato, remover atalho por parcela e verificar escolha mês/total com geração de PDFs.
+
 # Adiantamentos da Loja
 - [x] Botão e janela entre Dar baixa e PDF, valor/data e bloqueio acima do saldo; conferidos no celular e desktop.
 - [x] Gravação atômica record_store_advance, histórico persistente e saldo no mês; teste real de 50 + 50 quitou 100 sem alterar a próxima parcela.

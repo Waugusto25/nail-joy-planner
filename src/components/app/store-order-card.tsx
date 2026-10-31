@@ -70,7 +70,6 @@ export function StoreOrderCard({
   const [settling, setSettling] = useState<StoreOrderInstallment | null>(null);
   const [advancing, setAdvancing] = useState<StoreOrderInstallment | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const [invoiceParcel, setInvoiceParcel] = useState<number | null>(null);
   const [mpParcel, setMpParcel] = useState<StoreOrderInstallment | null>(null);
   const pending = pendingInstallments(order.installments_list);
   const nextDue = pending[0];
@@ -491,19 +490,6 @@ export function StoreOrderCard({
                         <Plus size={16} /> Adiantamento
                       </Button>
                     )}
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-9 w-9"
-                      aria-label={`Exportar fatura da parcela ${p.number} em PDF`}
-                      title="Exportar fatura deste mês (PDF)"
-                      onClick={() => {
-                        setInvoiceParcel(p.number);
-                        setInvoiceOpen(true);
-                      }}
-                    >
-                      <FileText size={16} />
-                    </Button>
                     {!p.paid_at && (
                       <Button
                         size="sm"
@@ -590,10 +576,7 @@ export function StoreOrderCard({
               size="sm"
               variant="outline"
               className="gap-1"
-              onClick={() => {
-                setInvoiceParcel(null);
-                setInvoiceOpen(true);
-              }}
+              onClick={() => setInvoiceOpen(true)}
             >
               <FileText size={16} /> Exportar Fatura (PDF)
             </Button>
@@ -620,16 +603,12 @@ export function StoreOrderCard({
 
       <StoreOrderAddItemsDialog order={order} open={addOpen} onOpenChange={setAddOpen} />
       {advancing && <StoreInstallmentAdvanceDialog key={advancing.id} parcel={advancing} onClose={() => setAdvancing(null)} />}
-      <StoreInvoiceExportDialog
+      {invoiceOpen && <StoreInvoiceExportDialog
         order={order}
         pixKey={pixKey}
         open={invoiceOpen}
-        onOpenChange={(v) => {
-          setInvoiceOpen(v);
-          if (!v) setInvoiceParcel(null);
-        }}
-        initialParcelNumber={invoiceParcel}
-      />
+        onOpenChange={setInvoiceOpen}
+      />}
       <MercadoPagoChargeDialog
         parcel={mpParcel}
         onOpenChange={(v) => {
