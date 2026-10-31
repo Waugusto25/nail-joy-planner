@@ -1,3 +1,7 @@
+# Datas das parcelas da Loja
+- [ ] Pendentes exibem Vencimento editável; pagas exibem Pagamento bloqueado com data registrada em São Paulo, sem apagar vencimento original.
+- [ ] Validar mudança de estado e preservação das datas com testes e painel autenticado.
+
 # Barra de parcelas da Loja
 - [x] Removido o campo de data Pagamento e seu manipulador em store-order-card.tsx; Vencimento e ações de pagamento preservados. Painel autenticado conferido em 393×852 e Dar baixa abriu sem alterar dados.
 
