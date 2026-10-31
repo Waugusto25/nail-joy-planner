@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -24,26 +24,18 @@ export function StoreInvoiceExportDialog({
   pixKey,
   open,
   onOpenChange,
-  initialParcelNumber,
 }: {
   order: StoreOrderWithDetails;
   pixKey: string;
   open: boolean;
   onOpenChange: (value: boolean) => void;
-  initialParcelNumber?: number | null;
 }) {
   const parcels = invoiceableInstallments(order);
-  const [mode, setMode] = useState<Mode>(initialParcelNumber ? "mes" : "total");
+  const [mode, setMode] = useState<Mode>("total");
   const [selected, setSelected] = useState<number | null>(
-    initialParcelNumber ?? parcels[0]?.number ?? null,
+    parcels[0]?.number ?? null,
   );
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setMode(initialParcelNumber ? "mes" : "total");
-    setSelected(initialParcelNumber ?? parcels[0]?.number ?? null);
-  }, [open, initialParcelNumber, parcels]);
 
   async function generate() {
     setLoading(true);
@@ -83,9 +75,9 @@ export function StoreInvoiceExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Exportar PDF do pedido</DialogTitle>
+          <DialogTitle>Exportar Fatura (PDF)</DialogTitle>
           <DialogDescription>
             Escolha entre a fatura total do pedido ou a fatura de um mês específico.
           </DialogDescription>
@@ -93,12 +85,13 @@ export function StoreInvoiceExportDialog({
 
         <div className="space-y-3">
           <div className="grid gap-2 sm:grid-cols-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
               aria-pressed={mode === "total"}
               onClick={() => setMode("total")}
               className={cn(
-                "rounded-md border p-3 text-left text-sm",
+                "h-auto flex-col items-start whitespace-normal rounded-md border p-3 text-left text-sm",
                 mode === "total" ? "border-primary bg-primary/5" : "border-border",
               )}
             >
@@ -106,13 +99,14 @@ export function StoreInvoiceExportDialog({
               <span className="text-muted-foreground text-xs">
                 Documento completo com todas as parcelas, para conferência.
               </span>
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
               aria-pressed={mode === "mes"}
               onClick={() => setMode("mes")}
               className={cn(
-                "rounded-md border p-3 text-left text-sm",
+                "h-auto flex-col items-start whitespace-normal rounded-md border p-3 text-left text-sm",
                 mode === "mes" ? "border-primary bg-primary/5" : "border-border",
               )}
             >
@@ -120,7 +114,7 @@ export function StoreInvoiceExportDialog({
               <span className="text-muted-foreground text-xs">
                 Somente a parcela escolhida, com os produtos daquele mês.
               </span>
-            </button>
+            </Button>
           </div>
 
           {mode === "mes" ? (
@@ -129,12 +123,13 @@ export function StoreInvoiceExportDialog({
                 const state = installmentState(p);
                 return (
                   <li key={p.id}>
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
                       aria-pressed={selected === p.number}
                       onClick={() => setSelected(p.number)}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm",
+                        "flex h-auto w-full flex-wrap items-center justify-between gap-2 whitespace-normal rounded-md border px-3 py-2 text-left text-sm",
                         selected === p.number ? "border-primary bg-primary/5" : "border-border",
                       )}
                     >
@@ -146,7 +141,7 @@ export function StoreInvoiceExportDialog({
                         {formatPrice(p.amount_cents)} ·{" "}
                         {state === "paga" ? "PAGO" : state === "parcial" ? "PARCIAL" : "PENDENTE"}
                       </span>
-                    </button>
+                    </Button>
                   </li>
                 );
               })}

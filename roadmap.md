@@ -1,3 +1,6 @@
+# Exportação de faturas da Loja
+- [x] Exportação concentrada junto ao extrato, atalho por parcela removido; escolha mês/total e downloads dos dois PDFs verificados no painel autenticado no celular, com seleção da segunda parcela preservada. Compilação OK e dez testes de pagamentos/recibos aprovados.
+
 # Adiantamentos da Loja
 - [x] Botão e janela entre Dar baixa e PDF, valor/data e bloqueio acima do saldo; conferidos no celular e desktop.
 - [x] Gravação atômica record_store_advance, histórico persistente e saldo no mês; teste real de 50 + 50 quitou 100 sem alterar a próxima parcela.
