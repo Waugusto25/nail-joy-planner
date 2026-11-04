@@ -99,6 +99,13 @@
       "when": 1793423838592,
       "tag": "0013_store_installment_advances",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793835195297,
+      "tag": "0014_store_receipt_account_settlement",
+      "breakpoints": true
     }
   ]
 }

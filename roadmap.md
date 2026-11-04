@@ -1,3 +1,8 @@
+# Recibos da Loja — opção 1
+- [x] Confirmação mensal sem palavra quitada; quitação total somente com saldo zero da cliente, preservando parciais/adiantamentos — store-receipt.ts e evolution.server.ts.
+- [x] Migration 0014 aplicada e whatsapp_receipt_event ativo reconsultado; saldo real de Maria impede quitação total; 15 testes aprovados e compilação OK, sem alterar pagamentos.
+- [ ] Entrega do novo texto depende do próximo deploy Vercel; nenhum recibo real reenviado neste turno.
+
 # Datas das parcelas da Loja
 - [x] Pendentes exibem Vencimento editável; pagas exibem Pagamento bloqueado derivado de paid_at em São Paulo, sem apagar vencimento original — store-order-card.tsx e store-installment-date.ts.
 - [x] Cinco testes de datas e doze regressões aprovados; pedido real da Marry conferido autenticado no celular e computador, com duas datas de pagamento bloqueadas e vencimento pendente editável; compilação OK. Nenhum pagamento real alterado.

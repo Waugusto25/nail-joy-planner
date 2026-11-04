@@ -2,14 +2,14 @@ import { z } from "zod";
 import { whatsappConfigSchema, whatsappPhone } from "./whatsapp-rules";
 import { adminCancellationAlert, adminRescheduleRequestAlert, cancellationMessage, confirmationMessage, formatPrice, reconfirmMessage, rescheduleMessage, APP_URL } from "./salon";
 import { createPublicClient } from "./supabase-public.server";
-import { receiptPaymentDetails } from "./store-receipt";
+import { receiptPaymentDetails, storeReceiptMessage } from "./store-receipt";
 
 const payloadSchema = z.object({
   phone: z.string().nullish(), name: z.string().nullish(), day: z.string().optional(), start: z.string().optional(),
   serviceName: z.string().nullish(), durationMinutes: z.number().nullish(), priceCents: z.number().optional(),
   discountPercent: z.number().nullish(), benefitType: z.string().nullish(), oldDay: z.string().optional(), oldStart: z.string().optional(),
   newDay: z.string().optional(), newStart: z.string().optional(), reason: z.string().nullish(),
-  amountCents: z.number().optional(), remainingCents: z.number().optional(), number: z.number().optional(), partial: z.boolean().optional(), advance: z.boolean().optional(),
+  amountCents: z.number().optional(), remainingCents: z.number().optional(), accountRemainingCents: z.number().int().nonnegative().optional(), number: z.number().optional(), partial: z.boolean().optional(), advance: z.boolean().optional(),
   dueDate: z.string().nullish(), title: z.string().optional(), prize: z.string().optional(), loginId: z.string().optional(),
 }).passthrough();
 const batchSchema = z.object({ enabled: z.boolean(), settings: whatsappConfigSchema.optional(), adminPhone: z.string().nullish(), pixKey: z.string().nullish(), messages: z.array(z.object({ id: z.string().uuid(), kind: z.string(), payload: payloadSchema })) });
@@ -36,9 +36,7 @@ function messageText(kind: string, p: Payload, pixKey: string): string {
         const due = (p.dueDate || "").split("-");
         return `Olá! Confirmamos o seu adiantamento de ${formatPrice(receipt.receivedCents)} referente à parcela ${p.number}. Restante a pagar deste mês (vencimento ${due.length === 3 ? `${due[2]}/${due[1]}` : "a definir"}): ${formatPrice(receipt.remainingCents)}. Obrigada! 🛍️✨`;
       }
-      return receipt.partial
-        ? `Olá! Seu pagamento parcial de ${formatPrice(receipt.receivedCents)} referente à parcela ${p.number} foi confirmado. Valor restante: ${formatPrice(receipt.remainingCents)}. Obrigada! 🛍️✨`
-        : `Olá! Seu pagamento de ${formatPrice(receipt.receivedCents)} referente à parcela ${p.number} foi confirmado. Parcela quitada. Obrigada! 🛍️✨`;
+      return storeReceiptMessage(p);
     }
     case "due": return `Olá! A parcela ${p.number}, com vencimento em ${(p.dueDate || "").split("-").reverse().join("/")}, está em aberto.\nValor: ${formatPrice(p.amountCents || 0)}${pixKey ? `\nChave Pix: ${pixKey}` : ""}\nSe já pagou, envie o comprovante. Obrigado!`;
     default: throw new Error("Mensagem não autorizada.");
