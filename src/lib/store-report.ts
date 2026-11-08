@@ -1,3 +1,4 @@
+import { drawPdfLogo } from "./store-pdf-logo";
 import type { jsPDF } from "jspdf";
 
 import { formatISODate, formatPhone, formatPrice } from "@/lib/salon";
@@ -35,6 +36,7 @@ function dateOf(ts: string | null): string {
  */
 export function drawOrderReport(doc: jsPDF, order: StoreOrderWithDetails): void {
   let y = M;
+  drawPdfLogo(doc);
   const line = (text: string, opts: { bold?: boolean; size?: number; indent?: number; color?: [number, number, number] } = {}) => {
     doc.setFont("helvetica", opts.bold ? "bold" : "normal");
     doc.setFontSize(opts.size ?? 9.5);

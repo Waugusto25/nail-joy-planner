@@ -1,3 +1,4 @@
+import { drawPdfLogo } from "./store-pdf-logo";
 import type { jsPDF } from "jspdf";
 
 import {
@@ -89,6 +90,7 @@ export function drawInvoice(
 
   const setInk = (c: [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
   let y = MARGIN;
+  drawPdfLogo(doc);
   const ensureSpace = (needed: number) => {
     if (y + needed <= PAGE_H - MARGIN) return;
     doc.addPage();
@@ -103,7 +105,7 @@ export function drawInvoice(
   doc.setFontSize(11);
   doc.text(
     `FATURA — PARCELA ${parcel.number}/${totalCount}`,
-    PAGE_W - MARGIN,
+    PAGE_W - MARGIN - 26,
     y + 4,
     { align: "right" },
   );

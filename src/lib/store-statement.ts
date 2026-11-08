@@ -1,3 +1,4 @@
+import { drawPdfLogo } from "./store-pdf-logo";
 import type { jsPDF } from "jspdf";
 
 import {
@@ -121,6 +122,7 @@ export function drawStatement(
 ): void {
   const totals = statementTotals(args.orders);
   let y = MARGIN;
+  drawPdfLogo(doc);
 
   const setInk = (color: [number, number, number]) => doc.setTextColor(color[0], color[1], color[2]);
   const ensureSpace = (needed: number) => {
@@ -220,13 +222,11 @@ export function drawStatement(
       ensureSpace(8);
       const alloc = allocation.byItem.find((a) => a.itemId === item.id);
       const numbers = alloc?.numbers ?? [];
-      const label = numbers.length
-        ? `${item.name} — [${numbers.join(", ")}]${
-            numbers.length > 1
-              ? ` (${numbers.length}x de ${formatPrice(alloc?.perInstallmentCents ?? 0)})`
-              : ""
-          }`
-        : item.name;
+      // Só "(Nx de R$ ...)": a lista [1, 2, 3] repetia a mesma informação.
+      const label =
+        numbers.length > 1
+          ? `${item.name} — (${numbers.length}x de ${formatPrice(alloc?.perInstallmentCents ?? 0)})`
+          : item.name;
       setInk(PALETTE.ink);
       doc.setFontSize(10);
       doc.text(doc.splitTextToSize(label, CONTENT_W - 40)[0] ?? label, MARGIN, y);

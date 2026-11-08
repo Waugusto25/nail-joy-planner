@@ -1,3 +1,4 @@
+import { drawPdfLogo } from "./store-pdf-logo";
 import type { jsPDF } from "jspdf";
 
 import { formatISODate, formatPrice } from "@/lib/salon";
@@ -76,6 +77,7 @@ export function splitByMonth(range: ReportRange): ReportRange[] {
 
 export function drawGeneralReport(doc: jsPDF, totals: ReportTotals, range: ReportRange): void {
   let y = M + 2;
+  drawPdfLogo(doc);
   doc.setTextColor(31, 36, 48);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
