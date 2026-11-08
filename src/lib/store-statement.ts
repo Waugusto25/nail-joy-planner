@@ -243,7 +243,9 @@ export function drawStatement(
     doc.setFontSize(9);
     setInk(PALETTE.soft);
     const condition = `Condição de pagamento: ${paymentCondition(order)}${
-      order.status === "entregue" && order.delivered_on ? ` · Entregue: ${formatISODate(order.delivered_on)}` : " · Aguardando entrega"
+      order.status === "entregue"
+        ? order.delivered_on ? ` · Entregue: ${formatISODate(order.delivered_on)}` : " · Entregue"
+        : " · Aguardando entrega"
     }`;
     doc.text(condition, MARGIN, y);
     y += 6;

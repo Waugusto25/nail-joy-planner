@@ -179,6 +179,10 @@ export function StoreOrderForm({
         delivery_date: deliveryDate || null,
         status,
         notes: notes.trim() || null,
+        // Entregue sem data registrada recebe a data de hoje (São Paulo); preserva a já gravada.
+        ...(status === "entregue" && !(editing as { delivered_on?: string | null } | null)?.delivered_on
+          ? { delivered_on: new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date()) }
+          : {}),
       };
 
       // Edição mantém a numeração atual do pedido.
