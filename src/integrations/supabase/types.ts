@@ -1123,6 +1123,10 @@ export type Database = {
           subscription_id: string
         }[]
       }
+      finalize_store_unification: {
+        Args: { p_ids: string[]; p_target: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -113,6 +113,13 @@
       "when": 1794437940678,
       "tag": "0015_store_unify_all_pending",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794438063367,
+      "tag": "0016_preserve_unified_payment_history",
+      "breakpoints": true
     }
   ]
 }
