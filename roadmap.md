@@ -1,3 +1,8 @@
+# Unificação de compras da Loja
+- [ ] Redistribuir todo o saldo anterior no novo plano, preservando históricos e pagamentos.
+- [ ] Mostrar confirmação com saldo anterior, novas compras e valor/data de cada parcela.
+- [ ] Corrigir a conta da Marry sem apagar registros; verificar persistência e testes.
+
 # Recibos da Loja — opção 1
 - [x] Confirmação mensal sem palavra quitada; quitação total somente com saldo zero da cliente, preservando parciais/adiantamentos — store-receipt.ts e evolution.server.ts.
 - [x] Migration 0014 aplicada e whatsapp_receipt_event ativo reconsultado; saldo real de Maria impede quitação total; 15 testes aprovados e compilação OK, sem alterar pagamentos.

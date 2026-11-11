@@ -21,3 +21,4 @@
 - Store advances are append-only dated entries on the installment, saved by an admin-authorized row-locking RPC; pending payment totals preserve those entries, and edits preserve installment IDs so receipts and monthly balances remain auditable without changing legacy settlement behavior.
 - Mount the invoice export dialog only while open so mode and installment selection reset on reopening without effects tied to newly allocated arrays.
 - Store installment date controls derive read-only payment dates from persisted paid_at in São Paulo time; never overwrite due_date when presenting paid history, so manual reversal restores the original due date.
+- Store unification previews all outstanding installments through a pure plan and saves through an admin-only, row-locking, idempotent RPC; transfer every outstanding balance, preserve paid history, and move only wholly unpaid products without duplicating sales totals.

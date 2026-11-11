@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { StoreUnificationDialog } from "./store-unification-dialog";
+import { unificationPlan, unificationSources } from "@/lib/store-unification";
+import { createUnifiedStoreOrderFn } from "@/lib/store-unification.functions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,17 +18,13 @@ import { advancedCents } from "@/lib/store-advance";
 import {
   ORDER_STATUSES,
   PAYMENT_METHODS,
-  formatISODate,
   formatPrice,
-  onlyDigits,
   splitInstallments,
 } from "@/lib/salon";
 import {
   addMonthsISO,
   fetchStoreClients,
   lastInstallmentNumber,
-  pendingInstallments,
-  type StoreOrderInstallment,
   type StoreOrderWithDetails,
 } from "@/lib/store";
 
@@ -44,28 +44,6 @@ function toInput(cents: number) {
 }
 
 
-/** Primeira parcela pendente (a vencer) de pedidos anteriores do mesmo cliente. */
-function firstPendingFromHistory(
-  orders: StoreOrderWithDetails[],
-  clientId: string,
-  clientPhone: string,
-  excludeOrderId?: string,
-): StoreOrderInstallment | null {
-  const digits = onlyDigits(clientPhone);
-  const parcels = orders
-    .filter((o) => {
-      if (o.id === excludeOrderId) return false;
-      if (o.store_client_id) return o.store_client_id === clientId;
-      // Pedidos antigos, sem vínculo, são reconhecidos pelo telefone.
-      return Boolean(digits) && onlyDigits(o.client_phone) === digits;
-    })
-    .flatMap((o) => pendingInstallments(o.installments_list));
-  if (parcels.length === 0) return null;
-  return [...parcels].sort((a, b) =>
-    (a.due_date ?? "9999-12-31").localeCompare(b.due_date ?? "9999-12-31"),
-  )[0] ?? null;
-}
-
 export function StoreOrderForm({
   editing,
   orders,
@@ -78,6 +56,7 @@ export function StoreOrderForm({
   embedded?: boolean;
 }) {
   const queryClient = useQueryClient();
+  const createUnified = useServerFn(createUnifiedStoreOrderFn);
   const clients = useQuery({ queryKey: ["store-clients"], queryFn: fetchStoreClients });
 
   const [clientId, setClientId] = useState("");
@@ -90,6 +69,8 @@ export function StoreOrderForm({
   const [unify, setUnify] = useState(false);
   const [continueNumbering, setContinueNumbering] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmUnify, setConfirmUnify] = useState(false);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
 
   useEffect(() => {
     if (!editing) return;
@@ -119,8 +100,8 @@ export function StoreOrderForm({
   const carryOver = useMemo(
     () =>
       clientId
-        ? firstPendingFromHistory(orders, clientId, selectedClient?.phone ?? "", editing?.id)
-        : null,
+        ? unificationSources(orders.filter((o) => o.id !== editing?.id), clientId, selectedClient?.phone ?? "")
+        : [],
     [orders, clientId, selectedClient?.phone, editing?.id],
   );
 
@@ -130,6 +111,7 @@ export function StoreOrderForm({
     [orders, clientId, editing],
   );
   const offset = continueNumbering && lastNumber > 0 ? lastNumber : 0;
+  const plan = unificationPlan(carryOver, total, Number(installments) || 1, deliveryDate || carryOver[0]?.due_date || null, offset);
 
   function reset() {
     setClientId("");
@@ -141,9 +123,11 @@ export function StoreOrderForm({
     setNotes("");
     setUnify(false);
     setContinueNumbering(false);
+    setConfirmUnify(false);
+    setRequestId(crypto.randomUUID());
   }
 
-  async function save() {
+  async function save(confirmed = false) {
     const client = (clients.data ?? []).find((c) => c.id === clientId);
     if (!client) {
       toast.error("Selecione um cliente da loja.");
@@ -165,9 +149,28 @@ export function StoreOrderForm({
       toast.error("Adicione pelo menos um item ao pedido.");
       return;
     }
+    if (!editing && unify && carryOver.length > 0 && !confirmed) {
+      setConfirmUnify(true);
+      return;
+    }
     setSaving(true);
     try {
       const count = Math.max(1, Number(installments) || 1);
+      if (!editing && unify && carryOver.length > 0) {
+        const firstDue = plan.parcels[0]?.dueDate;
+        if (!firstDue) throw new Error("Informe a data de pagamento do novo plano.");
+        await createUnified({ data: {
+          orderId: requestId, clientId: client.id,
+          items: validItems.map((i) => ({ name: i.name.trim(), unit_price_cents: toCents(i.price) })),
+          sources: plan.sources, count, offset, firstDue,
+          paymentMethod, status, notes: notes.trim(),
+        } });
+        toast.success("Compras unificadas e parcelas recalculadas.");
+        reset();
+        onDone();
+        await queryClient.invalidateQueries({ queryKey: ["admin-store-orders"] });
+        return;
+      }
       const payload = {
         store_client_id: client.id,
         client_name: client.full_name,
@@ -224,12 +227,10 @@ export function StoreOrderForm({
           .map((p) => [p.number - base, { paid_at: p.paid_at, due_date: p.due_date }]),
       );
       const amounts = splitInstallments(total, count);
-      const merging = unify && carryOver ? carryOver : null;
-      const firstDue = merging?.due_date ?? (deliveryDate || null);
+      const firstDue = deliveryDate || null;
       const { error: parcelsError } = await supabase.from("store_order_installments").upsert(
         amounts.map((amount, index) => {
           const existing = editing?.installments_list.find((p) => p.number === base + index + 1);
-          const extra = merging && index === 0 ? merging.amount_cents : 0;
           const monthlyDue = firstDue ? addMonthsISO(firstDue, index) : null;
           return {
             ...(existing ? { id: existing.id, paid_amount_cents: existing.paid_amount_cents,
@@ -237,8 +238,8 @@ export function StoreOrderForm({
               added_extra_cents: existing.added_extra_cents } : {}),
             order_id: orderId,
             number: base + index + 1,
-            amount_cents: amount + extra,
-            merged_extra_cents: extra,
+            amount_cents: amount,
+            merged_extra_cents: existing?.merged_extra_cents ?? 0,
             // Cada parcela vence um mês depois da anterior, com ou sem unificação.
             due_date: paid.get(index + 1)?.due_date ?? monthlyDue,
             paid_at: paid.get(index + 1)?.paid_at ?? null,
@@ -250,15 +251,6 @@ export function StoreOrderForm({
       if (obsolete.length) {
         const { error } = await supabase.from("store_order_installments").delete().in("id", obsolete.map((p) => p.id));
         if (error) throw new Error(error.message);
-      }
-
-      // A parcela antiga somada sai da cobrança, evitando duplicidade.
-      if (merging) {
-        const { error: mergeError } = await supabase
-          .from("store_order_installments")
-          .update({ merged_into_order_id: orderId })
-          .eq("id", merging.id);
-        if (mergeError) throw new Error(mergeError.message);
       }
 
       toast.success(editing ? "Pedido atualizado." : "Pedido registrado.");
@@ -291,7 +283,7 @@ export function StoreOrderForm({
         </p>
       </div>
 
-      {carryOver ? (
+      {!editing && carryOver.length > 0 ? (
         <div className="rounded-md border border-primary/40 bg-primary/5 p-3">
           <label className="flex items-start gap-2 text-sm">
             <input
@@ -303,9 +295,8 @@ export function StoreOrderForm({
             <span>
               Unificar parcelas pendentes anteriores a este novo pedido?
               <span className="block text-xs text-muted-foreground">
-                Saldo pendente de {formatPrice(carryOver.amount_cents)} com vencimento em{" "}
-                {carryOver.due_date ? formatISODate(carryOver.due_date) : "data a definir"}. Marcado,
-                esse valor entra na 1ª parcela deste pedido e a parcela antiga deixa de ser cobrada.
+                Saldo total de {formatPrice(plan.previousCents)} em {carryOver.length} parcelas anteriores.
+                Esse saldo será somado às novas compras e dividido em todas as parcelas deste plano.
               </span>
             </span>
           </label>
@@ -334,7 +325,7 @@ export function StoreOrderForm({
             Continuar numeração (parcela {lastNumber + 1})
           </label>
           <p className="text-xs text-muted-foreground">
-            É uma venda nova no mesmo cadastro; as parcelas antigas não mudam.
+            {unify ? "A numeração escolhida será usada no novo plano unificado." : "É uma venda nova no mesmo cadastro; as parcelas antigas não mudam."}
           </p>
         </fieldset>
       ) : null}
@@ -430,10 +421,9 @@ export function StoreOrderForm({
               {formatPrice(parcels[parcels.length - 1] ?? 0)})
             </p>
           ) : null}
-          {unify && carryOver ? (
+          {unify && carryOver.length > 0 ? (
             <p className="text-xs text-primary">
-              1ª parcela consolidada:{" "}
-              {formatPrice((parcels[0] ?? 0) + carryOver.amount_cents)}
+              Total unificado: {formatPrice(plan.totalCents)} · {plan.parcels.length} parcelas de {formatPrice(plan.parcels[0]?.amountCents ?? 0)}
             </p>
           ) : null}
         </div>
@@ -489,6 +479,7 @@ export function StoreOrderForm({
           </Button>
         ) : null}
       </div>
+      <StoreUnificationDialog open={confirmUnify} onOpenChange={(open) => { if (!saving) setConfirmUnify(open); }} plan={plan} saving={saving} onConfirm={() => void save(true)} />
     </section>
   );
 }

@@ -1093,6 +1093,21 @@ export type Database = {
         Returns: boolean
       }
       consume_my_referral: { Args: { p_appointment: string }; Returns: boolean }
+      create_unified_store_order: {
+        Args: {
+          p_client_id: string
+          p_count: number
+          p_first_due: string
+          p_items: Json
+          p_notes: string
+          p_offset: number
+          p_order_id: string
+          p_payment_method: string
+          p_sources: Json
+          p_status: string
+        }
+        Returns: string
+      }
       delete_client_account: { Args: { p_client: string }; Returns: boolean }
       drop_push_subscriptions: { Args: { p_ids: string[] }; Returns: undefined }
       due_reminder_targets: {
