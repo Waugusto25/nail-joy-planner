@@ -19,6 +19,7 @@ const invoke = resolveServiceImageFn as unknown as (input: Invocation) => Promis
 function caller(ownUrl: string | null, published: boolean, failed = false) {
   const eq = vi.fn().mockReturnThis();
   return {
+    eq,
     storage: { from: vi.fn(() => ({ createSignedUrl: vi.fn(async () => ({ data: ownUrl ? { signedUrl: ownUrl } : null })) })) },
     from: vi.fn(() => ({ select: vi.fn(() => ({ eq, limit: vi.fn(async () => ({
       data: published ? [{ id: "service" }] : [], error: failed ? { message: "unavailable" } : null,
@@ -46,8 +47,8 @@ describe("private service image authorization", () => {
     const db = caller(null, true);
     await invoke({ data: { path: "servicos/published.png" }, context: { supabase: db } });
     expect(db.from).toHaveBeenCalledWith("services");
-    expect(db.from.mock.results[0].value.select().eq).toHaveBeenCalledWith("active", true);
-    expect(db.from.mock.results[0].value.select().eq).toHaveBeenCalledWith("image_url", "servicos/published.png");
+    expect(db.eq).toHaveBeenCalledWith("active", true);
+    expect(db.eq).toHaveBeenCalledWith("image_url", "servicos/published.png");
     expect(mocks.sign).toHaveBeenCalledWith("servicos/published.png", 300);
   });
   it("fails closed if the service authorization query fails", async () => {
