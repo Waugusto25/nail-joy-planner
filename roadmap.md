@@ -1,7 +1,9 @@
 # Unificação de compras da Loja
-- [ ] Redistribuir todo o saldo anterior no novo plano, preservando históricos e pagamentos.
-- [ ] Mostrar confirmação com saldo anterior, novas compras e valor/data de cada parcela.
-- [ ] Corrigir a conta da Marry sem apagar registros; verificar persistência e testes.
+- [x] Redistribuir todo o saldo anterior no novo plano; migrations 0015/0016 com gravação administrativa atômica e preservação de histórico pago.
+- [x] Confirmação com saldo anterior, novas compras e valor/data de cada parcela; janela verificada autenticada em desktop e 393×852.
+- [x] Marry corrigida: produtos e saldo R$ 302,70 num pedido ativo, duas parcelas R$ 75,68 e duas R$ 75,67; anterior arquivado e parcelas transferidas, sem exclusão.
+- [x] Sete testes Vitest e cinco testes de datas aprovados; unificação temporária salva e reaberta na interface com produtos e 2×R$ 60,00; registros temporários removidos. Compilação OK.
+- [ ] Levar o novo aviso à versão Vercel depende do próximo deploy externo.
 
 # Recibos da Loja — opção 1
 - [x] Confirmação mensal sem palavra quitada; quitação total somente com saldo zero da cliente, preservando parciais/adiantamentos — store-receipt.ts e evolution.server.ts.
