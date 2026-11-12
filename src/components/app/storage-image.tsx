@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 
-import { supabase } from "@/lib/supabase-client";
+import { resolveServiceImageFn } from "@/lib/service-images.functions";
 
 const BUCKET = "service-images";
 const LOVABLE_ASSET_ORIGIN = "https://nail-joy-planner.lovable.app";
@@ -22,6 +23,7 @@ function isDirect(url: string) {
 
 /** Resolves either a direct URL or a private storage path into a usable image src. */
 export function useResolvedImage(url?: string | null) {
+  const resolveImage = useServerFn(resolveServiceImageFn);
   const normalized = resolveDirectImageUrl(url);
   const [src, setSrc] = useState<string | null>(normalized && isDirect(normalized) ? normalized : null);
 
@@ -36,16 +38,18 @@ export function useResolvedImage(url?: string | null) {
       return;
     }
     let alive = true;
-    void supabase.storage
-      .from(BUCKET)
-      .createSignedUrl(nextUrl, 60 * 60)
-      .then(({ data }) => {
-        if (alive) setSrc(data?.signedUrl ?? null);
+    setSrc(null);
+    void resolveImage({ data: { path: nextUrl } })
+      .then(({ signedUrl }) => {
+        if (alive) setSrc(signedUrl);
+      })
+      .catch(() => {
+        if (alive) setSrc(null);
       });
     return () => {
       alive = false;
     };
-  }, [url]);
+  }, [url, resolveImage]);
 
   return src;
 }

@@ -120,6 +120,20 @@
       "when": 1794438063367,
       "tag": "0016_preserve_unified_payment_history",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794519125647,
+      "tag": "0017_scope_service_image_reads",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794519209320,
+      "tag": "0018_restrict_service_image_storage_to_owner",
+      "breakpoints": true
     }
   ]
 }
