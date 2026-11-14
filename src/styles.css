@@ -330,3 +330,15 @@
     transparent 100%
   );
 }
+
+/* Botão oficial do Google (cores fixadas pelas diretrizes da marca Google). */
+.google-button {
+  background: #ffffff;
+  color: #1f1f1f;
+  border: 1px solid #747775;
+}
+.dark .google-button {
+  background: #131314;
+  color: #e3e3e3;
+  border-color: #8e918f;
+}

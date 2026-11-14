@@ -4,6 +4,8 @@ import { toast } from "sonner";
 
 import { BrandMark } from "@/components/app/brand";
 import { CalendarSyncDialog } from "@/components/app/calendar-sync-dialog";
+import { GoogleAccess } from "@/components/app/google-access";
+import { isGoogleBridgeSession } from "@/lib/google-access";
 import { PasswordInput } from "@/components/app/password-input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -64,7 +66,7 @@ function AuthPage() {
   const [gate, setGate] = useState<"idle" | "checking" | "prompt">("idle");
 
   useEffect(() => {
-    if (ready && session && gate === "idle") void navigate({ to: "/painel", replace: true });
+    if (ready && session && gate === "idle" && !isGoogleBridgeSession(session.user)) void navigate({ to: "/painel", replace: true });
   }, [ready, session, navigate, gate]);
 
   async function afterClientSignIn(userId: string) {
@@ -97,6 +99,16 @@ function AuthPage() {
             vez, criamos seu cadastro na hora.
           </p>
           <div className="pt-5">
+            <GoogleAccess
+              onBeforeSignIn={() => setGate("checking")}
+              onSignedIn={afterClientSignIn}
+              onSignInFailed={() => setGate("idle")}
+            />
+            <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />
+              ou com nome e telefone
+              <span className="h-px flex-1 bg-border" />
+            </div>
             <PhoneAccessForm
               onBeforeSignIn={() => setGate("checking")}
               onSignedIn={afterClientSignIn}
