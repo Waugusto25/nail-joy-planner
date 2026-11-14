@@ -1,5 +1,5 @@
 # Avisos administrativos no grupo WhatsApp
-- [ ] Aplicar 0019: ferramenta recusou antes de executar SQL por snapshot duplicado; inspeção confirmou snapshot_chain_mismatch e database_row_missing, sem plano de reparo disponível.
+- [x] Aplicar 0019: histórico corrigido, coluna do grupo e gatilho de nova cliente confirmados no banco.
 - [x] Destino do grupo e normalização de telefones verificados com quatro testes aprovados.
 - [ ] Confirmar entrega real após corrigir o histórico e atualizar Vercel; não reenviar avisos antigos.
 
