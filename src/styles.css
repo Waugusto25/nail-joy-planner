@@ -275,7 +275,7 @@
     right: 50%;
     z-index: -2;
     pointer-events: none;
-    opacity: 0.85;
+    opacity: 1;
     background-image: url("https://nail-joy-planner.lovable.app/__l5e/assets-v1/27a013eb-e844-4706-b4c3-cfb925f60984/fundo-flores.jpg");
     background-repeat: no-repeat;
     background-position: left top;
@@ -329,6 +329,16 @@
     oklch(1 0 0 / 0.15) 78%,
     transparent 100%
   );
+
+  /* Desktop: veu concentrado so na coluna central, flores vivas nas laterais. */
+  @media (min-width: 1024px) {
+    background: radial-gradient(
+      48% 90% at 50% 45%,
+      oklch(1 0 0 / 0.55) 0%,
+      oklch(1 0 0 / 0.35) 55%,
+      transparent 100%
+    );
+  }
 }
 
 /* Botão oficial do Google (cores fixadas pelas diretrizes da marca Google). */
