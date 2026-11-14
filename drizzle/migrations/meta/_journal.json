@@ -134,6 +134,13 @@
       "when": 1794519209320,
       "tag": "0018_restrict_service_image_storage_to_owner",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794619726442,
+      "tag": "0019_whatsapp_admin_group_new_client",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { whatsappConfigSchema, whatsappPhone } from "./whatsapp-rules";
+import { whatsappConfigSchema, whatsappTarget } from "./whatsapp-rules";
 import { adminCancellationAlert, adminRescheduleRequestAlert, cancellationMessage, confirmationMessage, formatPrice, reconfirmMessage, rescheduleMessage, APP_URL } from "./salon";
 import { createPublicClient } from "./supabase-public.server";
 import { receiptPaymentDetails, storeReceiptMessage } from "./store-receipt";
@@ -12,13 +12,15 @@ const payloadSchema = z.object({
   amountCents: z.number().optional(), remainingCents: z.number().optional(), accountRemainingCents: z.number().int().nonnegative().optional(), number: z.number().optional(), partial: z.boolean().optional(), advance: z.boolean().optional(),
   dueDate: z.string().nullish(), title: z.string().optional(), prize: z.string().optional(), loginId: z.string().optional(),
 }).passthrough();
-const batchSchema = z.object({ enabled: z.boolean(), settings: whatsappConfigSchema.optional(), adminPhone: z.string().nullish(), pixKey: z.string().nullish(), messages: z.array(z.object({ id: z.string().uuid(), kind: z.string(), payload: payloadSchema })) });
+const batchSchema = z.object({ enabled: z.boolean(), settings: whatsappConfigSchema.extend({ admin_group_jid: z.string().nullish() }).optional(), adminPhone: z.string().nullish(), pixKey: z.string().nullish(), messages: z.array(z.object({ id: z.string().uuid(), kind: z.string(), payload: payloadSchema })) });
+const ADMIN_KINDS = ["prebooking", "client_cancelled", "reschedule_request", "new_client"];
 type Payload = z.infer<typeof payloadSchema>;
 
 function messageText(kind: string, p: Payload, pixKey: string): string {
   const n = { name: p.name || "Cliente", day: p.day || "", start: p.start || "", serviceName: p.serviceName || "Procedimento", durationMinutes: p.durationMinutes || 60 };
   switch (kind) {
     case "prebooking": return `💅 Novo pré-agendamento!\nCliente: ${n.name}\nTelefone: ${p.phone || ""}\nProcedimento: ${n.serviceName}\nData: ${n.day} às ${n.start.slice(0, 5)}\nValor final: ${formatPrice(p.priceCents || 0)}${p.discountPercent ? `\nBenefício: ${p.benefitType} (${p.discountPercent}%)` : ""}`;
+    case "new_client": return `🎉 Nova cliente cadastrada!\nCliente: ${n.name}\nTelefone: ${p.phone || ""}${p.loginId ? `\nUsuário: ${p.loginId}` : ""}`;
     case "confirmation": return confirmationMessage(n);
     case "reminder": return reconfirmMessage(n);
     case "cancellation": return cancellationMessage(n);
@@ -51,7 +53,7 @@ export async function sendEvolution(config: z.infer<typeof whatsappConfigSchema>
   if (url.username || url.password || /^(localhost|127\.|169\.254\.|10\.|192\.168\.|\[)/.test(url.hostname)) throw new Error("Endereço de API inválido.");
   const response = await fetch(`${safe.api_url.replace(/\/$/, "")}/message/sendText/${encodeURIComponent(safe.instance_name)}`, {
     method: "POST", redirect: "error", signal: AbortSignal.timeout(15000), headers: { apikey: key, "Content-Type": "application/json" },
-    body: JSON.stringify({ number: whatsappPhone(phone), text }),
+    body: JSON.stringify({ number: whatsappTarget(phone), text }),
   });
   // Não armazenar a resposta da VPS: ela pode conter chave ou dados de clientes.
   if (!response.ok) throw new Error(`Evolution recusou o envio (HTTP ${response.status}).`);
@@ -71,7 +73,9 @@ export async function processWhatsapp(serviceToken: string): Promise<{ sent: num
       if (valid.error) throw new Error("Não foi possível validar a mensagem.");
       if (!valid.data) status = "skipped";
       else {
-        const phone = ["prebooking", "client_cancelled", "reschedule_request"].includes(m.kind) ? batch.adminPhone : m.payload.phone;
+        // Alertas da gerência vão ao grupo quando configurado; sem grupo, mantém o número do salão.
+        const adminTarget = batch.settings.admin_group_jid || batch.adminPhone;
+        const phone = ADMIN_KINDS.includes(m.kind) ? adminTarget : m.payload.phone;
         await sendEvolution(batch.settings, phone || "", messageText(m.kind, m.payload, batch.pixKey || ""));
         sent++;
       }

@@ -6,6 +6,13 @@ export const whatsappConfigSchema = z.object({
   enabled: z.boolean(),
 });
 
+/** Destino Evolution: grupo (JID @g.us) passa intacto; telefone recebe DDI 55. */
+export function whatsappTarget(raw: string): string {
+  const trimmed = raw.trim();
+  if (/^[0-9-]+@g\.us$/.test(trimmed)) return trimmed;
+  return whatsappPhone(trimmed);
+}
+
 export function whatsappPhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   const national = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
