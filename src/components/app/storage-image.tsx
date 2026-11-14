@@ -4,17 +4,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { resolveServiceImageFn } from "@/lib/service-images.functions";
 
 const BUCKET = "service-images";
-const LOVABLE_ASSET_ORIGIN = "https://nail-joy-planner.lovable.app";
-
 /**
- * Assets do Lovable salvos como `/__l5e/...` quebram em deploy externo,
- * porque o domínio próprio tenta servir esse caminho localmente. Forçamos a
- * origem publicada do Lovable, que é onde esses arquivos existem de fato.
+ * Assets `/__l5e/...` são servidos pelo próprio domínio publicado. Mantemos o
+ * caminho relativo: apontar para o endereço antigo gera redirecionamento entre
+ * domínios, que o navegador do computador bloqueia em imagens.
  */
 export function resolveDirectImageUrl(url?: string | null) {
   if (!url) return null;
-  if (url.startsWith("/__l5e/assets-v1/")) return `${LOVABLE_ASSET_ORIGIN}${url}`;
-  return url;
+  const legacy = url.match(/^https:\/\/nail-joy-planner\.lovable\.app(\/__l5e\/assets-v1\/.*)$/);
+  return legacy ? legacy[1] : url;
 }
 
 function isDirect(url: string) {
