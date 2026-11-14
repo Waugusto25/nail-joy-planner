@@ -18,3 +18,9 @@ export function isGoogleBridgeSession(user: SessionUserLike | null | undefined):
   const providers = Array.isArray(meta.providers) ? meta.providers : [];
   return meta.provider === "google" || providers.includes("google");
 }
+
+/** Hospedagem Lovable (preview e .lovable.app) tem o atalho de login próprio. */
+export function isLovableHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host.endsWith(".lovable.app") || host.endsWith(".lovableproject.com") || host === "localhost";
+}

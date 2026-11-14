@@ -12,3 +12,14 @@ describe("isGoogleBridgeSession", () => {
     expect(isGoogleBridgeSession(null)).toBe(false);
   });
 });
+
+import { isLovableHost } from "./google-access";
+describe("isLovableHost", () => {
+  it("usa o login direto no domínio próprio da Vercel", () => {
+    expect(isLovableHost("jannahnails.com")).toBe(false);
+    expect(isLovableHost("www.jannahnails.com")).toBe(false);
+  });
+  it("mantém o atalho na hospedagem Lovable", () => {
+    expect(isLovableHost("nail-joy-planner.lovable.app")).toBe(true);
+  });
+});

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useSupabaseSession } from "@/hooks/useSession";
 import { lovable } from "@/integrations/lovable";
 import { finishAccessFn, googleAccessFn } from "@/lib/auth.functions";
-import { isGoogleBridgeSession } from "@/lib/google-access";
+import { isGoogleBridgeSession, isLovableHost } from "@/lib/google-access";
 import { onlyDigits } from "@/lib/salon";
 import { supabase } from "@/lib/supabase-client";
 
@@ -114,6 +114,19 @@ export function GoogleAccess({
 
   async function startGoogle() {
     setBusy(true);
+    // Fora da hospedagem Lovable (Vercel/jannahnails.com) o atalho /~oauth não
+    // existe: usamos direto o login Google do backend com as credenciais próprias.
+    if (!isLovableHost(window.location.hostname)) {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin, queryParams: { prompt: "select_account" } },
+      });
+      if (error) {
+        setBusy(false);
+        toast.error("Não foi possível abrir o Google. Tente novamente.");
+      }
+      return;
+    }
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
       extraParams: { prompt: "select_account" },
