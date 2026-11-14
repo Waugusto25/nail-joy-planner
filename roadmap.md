@@ -1,3 +1,8 @@
+# Avisos administrativos no grupo WhatsApp
+- [ ] Aplicar 0019: ferramenta recusou antes de executar SQL por snapshot duplicado; inspeção confirmou snapshot_chain_mismatch e database_row_missing, sem plano de reparo disponível.
+- [x] Destino do grupo e normalização de telefones verificados com quatro testes aprovados.
+- [ ] Confirmar entrega real após corrigir o histórico e atualizar Vercel; não reenviar avisos antigos.
+
 # Unificação de compras da Loja
 - [x] Redistribuir todo o saldo anterior no novo plano; migrations 0015/0016 com gravação administrativa atômica e preservação de histórico pago.
 - [x] Confirmação com saldo anterior, novas compras e valor/data de cada parcela; janela verificada autenticada em desktop e 393×852.
