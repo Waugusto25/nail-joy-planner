@@ -10,6 +10,7 @@ const bodySchema = z.object({
 });
 
 export const Route = createFileRoute("/api/public/hooks/mercado-pago")({
+  staticData: { sitemap: false },
   server: {
     handlers: {
       POST: async ({ request }) => {

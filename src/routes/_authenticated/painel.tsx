@@ -70,6 +70,7 @@ const WELCOME_IMAGE = "/__l5e/assets-v1/5a73338f-8d2f-459f-8bb6-0dc055ee5917/boa
 export type Claim = { benefit: "fidelidade" | "indicacao" | "premio"; eventId?: string };
 
 export const Route = createFileRoute("/_authenticated/painel")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Meu painel — Jannah Nails" },

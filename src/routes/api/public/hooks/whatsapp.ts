@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/api/public/hooks/whatsapp")({
+  staticData: { sitemap: false },
   server: { handlers: { POST: async ({ request }) => {
     const token = request.headers.get("x-service-token");
     if (!token) return new Response("Unauthorized", { status: 401 });

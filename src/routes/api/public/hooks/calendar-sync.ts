@@ -19,6 +19,7 @@ function unauthorized(message: string) {
  * operação para a administradora ou para a própria dona do atendimento.
  */
 export const Route = createFileRoute("/api/public/hooks/calendar-sync")({
+  staticData: { sitemap: false },
   server: {
     handlers: {
       POST: async ({ request }) => {

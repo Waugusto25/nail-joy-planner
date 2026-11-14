@@ -30,6 +30,7 @@ import {
 } from "@/lib/salon";
 
 export const Route = createFileRoute("/")({
+  staticData: { sitemap: true },
   head: () => ({
     meta: [
       { title: "Jannah Nails — Entrar e agendar suas unhas" },
