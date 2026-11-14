@@ -93,10 +93,9 @@ function AuthPage() {
         </h1>
 
         <div className="surface-card mt-8 p-6">
-          <h2 className="font-display text-xl">Entrar ou criar conta</h2>
+          <h2 className="font-display text-xl">Bem-vinda ao nosso espaço ✨</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Informe seu nome e seu telefone. Se já tiver conta, você entra direto; se for a primeira
-            vez, criamos seu cadastro na hora.
+            Seu momento de cuidado começa aqui. Entre ou cadastre-se em segundos.
           </p>
           <div className="pt-5">
             <GoogleAccess
